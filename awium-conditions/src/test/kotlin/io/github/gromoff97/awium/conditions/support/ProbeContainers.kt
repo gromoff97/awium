@@ -44,7 +44,6 @@ object ProbeContainers {
 
     class EntryMap<KEY, VALUE>(private val sourceEntries: List<Map.Entry<KEY, VALUE>>) : AbstractMap<KEY, VALUE>() {
         var beforeEntrySet = Runnable {}
-        var beforeIterator = Runnable {}
         var entrySetCalls = 0
 
         override fun isEmpty() = sourceEntries.isEmpty()
@@ -56,10 +55,7 @@ object ProbeContainers {
                 return object : AbstractSet<Map.Entry<KEY, VALUE>>() {
                     override val size get() = sourceEntries.size
 
-                    override fun iterator(): Iterator<Map.Entry<KEY, VALUE>> {
-                        beforeIterator.run()
-                        return sourceEntries.iterator()
-                    }
+                    override fun iterator() = sourceEntries.iterator()
                 }
             }
 
