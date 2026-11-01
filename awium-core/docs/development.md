@@ -53,9 +53,8 @@ Override `Condition.newAttempt()` for a stateful evaluator, created lazily for e
 For a custom lifecycle, override `newRun(definition, recording)` and return a fresh
 `AbstractConditionRun`. Its `probe` checks observations, `complete` decides completion,
 and `result` supplies the final value, including when nested. The supplied definition
-carries the `because` reason. The base class records history and assembles the outcome;
-protected hooks customize history scopes and diagnostics. The engine owns polling,
-timeouts, and persistence. Mutable state stays within a run; definitions stay immutable.
+carries the `because` reason; protected hooks customize history scopes and diagnostics.
+Mutable state stays within a run; definitions stay immutable.
 `ProbeFailure` adds a nested location while preserving the original cause.
 
 ## Type and module boundaries
