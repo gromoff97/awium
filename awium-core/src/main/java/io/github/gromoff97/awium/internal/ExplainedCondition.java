@@ -11,7 +11,7 @@ public final class ExplainedCondition<INPUT, RESULT> extends AwaitCondition.Defi
 
     public ExplainedCondition(Condition<INPUT, RESULT> original, String explanation) {
         super(original, explanation);
-        this.original = original;
+        this.original = original instanceof ExplainedCondition<INPUT, RESULT> explained ? explained.original : original;
     }
 
     @Override

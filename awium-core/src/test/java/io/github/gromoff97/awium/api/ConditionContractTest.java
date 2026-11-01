@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.AbstractConditionRun;
 import io.github.gromoff97.awium.execution.ConditionRun;
+import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.support.FakeTime;
@@ -21,6 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConditionContractTest {
+    @Test
+    void replacingTheReasonManyTimesStillAllowsEvaluation() throws Throwable {
+        Condition<String, Integer> condition = new DefinedCondition<>("length", null,
+                actual -> satisfied(actual.length()));
+        for (int i = 0; i < 50_000; i++) condition = condition.because("updated reason");
+
+        assertEquals(satisfied(5), condition.probe("ready"));
+    }
+
     @Test
     void reasonsPreserveDirectProbeResults() throws Throwable {
         var expected = unsatisfied("not ready", new IllegalStateException("offline"));
