@@ -10,8 +10,12 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -27,19 +31,14 @@ import static java.time.Duration.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class SourceContractTest {
 
-    @Test
-    void everyTypedNullSourceUsesTheExactValidationMessage() {
-        assertNullRejected("delegate", () -> new Await.CollectionViewSource<>(null));
-        assertNullRejected("delegate", () -> new Await.MapViewSource<>(null));
-        assertNullRejected("source", () -> await((Callable<Object>) null));
-        assertNullRejected("source", () -> await((Await.OptionalSource<Object>) null));
-        assertNullRejected("source", () -> await((Await.CollectionSource<Collection<Object>>) null));
-        assertNullRejected("source", () -> await((Await.MapSource<Map<Object, Object>>) null));
-        assertNullRejected("source", () -> await((Await.CollectionViewSource<Object, List<Object>>) null));
-        assertNullRejected("source", () -> await((Await.MapViewSource<Object, Object, Map<Object, Object>>) null));
+    @ParameterizedTest
+    @MethodSource("missingSources")
+    void rejectsMissingSourcesBeforePolling(String argument, Executable action) {
+        assertNullRejected(argument, action);
     }
 
     @Test
@@ -101,5 +100,23 @@ class SourceContractTest {
 
     private static void assertNullRejected(String argument, Executable action) {
         assertEquals(argument + " must not be null", assertThrows(NullPointerException.class, action).getMessage());
+    }
+
+    private static Stream<Arguments> missingSources() {
+        return Stream.of(
+                argumentSet("collection view delegate", "delegate", (Executable) () -> new Await.CollectionViewSource<>(null)),
+                argumentSet("map view delegate", "delegate", (Executable) () -> new Await.MapViewSource<>(null)),
+                argumentSet("await / value", "source", (Executable) () -> await((Callable<Object>) null)),
+                argumentSet("await / optional", "source", (Executable) () -> await((Await.OptionalSource<Object>) null)),
+                argumentSet("await / collection", "source", (Executable) () -> await((Await.CollectionSource<Collection<Object>>) null)),
+                argumentSet("await / map", "source", (Executable) () -> await((Await.MapSource<Map<Object, Object>>) null)),
+                argumentSet("await / collection view", "source", (Executable) () -> await((Await.CollectionViewSource<Object, List<Object>>) null)),
+                argumentSet("await / map view", "source", (Executable) () -> await((Await.MapViewSource<Object, Object, Map<Object, Object>>) null)),
+                argumentSet("tryAwait / value", "source", (Executable) () -> tryAwait((Callable<Object>) null)),
+                argumentSet("tryAwait / optional", "source", (Executable) () -> tryAwait((Await.OptionalSource<Object>) null)),
+                argumentSet("tryAwait / collection", "source", (Executable) () -> tryAwait((Await.CollectionSource<Collection<Object>>) null)),
+                argumentSet("tryAwait / map", "source", (Executable) () -> tryAwait((Await.MapSource<Map<Object, Object>>) null)),
+                argumentSet("tryAwait / collection view", "source", (Executable) () -> tryAwait((Await.CollectionViewSource<Object, List<Object>>) null)),
+                argumentSet("tryAwait / map view", "source", (Executable) () -> tryAwait((Await.MapViewSource<Object, Object, Map<Object, Object>>) null)));
     }
 }
