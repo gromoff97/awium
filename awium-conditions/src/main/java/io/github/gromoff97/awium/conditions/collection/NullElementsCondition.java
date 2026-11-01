@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.collection;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.Collection;
 
-import static io.github.gromoff97.awium.conditions.common.ValueMatching.matchesAll;
-import static io.github.gromoff97.awium.conditions.common.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.matchesAll;
+import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

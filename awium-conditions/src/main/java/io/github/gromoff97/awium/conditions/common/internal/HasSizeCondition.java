@@ -1,9 +1,9 @@
-package io.github.gromoff97.awium.conditions.common;
+package io.github.gromoff97.awium.conditions.common.internal;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import java.util.function.ToIntFunction;
 
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.BETWEEN;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.BETWEEN;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

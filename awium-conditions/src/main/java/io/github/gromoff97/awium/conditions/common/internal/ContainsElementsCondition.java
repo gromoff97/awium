@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions.common;
+package io.github.gromoff97.awium.conditions.common.internal;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
@@ -6,9 +6,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.conditions.common.ExpectedValues.snapshot;
-import static io.github.gromoff97.awium.conditions.common.ValueMatching.firstMissingExpectedIndex;
-import static io.github.gromoff97.awium.conditions.common.ValueMatching.firstPresentExpectedIndex;
+import static io.github.gromoff97.awium.conditions.common.internal.ExpectedValues.snapshot;
+import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.firstMissingExpectedIndex;
+import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.firstPresentExpectedIndex;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

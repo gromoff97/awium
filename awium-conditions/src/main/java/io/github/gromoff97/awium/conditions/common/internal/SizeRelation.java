@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions.common;
+package io.github.gromoff97.awium.conditions.common.internal;
 
 public enum SizeRelation {
     EQUAL("is"), NOT_EQUAL("is not"), GREATER("is greater than"), AT_LEAST("is at least"),

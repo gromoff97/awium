@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions;
+package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.execution.DefinedCondition;
 

@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.last
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.Conditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.allKeys
 import io.github.gromoff97.awium.conditions.map.MapConditions.allValues

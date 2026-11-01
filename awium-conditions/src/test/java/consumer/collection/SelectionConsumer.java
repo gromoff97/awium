@@ -1,6 +1,6 @@
 package consumer.collection;
 
-import io.github.gromoff97.awium.conditions.Conditions;
+import io.github.gromoff97.awium.conditions.common.Conditions;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -16,13 +16,13 @@ import static io.github.gromoff97.awium.conditions.collection.CollectionConditio
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
-import static io.github.gromoff97.awium.conditions.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.Conditions.asserted;
-import static io.github.gromoff97.awium.conditions.Conditions.equalTo;
-import static io.github.gromoff97.awium.conditions.Conditions.instanceOf;
-import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
-import static io.github.gromoff97.awium.conditions.Conditions.isNull;
-import static io.github.gromoff97.awium.conditions.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.common.Conditions.asserted;
+import static io.github.gromoff97.awium.conditions.common.Conditions.equalTo;
+import static io.github.gromoff97.awium.conditions.common.Conditions.instanceOf;
+import static io.github.gromoff97.awium.conditions.common.Conditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.common.Conditions.isNull;
+import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
 import static java.time.Duration.ofNanos;

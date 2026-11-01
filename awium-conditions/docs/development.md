@@ -40,11 +40,11 @@ It is separate from `build`, `check`, and `test`.
 | --- | --- |
 | `Conditions`, domain catalogs | Public factories; no checking algorithms |
 | Conditions beside each factory | Family-specific checks; package-private |
-| `conditions.common` | Checks and helpers shared across families |
+| `conditions.common.internal` | Checks and helpers shared across families |
 | `CapturedCondition.Run` | Stage transitions, collected observations, and stage diagnostics |
 
 Mutable state belongs to each run; reusable definitions stay immutable.
-Factories live in `conditions`, `conditions.collection`, `conditions.map`,
+Factories live in `conditions.common`, `conditions.collection`, `conditions.map`,
 `conditions.optional`, and `conditions.string`. The Java module exports these
-packages and `conditions.function`, requiring core transitively. `conditions.common`
+packages and `conditions.function`, requiring core transitively. `conditions.common.internal`
 is unexported; its public classes allow reuse between families within the module.

@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.composition
 import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
-import io.github.gromoff97.awium.conditions.Conditions.captured
-import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.Conditions.captured
+import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import io.github.gromoff97.awium.result.ConditionResult.unsatisfied

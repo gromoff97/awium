@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.value
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.Conditions.isNotNull
-import io.github.gromoff97.awium.conditions.Conditions.isNull
+import io.github.gromoff97.awium.conditions.common.Conditions.isNotNull
+import io.github.gromoff97.awium.conditions.common.Conditions.isNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame

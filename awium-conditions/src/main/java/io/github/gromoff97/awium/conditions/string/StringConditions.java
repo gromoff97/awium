@@ -1,18 +1,18 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.conditions.common.EmptyCondition;
-import io.github.gromoff97.awium.conditions.common.HasSizeCondition;
+import io.github.gromoff97.awium.conditions.common.internal.EmptyCondition;
+import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition;
 import io.github.gromoff97.awium.conditions.string.TextMatchCondition.Match;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.BETWEEN;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.EQUAL;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.LESS;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.NOT_EQUAL;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.BETWEEN;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.EQUAL;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.NOT_EQUAL;
 
 public final class StringConditions {
 

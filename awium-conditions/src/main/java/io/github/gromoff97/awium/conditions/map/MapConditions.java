@@ -5,13 +5,13 @@ import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.conditions.common.ContainsCondition;
-import io.github.gromoff97.awium.conditions.common.ContainsElementsCondition.Membership;
-import io.github.gromoff97.awium.conditions.common.ContainsElementsCondition;
-import io.github.gromoff97.awium.conditions.common.EmptyCondition;
-import io.github.gromoff97.awium.conditions.common.HasSizeCondition;
-import io.github.gromoff97.awium.conditions.common.QuantifiedCondition.Quantifier;
-import io.github.gromoff97.awium.conditions.common.QuantifiedCondition;
+import io.github.gromoff97.awium.conditions.common.internal.ContainsCondition;
+import io.github.gromoff97.awium.conditions.common.internal.ContainsElementsCondition.Membership;
+import io.github.gromoff97.awium.conditions.common.internal.ContainsElementsCondition;
+import io.github.gromoff97.awium.conditions.common.internal.EmptyCondition;
+import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition;
+import io.github.gromoff97.awium.conditions.common.internal.QuantifiedCondition.Quantifier;
+import io.github.gromoff97.awium.conditions.common.internal.QuantifiedCondition;
 import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -20,17 +20,17 @@ import java.util.Map;
 import java.util.Objects;
 
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapEntries.entryPredicate;
 import static io.github.gromoff97.awium.conditions.map.MapEntries.snapshotEntries;
-import static io.github.gromoff97.awium.conditions.common.NestedCondition.compose;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.BETWEEN;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.EQUAL;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.LESS;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.NOT_EQUAL;
+import static io.github.gromoff97.awium.conditions.common.internal.NestedCondition.compose;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.BETWEEN;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.EQUAL;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.NOT_EQUAL;
 
 public final class MapConditions {
 

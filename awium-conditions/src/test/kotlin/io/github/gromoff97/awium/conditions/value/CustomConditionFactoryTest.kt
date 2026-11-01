@@ -5,8 +5,8 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.Conditions.condition
-import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.Conditions.condition
+import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied

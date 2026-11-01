@@ -3,8 +3,8 @@ package io.github.gromoff97.awium.conditions.api
 import com.google.testing.compile.Compiler.javac
 import com.google.testing.compile.JavaFileObjects.forSourceString
 import io.github.gromoff97.awium.Await
-import io.github.gromoff97.awium.conditions.common.HasSizeCondition
-import io.github.gromoff97.awium.conditions.common.NestedCondition
+import io.github.gromoff97.awium.conditions.common.internal.HasSizeCondition
+import io.github.gromoff97.awium.conditions.common.internal.NestedCondition
 import io.github.gromoff97.awium.conditions.support.conditionsJar
 import io.github.gromoff97.awium.conditions.support.coreJar
 import java.io.File.pathSeparator
@@ -31,7 +31,7 @@ class ArtifactContractIT {
         val conditions = ModuleFinder.of(conditionsJar).find("io.github.gromoff97.awium.conditions").orElseThrow().descriptor()
 
         assertFalse(conditions.isAutomatic)
-        assertEquals(setOf("io.github.gromoff97.awium.conditions", "io.github.gromoff97.awium.conditions.function",
+        assertEquals(setOf("io.github.gromoff97.awium.conditions.common", "io.github.gromoff97.awium.conditions.function",
             "io.github.gromoff97.awium.conditions.collection", "io.github.gromoff97.awium.conditions.map",
             "io.github.gromoff97.awium.conditions.optional", "io.github.gromoff97.awium.conditions.string"),
             conditions.exports().map { it.source() }.toSet())
@@ -72,7 +72,7 @@ class ArtifactContractIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["EqualityCondition", "collection.SortedCondition", "map.SingleEntryCondition",
+    @ValueSource(strings = ["common.EqualityCondition", "collection.SortedCondition", "map.SingleEntryCondition",
         "optional.PresentCondition", "string.BlankCondition"])
     fun `family implementations are hidden from classpath consumers`(type: String) {
         val source = forSourceString("consumer.Contract", """

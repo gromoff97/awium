@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions;
+package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
@@ -13,10 +13,10 @@ import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.conditions.common.SizeRelation.LESS;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_LEAST;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.AT_MOST;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.GREATER;
+import static io.github.gromoff97.awium.conditions.common.internal.SizeRelation.LESS;
 
 public final class Conditions {
 

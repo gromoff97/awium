@@ -1,10 +1,10 @@
-package io.github.gromoff97.awium.conditions.common;
+package io.github.gromoff97.awium.conditions.common.internal;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.conditions.common.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.conditions.common.internal.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 

@@ -5,10 +5,10 @@ import io.github.gromoff97.awium.AwaitCondition.Reference
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
-import io.github.gromoff97.awium.conditions.Conditions.captured
-import io.github.gromoff97.awium.conditions.Conditions.condition
-import io.github.gromoff97.awium.conditions.Conditions.equalTo
-import io.github.gromoff97.awium.conditions.Conditions.isNotNull
+import io.github.gromoff97.awium.conditions.common.Conditions.captured
+import io.github.gromoff97.awium.conditions.common.Conditions.condition
+import io.github.gromoff97.awium.conditions.common.Conditions.equalTo
+import io.github.gromoff97.awium.conditions.common.Conditions.isNotNull
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.execution.DefinedCondition

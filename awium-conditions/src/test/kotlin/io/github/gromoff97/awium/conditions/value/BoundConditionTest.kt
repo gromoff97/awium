@@ -5,10 +5,10 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.Conditions.atLeast
-import io.github.gromoff97.awium.conditions.Conditions.atMost
-import io.github.gromoff97.awium.conditions.Conditions.greaterThan
-import io.github.gromoff97.awium.conditions.Conditions.lessThan
+import io.github.gromoff97.awium.conditions.common.Conditions.atLeast
+import io.github.gromoff97.awium.conditions.common.Conditions.atMost
+import io.github.gromoff97.awium.conditions.common.Conditions.greaterThan
+import io.github.gromoff97.awium.conditions.common.Conditions.lessThan
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals

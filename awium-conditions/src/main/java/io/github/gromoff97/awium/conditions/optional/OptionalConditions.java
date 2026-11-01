@@ -7,8 +7,8 @@ import io.github.gromoff97.awium.conditions.function.CheckedPredicate;
 import java.util.Optional;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import static io.github.gromoff97.awium.conditions.Conditions.matches;
-import static io.github.gromoff97.awium.conditions.common.NestedCondition.compose;
+import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.internal.NestedCondition.compose;
 
 public final class OptionalConditions {
 

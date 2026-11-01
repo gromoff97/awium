@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.util.List;
 
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.conditions.Conditions.asserted;
-import static io.github.gromoff97.awium.conditions.Conditions.condition;
-import static io.github.gromoff97.awium.conditions.Conditions.isNotNull;
+import static io.github.gromoff97.awium.conditions.common.Conditions.asserted;
+import static io.github.gromoff97.awium.conditions.common.Conditions.condition;
+import static io.github.gromoff97.awium.conditions.common.Conditions.isNotNull;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.time.Duration.ofNanos;
 

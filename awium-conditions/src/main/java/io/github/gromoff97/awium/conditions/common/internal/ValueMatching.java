@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.conditions.common;
+package io.github.gromoff97.awium.conditions.common.internal;
 
 import io.github.gromoff97.awium.conditions.function.CheckedBiPredicate;
 import io.github.gromoff97.awium.conditions.function.CheckedPredicate;

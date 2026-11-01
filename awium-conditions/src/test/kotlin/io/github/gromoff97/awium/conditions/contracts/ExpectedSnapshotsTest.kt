@@ -6,7 +6,7 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.cont
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.conditions.Conditions
+import io.github.gromoff97.awium.conditions.common.Conditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsExactlyEntries

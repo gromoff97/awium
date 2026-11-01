@@ -67,7 +67,7 @@ Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not
 Single bounds need not be comparable: the source must implement `Comparable<BOUND>`.
 Range bounds must also compare with each other. Empty `in` never matches;
 empty `notIn` matches anything, including null.
-[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/Conditions.java).
+[Signatures](../src/main/java/io/github/gromoff97/awium/conditions/common/Conditions.java).
 
 ### Predicates and assertions
 

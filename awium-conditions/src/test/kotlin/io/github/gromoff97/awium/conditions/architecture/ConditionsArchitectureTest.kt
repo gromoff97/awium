@@ -33,16 +33,16 @@ class ConditionsArchitectureTest {
 
     @Test
     fun `family implementations are package private`() {
-        noClasses().that().resideInAnyPackage("..awium.conditions", "..awium.conditions.collection",
+        noClasses().that().resideInAnyPackage("..awium.conditions.common", "..awium.conditions.collection",
             "..awium.conditions.map", "..awium.conditions.optional", "..awium.conditions.string")
             .and(inFamilies(catalogs + "CapturedCondition").negate())
             .should().bePublic().check(productClasses)
     }
 
     @Test
-    fun `common implementations do not depend on condition families`() {
-        noClasses().that().resideInAPackage("..awium.conditions.common..")
-            .should().dependOnClassesThat().resideInAnyPackage("..awium.conditions", "..awium.conditions.collection..",
+    fun `shared implementations do not depend on condition families`() {
+        noClasses().that().resideInAPackage("..awium.conditions.common.internal..")
+            .should().dependOnClassesThat().resideInAnyPackage("..awium.conditions.common", "..awium.conditions.collection..",
                 "..awium.conditions.map..", "..awium.conditions.optional..", "..awium.conditions.string..")
             .check(productClasses)
     }

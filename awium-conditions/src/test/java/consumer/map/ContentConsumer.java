@@ -9,8 +9,8 @@ import java.util.Map.Entry;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.conditions.Conditions.captured;
-import static io.github.gromoff97.awium.conditions.Conditions.matches;
+import static io.github.gromoff97.awium.conditions.common.Conditions.captured;
+import static io.github.gromoff97.awium.conditions.common.Conditions.matches;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.containsAllEntries;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.containsAllKeys;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.containsAllValues;

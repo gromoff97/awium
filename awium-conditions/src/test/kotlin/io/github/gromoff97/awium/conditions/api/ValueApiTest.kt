@@ -1,5 +1,5 @@
 package io.github.gromoff97.awium.conditions.api
-import io.github.gromoff97.awium.conditions.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.Conditions.matches
 import java.util.function.Predicate
 
 import consumer.value.ValueConsumer

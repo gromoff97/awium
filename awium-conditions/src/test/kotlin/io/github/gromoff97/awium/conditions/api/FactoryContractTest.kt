@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
-import io.github.gromoff97.awium.conditions.Conditions
+import io.github.gromoff97.awium.conditions.common.Conditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions
 import io.github.gromoff97.awium.conditions.string.StringConditions

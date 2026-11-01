@@ -6,10 +6,10 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.Conditions.equalTo
-import io.github.gromoff97.awium.conditions.Conditions.notEqualTo
-import io.github.gromoff97.awium.conditions.Conditions.notSameAs
-import io.github.gromoff97.awium.conditions.Conditions.sameAs
+import io.github.gromoff97.awium.conditions.common.Conditions.equalTo
+import io.github.gromoff97.awium.conditions.common.Conditions.notEqualTo
+import io.github.gromoff97.awium.conditions.common.Conditions.notSameAs
+import io.github.gromoff97.awium.conditions.common.Conditions.sameAs
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.ThrowingEquals
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied

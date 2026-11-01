@@ -22,10 +22,10 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sing
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sorted
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.startsWith
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
-import io.github.gromoff97.awium.conditions.Conditions.captured
-import io.github.gromoff97.awium.conditions.Conditions.conditionPerWait
-import io.github.gromoff97.awium.conditions.Conditions.instanceOf
-import io.github.gromoff97.awium.conditions.Conditions.matches
+import io.github.gromoff97.awium.conditions.common.Conditions.captured
+import io.github.gromoff97.awium.conditions.common.Conditions.conditionPerWait
+import io.github.gromoff97.awium.conditions.common.Conditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.Conditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.allKeys
 import io.github.gromoff97.awium.conditions.map.MapConditions.allValues
