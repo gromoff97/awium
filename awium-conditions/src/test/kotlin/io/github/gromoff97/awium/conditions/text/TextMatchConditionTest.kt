@@ -19,19 +19,14 @@ import org.mockito.Mockito.`when`
 class TextMatchConditionTest {
     @ParameterizedTest
     @MethodSource("examples")
-    fun `matches a snapshot of the expected text`(example: Example) {
+    fun `keeps matching and rejecting the same text after the expectation changes`(example: Example) {
         val expected = StringBuilder("ready")
         val condition = example.factory(expected)
         expected.replace(0, expected.length, "changed")
         val actual = StringBuilder(example.matching)
 
         assertSame(actual, result(evaluate(condition, actual)))
-    }
-
-    @ParameterizedTest
-    @MethodSource("examples")
-    fun `rejects text that does not meet the condition`(example: Example) {
-        rejection(example.factory("ready"), example.mismatch)
+        rejection(condition, example.mismatch)
     }
 
     @ParameterizedTest

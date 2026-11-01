@@ -42,7 +42,7 @@ class TextSetConditionTest {
         suffix[0] = 'x'
         expected[1] = "changed"
 
-        val actual = if (negated) "failed" else "ready"
+        val actual = if (negated) "changed xy" else "ready"
         assertSame(actual, result(evaluate(condition, actual)))
         assertEquals(listOf("rea", "dy"), condition.references().first().value())
     }
