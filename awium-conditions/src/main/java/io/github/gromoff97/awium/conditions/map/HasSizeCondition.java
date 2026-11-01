@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -32,6 +33,7 @@ final class HasSizeCondition implements PreservingCondition<Map<?, ?>> {
     public ConditionResult<?> probe(Map<?, ?> actual) throws Throwable {
         if (actual == null) return unsatisfied("map was null");
         int size = actual.size();
-        return comparison.probe(size) instanceof Satisfied<?> ? satisfied(actual) : unsatisfied("map size was " + size);
+        var diagnostic = new Diagnostic(null, new Reference<>("Actual size", size));
+        return comparison.probe(size) instanceof Satisfied<?> ? satisfied(actual, diagnostic) : unsatisfied(diagnostic.withMismatch("map size did not match"));
     }
 }

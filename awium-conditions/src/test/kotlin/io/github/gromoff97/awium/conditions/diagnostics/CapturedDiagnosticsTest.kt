@@ -45,36 +45,36 @@ import org.mockito.Mockito.mock
 class CapturedDiagnosticsTest {
     @Test
     fun `a rejected first stage reports its expected operand`() {
-        val run = start<String, List<String>>(captured(equalTo("first"), equalTo("second")), false)
+        val run = start<String, List<String>>(captured(equalTo("first"), equalTo("second")))
         val failure = diagnose(run, Timeout(step(run, "actual")))
-        assertThat(failure.message()).contains("Sequence: captured 0/2", "stage 1/2",
-            "Condition: value equals expected", "Expected: \"first\"")
+        assertThat(failure.message()).contains("Sequence: \"captured 0/2", "stage 1/2",
+            "Current stage: value equals expected", "Expected: \"first\"")
     }
 
     @Test
     fun `a mismatch identifies the current stage`() {
-        val run = start<String, List<String>>(lifecycle(), false)
+        val run = start<String, List<String>>(lifecycle())
         step(run, "created")
         val failure = diagnose(run, Timeout(step(run, "created")))
-        assertThat(failure.message()).contains("Sequence: captured 1/3; stage 2/3",
-            "Condition: payment status is pending", "Mismatch: payment status was created")
+        assertThat(failure.message()).contains("Sequence: \"captured 1/3; stage 2/3\"",
+            "Current stage: payment status is pending", "Mismatch: payment status was created")
     }
 
     @Test
     fun `timeout after an intermediate success points to the next stage`() {
-        val run = start<String, List<String>>(captured(equalTo("created"), equalTo("pending"), equalTo("completed")), false)
+        val run = start<String, List<String>>(captured(equalTo("created"), equalTo("pending"), equalTo("completed")))
         val failure = diagnose(run, Timeout(step(run, "created")))
-        assertThat(failure.message()).contains("Sequence: captured 1/3", "stage 1/3", "Expected: \"created\"",
+        assertThat(failure.message()).contains("Sequence: \"captured 1/3", "stage 1/3", "Expected: \"created\"",
             "Next stage 2/3:", "Expected: \"pending\"")
     }
 
     @Test
     fun `a final stage mismatch reports the earlier captures`() {
-        val run = start<String, List<String>>(lifecycle(), false)
+        val run = start<String, List<String>>(lifecycle())
         listOf("created", "pending", "completed").forEach { step(run, it) }
         val failure = diagnose(run, PersistenceFailure(0, step(run, "created")))
-        assertThat(failure.message()).contains("Sequence: captured 2/3; stage 3/3",
-            "Condition: payment status is completed", "Mismatch: payment status was created")
+        assertThat(failure.message()).contains("Sequence: \"captured 2/3; stage 3/3\"",
+            "Current stage: payment status is completed", "Mismatch: payment status was created")
     }
 
     @Test
@@ -83,26 +83,26 @@ class CapturedDiagnosticsTest {
         val frames = arrayOf(StackTraceElement("Payments", "verifyPending", "Payments.java", 42))
         cause.stackTrace = frames
         val pending = condition<String, String>("payment status is pending") { unsatisfied("payment status was created", cause) }
-        val run = start<String, List<String>>(lifecycle(pending), false)
+        val run = start<String, List<String>>(lifecycle(pending))
         step(run, "created")
         val failure = diagnose(run, Timeout(step(run, "created")))
         assertSame(cause, failure.cause())
         assertArrayEquals(frames, cause.stackTrace)
-        assertThat(failure.message()).contains("Sequence: captured 1/3; stage 2/3", "pending assertion failed")
+        assertThat(failure.message()).contains("Sequence: \"captured 1/3; stage 2/3\"", "pending assertion failed")
     }
 
     @Test
     fun `a thrown failure identifies the current stage`() {
         val cause = IllegalStateException("status callback failed")
         val pending = condition<String, String>("payment status is pending") { throw cause }
-        val run = start<String, List<String>>(lifecycle(pending), false)
+        val run = start<String, List<String>>(lifecycle(pending))
         step(run, "created")
         assertSame(cause, assertThrows(Throwable::class.java) { probe(run, "created") })
         val attempt = FailedAfterObservation("created", CONDITION, cause, null)
         run.record(attempt)
         val failure = diagnose(run, Uncontrolled(ExecutionStep(false, ACQUISITION, 0, attempt)))
         assertSame(cause, failure.cause())
-        assertThat(failure.message()).contains("Sequence: captured 1/3; stage 2/3", "payment status is pending")
+        assertThat(failure.message()).contains("Sequence: \"captured 1/3; stage 2/3\"", "payment status is pending")
     }
 
     @Test
@@ -110,7 +110,7 @@ class CapturedDiagnosticsTest {
         val actual = RenderingValue { throw IllegalArgumentException("actual toString failed") }
         val run = secondStage(condition<Any, Any>("inner second") { unsatisfied("inner mismatch") })
         val failure = diagnose(run, Timeout(step(run, actual)))
-        assertThat(failure.message()).contains("Sequence: captured 1/2", "Condition: inner second", "Mismatch: inner mismatch")
+        assertThat(failure.message()).contains("Sequence: \"captured 1/2", "Current stage: inner second", "Mismatch: inner mismatch")
     }
 
     @Test
@@ -124,7 +124,7 @@ class CapturedDiagnosticsTest {
 
         assertNull(failure.cause())
         assertEquals(listOf(cause), failure.suppressed())
-        assertThat(failure.message()).contains("Actual: observed value", "Sequence: captured 1/2",
+        assertThat(failure.message()).contains("Actual: observed value", "Sequence: \"captured 1/2",
             "Expected: <unprintable>", "Mismatch: not ready")
         assertEquals(1, actual.calls)
         assertEquals(1, expected.calls)
@@ -143,15 +143,15 @@ class CapturedDiagnosticsTest {
         val first = withOperand("first stage", Reference("Expected", root), AwaitAttempt { satisfied(it) })
         val second = withOperand("second stage", Reference("Expected", operand),
             AwaitAttempt { unsatisfied("not ready", original) })
-        val run = start<Any, List<Any>>(captured(first, second), false)
+        val run = start<Any, List<Any>>(captured(first, second))
         step(run, actual)
         val failure = diagnose(run, Timeout(step(run, actual)))
 
         assertEquals(TIMEOUT, failure.reason())
         assertSame(original, failure.cause())
         assertEquals(listOf(diagnostic), failure.suppressed())
-        assertThat(failure.message()).contains("Sequence: captured 1/2; stage 2/2", "Actual: observed value",
-            "Condition: second stage\n    Expected: stage operand")
+        assertThat(failure.message()).contains("Sequence: \"captured 1/2; stage 2/2\"", "Actual: observed value",
+            "Current stage: second stage\n        Expected: stage operand")
         assertEquals(listOf(0, 1, 1), listOf(root.calls, actual.calls, operand.calls))
         assertEquals(1, messages)
     }
@@ -169,13 +169,13 @@ class CapturedDiagnosticsTest {
         }
         val second = withOperand("second stage", Reference("Expected", expected),
             AwaitAttempt { unsatisfied("not ready", original) })
-        val run = start<Any, List<Any>>(captured(condition<Any, Any>("condition") { satisfied(it) }, second), false)
+        val run = start<Any, List<Any>>(captured(condition<Any, Any>("condition") { satisfied(it) }, second))
         step(run, actual)
         val failure = diagnose(run, Timeout(step(run, actual)))
 
         assertSame(original, failure.cause())
         assertEquals(listOf(expectedFailure, actualFailure, causeFailure), failure.suppressed())
-        assertThat(failure.message()).contains("Condition: second stage\n    Expected: <unprintable>",
+        assertThat(failure.message()).contains("Current stage: second stage\n        Expected: <unprintable>",
             "Mismatch: not ready", ": <unprintable>")
         assertEquals(listOf(1, 1, 1), listOf(expected.calls, actual.calls, messages))
     }
@@ -185,7 +185,7 @@ class CapturedDiagnosticsTest {
     fun `an external failure keeps the current stage and captures`(completed: Int, operation: Operation) {
         val first = equalTo("ready")
         val last = equalTo("done")
-        val run = start<String, List<String>>(captured(first, last), true)
+        val run = start<String, List<String>>(captured(first, last))
         val values = listOf("ready", "done").take(completed)
         values.forEach { step(run, it) }
         run.beginAttempt()
@@ -195,7 +195,7 @@ class CapturedDiagnosticsTest {
         val result = run.finish(Uncontrolled(ExecutionStep(false, ACQUISITION, 0, attempt)), mock(WaitTiming::class.java))
 
         assertSame(cause, failure(result).cause())
-        assertThat(failure(result).message()).contains("Sequence: captured $completed/2; stage 2/2")
+        assertThat(failure(result).message()).contains("Sequence: \"captured $completed/2; stage 2/2\"")
         assertEquals(values, run.result())
         assertEquals(listOf(first, last), result.conditions().map { it.condition() })
         assertSame(attempt, result.conditions().last().attempts().lastEntry().value)
@@ -203,10 +203,10 @@ class CapturedDiagnosticsTest {
 
     @Test
     fun `completion after the deadline still describes the final stage`() {
-        val run = start<String, List<String>>(captured(equalTo("ready"), equalTo("done")), false)
+        val run = start<String, List<String>>(captured(equalTo("ready"), equalTo("done")))
         step(run, "ready")
         val failure = diagnose(run, Timeout(step(run, "done")))
-        assertThat(failure.message()).contains("Sequence: captured 2/2; stage 2/2", "Expected: \"done\"")
+        assertThat(failure.message()).contains("Sequence: \"captured 2/2; stage 2/2\"", "Expected: \"done\"")
     }
 
     private fun withOperand(name: String, operand: Reference<*>, check: AwaitAttempt<Any, Any>) = object : Condition<Any, Any> {
@@ -223,7 +223,7 @@ class CapturedDiagnosticsTest {
     }
 
     private fun secondStage(second: AwaitCondition): ConditionRun<Any, *> {
-        val run = start<Any, List<Any>>(captured(isNotNull, second), false)
+        val run = start<Any, List<Any>>(captured(isNotNull, second))
         step(run, "ready")
         return run
     }
@@ -233,8 +233,8 @@ class CapturedDiagnosticsTest {
 
     private fun <OBSERVED> step(run: ConditionRun<OBSERVED, *>, actual: OBSERVED): ExecutionStep<OBSERVED> {
         val attempt: Attempt<OBSERVED> = when (val checked = probe(run, actual)) {
-            is Satisfied -> SatisfiedObservation(actual)
-            is Unsatisfied -> UnsatisfiedObservation(actual, checked.mismatch(), checked.cause())
+            is Satisfied -> SatisfiedObservation(actual, checked.diagnostic())
+            is Unsatisfied -> UnsatisfiedObservation(actual, checked.diagnostic(), checked.cause())
         }
         run.record(attempt)
         return ExecutionStep(run.complete(), ACQUISITION, 0, attempt)

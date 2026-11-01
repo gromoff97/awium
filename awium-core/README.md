@@ -47,11 +47,14 @@ Keep definitions immutable; [custom lifecycles](docs/development.md) support per
 | Factory | Meaning |
 | --- | --- |
 | `satisfied(value)` | Chosen result, including null; pass `actual` to return the observation |
-| `unsatisfied()`, `unsatisfied(message)`, `unsatisfied(message, cause)` | Mismatch with optional diagnostics |
+| `unsatisfied(message)`, `unsatisfied(message, cause)` | Mismatch with a required non-blank message and optional cause |
+| `unsatisfied(diagnostic)`, `unsatisfied(diagnostic, cause)` | Mismatch with structured fields |
+| `satisfied(value, diagnostic)` | Success with fields retained in history or if it arrives after the deadline |
 
 The declared result sets the terminal type: `ConditionResult<CharSequence>` yields
 `CharSequence` even for a `String` source. `mapValue(function)` transforms success
-values and preserves mismatches.
+values and preserves diagnostic data. Every mismatch requires a message, including
+one supplied through `Diagnostic`. Null, empty, or whitespace-only messages are rejected.
 
 ## Reasons
 

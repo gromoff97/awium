@@ -82,7 +82,7 @@ String receipt = await(paymentRepository::load).until(condition("payment has a r
 ```
 
 Return `satisfied(value)` to finish with that value, including null, or
-`unsatisfied()` to retry. A mismatch may include a message and cause:
+`unsatisfied(message)` to retry. A mismatch requires a non-blank message and may include a cause:
 `unsatisfied("receipt was absent", cause)`. Any throwable escaping the callback
 stops the wait. For a reusable class, implement `Condition<INPUT, RESULT>` with
 `description()` and `probe(actual)`; its result type determines what `until` returns.
@@ -96,7 +96,7 @@ external state remains shared.
 var check = conditionPerWait("two paid observations", () -> {
     int[] paidObservations = {0};
     return (Payment actual) -> actual.paid() && ++paidObservations[0] >= 2
-            ? satisfied(actual) : unsatisfied();
+            ? satisfied(actual) : unsatisfied("waiting for two paid observations");
 });
 ```
 
@@ -310,7 +310,7 @@ Terminal diagnostics add the stage number and sequence reason; timeout after an
 intermediate success identifies the next stage.
 
 Each entry key is the last attempt number in a group. Adjacent checks share an
-entry when their observations are deeply equal and their status, mismatch text,
+entry when their observations are deeply equal and their status, diagnostic data,
 and exception instance stay unchanged. Execution failures remain separate;
 history is never trimmed. Stored observations are references, so later mutations
 can change what old entries show. `result.conditions()` and each history's

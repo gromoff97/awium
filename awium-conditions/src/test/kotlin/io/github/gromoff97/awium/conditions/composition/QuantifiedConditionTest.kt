@@ -98,7 +98,7 @@ class QuantifiedConditionTest {
         val nested = conditionPerWait<User, User>("second check") {
             factories++
             var calls = 0
-            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied() }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("waiting for a second observation") }
         }
         val actual = listOf(ready, ready)
         repeat(2) {
@@ -113,7 +113,7 @@ class QuantifiedConditionTest {
         val nested = conditionPerWait<User, User>("second check") {
             factories++
             var calls = 0
-            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied() }
+            AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("waiting for a second observation") }
         }
         val actual = listOf(ready, ready)
         val execution = bind<List<User>, List<List<User>>>(captured(any(nested), any(nested)))

@@ -288,7 +288,7 @@ class DiagnosticsSnapshotTest {
 
     @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}, message={1}")
     @MethodSource("blankMessageTerminals")
-    void blankCauseMessagesAreOmittedAndReadOnlyOnce(boolean recording, String message) {
+    void blankCauseMessagesAreOmittedAndReadOnlyOnce(boolean returnResult, String message) {
         int[] reads = {0};
         var cause = new IllegalStateException(message) {
             @Override
@@ -299,7 +299,7 @@ class DiagnosticsSnapshotTest {
         };
         Callable<Object> source = () -> { throw cause; };
         var waiting = withTime(await(source), time, time);
-        var failure = recording ? failure(diagnostic(waiting).until(accepted))
+        var failure = returnResult ? failure(diagnostic(waiting).until(accepted))
                 : assertThrows(AwaitExecutionException.class, () -> waiting.until(accepted)).failure();
 
         assertEquals(SOURCE_FAILED, failure.reason());
@@ -309,8 +309,8 @@ class DiagnosticsSnapshotTest {
     }
 
     private static Stream<Arguments> blankMessageTerminals() {
-        return Stream.of(false, true).flatMap(recording -> Stream.of(null, "", " \r\n\t")
-                .map(message -> arguments(recording, message)));
+        return Stream.of(false, true).flatMap(returnResult -> Stream.of(null, "", " \r\n\t")
+                .map(message -> arguments(returnResult, message)));
     }
 
     @Test
@@ -436,7 +436,7 @@ class DiagnosticsSnapshotTest {
 
     @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}")
     @ValueSource(booleans = {false, true})
-    void diagnosticFailurePreservesTheInterruptRaisedByRendering(boolean recording) {
+    void diagnosticFailurePreservesTheInterruptRaisedByRendering(boolean returnResult) {
         int[] messageCalls = {0};
         var diagnostic = new IllegalStateException() {
             @Override
@@ -454,7 +454,7 @@ class DiagnosticsSnapshotTest {
         var original = new AssertionError("not ready");
         var waiting = timedAwait(() -> actual, config(1, 2, 0), time, time);
         var check = check("ready", value -> unsatisfied("not ready", original));
-        var failure = recording ? failure(diagnostic(waiting).until(check))
+        var failure = returnResult ? failure(diagnostic(waiting).until(check))
                 : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
@@ -465,7 +465,7 @@ class DiagnosticsSnapshotTest {
 
     @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}")
     @ValueSource(booleans = {false, true})
-    void diagnosticErrorMessagesAreNotEvaluatedRecursively(boolean recording) {
+    void diagnosticErrorMessagesAreNotEvaluatedRecursively(boolean returnResult) {
         var interruption = new InterruptedException("diagnostic message interrupted");
         int[] messageCalls = {0};
         var diagnostic = new IllegalStateException() {
@@ -482,7 +482,7 @@ class DiagnosticsSnapshotTest {
             return actual;
         }), time, time).upTo(ofNanos(2));
         var check = check("not ready", value -> unsatisfied("not ready", original));
-        var failure = recording ? failure(diagnostic(waiting).until(check))
+        var failure = returnResult ? failure(diagnostic(waiting).until(check))
                 : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
         assertEquals(TIMEOUT, failure.reason());
         assertSame(original, failure.cause());
@@ -514,7 +514,7 @@ class DiagnosticsSnapshotTest {
 
         var diagnosticFailure = assertFailure(TIMEOUT,
                 () -> timedAwait(() -> new ThrowingValue(cause), config(1, 2, 0), time, time)
-                        .until(check("not ready", actual -> unsatisfied())));
+                        .until(check("not ready", actual -> unsatisfied("not ready"))));
         assertNull(diagnosticFailure.getCause());
         assertArrayEquals(new Throwable[]{cause}, diagnosticFailure.getSuppressed());
         assertThat(diagnosticFailure).hasMessageContainingAll("Rendering failure: " + cause.getClass().getName());
@@ -527,7 +527,7 @@ class DiagnosticsSnapshotTest {
         var waiting = withTime(await(() -> value), time, time)
                 .every(ofNanos(1)).upTo(ofNanos(2));
         var check = new TestCondition<>("not ready", new Reference<>("Expected", value),
-                (Object actual) -> unsatisfied());
+                (Object actual) -> unsatisfied("not ready"));
 
         var returned = failure(diagnostic(waiting).until(check));
         var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
@@ -627,7 +627,7 @@ class DiagnosticsSnapshotTest {
 
     private static Throwable renderFailure(AwaitCondition condition, AwaitFailure.Reason reason, WaitCompletion outcome,
             WaitConfiguration configuration, long attemptNumber) {
-        var run = ConditionExecution.start(condition, false);
+        var run = ConditionExecution.start(condition);
         for (long number = 0; number < attemptNumber; number++) {
             run.record(new Attempt.SatisfiedObservation<>(null));
         }
@@ -637,8 +637,8 @@ class DiagnosticsSnapshotTest {
     private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(OBSERVED observed, ConditionResult<?> result, long completedNanos) {
         return new ExecutionStep<>(false, ACQUISITION, completedNanos,
                 switch (result) {
-                    case ConditionResult.Satisfied<?> ignored -> new Attempt.SatisfiedObservation<>(observed);
-                    case ConditionResult.Unsatisfied<?> mismatch -> new Attempt.UnsatisfiedObservation<>(observed, mismatch.mismatch(), mismatch.cause());
+                    case ConditionResult.Satisfied<?> success -> new Attempt.SatisfiedObservation<>(observed, success.diagnostic());
+                    case ConditionResult.Unsatisfied<?> mismatch -> new Attempt.UnsatisfiedObservation<>(observed, mismatch.diagnostic(), mismatch.cause());
                 });
     }
 
@@ -702,7 +702,7 @@ class DiagnosticsSnapshotTest {
 
     @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}, reference={1}")
     @CsvSource({"false,scalar", "true,scalar", "false,array", "true,array", "false,list", "true,list", "false,entry", "true,entry"})
-    void renderingPreservesInterruptionBetweenFieldsButUsesTheFinalFlagWithinOneReference(boolean recording, String shape) {
+    void renderingPreservesInterruptionBetweenFieldsButUsesTheFinalFlagWithinOneReference(boolean returnResult, String shape) {
         int[] renders = {0, 0, 0};
         Object signalling = mock();
         when(signalling.toString()).thenAnswer(ignored -> {
@@ -736,7 +736,7 @@ class DiagnosticsSnapshotTest {
             @Override public ConditionResult<?> probe(Object actual) { return unsatisfied("not ready", original); }
         };
         var waiting = timedAwait(() -> clearing, config(1, 2, 0), time, time);
-        AwaitFailure failure = recording
+        AwaitFailure failure = returnResult
                 ? failure(diagnostic(waiting).until(check))
                 : assertThrows(AwaitAssertionError.class, () -> waiting.until(check)).failure();
 

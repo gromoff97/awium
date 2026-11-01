@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
@@ -32,6 +33,7 @@ final class HasSizeCondition implements PreservingCondition<Collection<?>> {
     public ConditionResult<?> probe(Collection<?> actual) throws Throwable {
         if (actual == null) return unsatisfied("collection was null");
         int size = actual.size();
-        return comparison.probe(size) instanceof Satisfied<?> ? satisfied(actual) : unsatisfied("collection size was " + size);
+        var diagnostic = new Diagnostic(null, new Reference<>("Actual size", size));
+        return comparison.probe(size) instanceof Satisfied<?> ? satisfied(actual, diagnostic) : unsatisfied(diagnostic.withMismatch("collection size did not match"));
     }
 }

@@ -13,8 +13,8 @@ public final class CheckRun<OBSERVED, RESULT> extends AbstractConditionRun<OBSER
     private ConditionResult<? extends RESULT> verdict;
 
     public CheckRun(AwaitCondition condition,
-            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory, boolean recording) {
-        super(condition, recording);
+            Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+        super(condition);
         evaluation = new ConditionExecution<>(evaluatorFactory);
     }
 

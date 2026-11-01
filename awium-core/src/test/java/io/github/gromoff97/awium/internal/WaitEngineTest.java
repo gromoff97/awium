@@ -82,7 +82,7 @@ class WaitEngineTest {
         Callable<String> source = mock();
         when(clock.getAsLong()).thenReturn(0L, 7L);
         var engine = new WaitEngine<String>(withTime(config(1, 10, 0), clock, time), source,
-                start(accepted, false));
+                start(accepted));
         currentThread().interrupt();
 
         var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor(ignored -> {}));
@@ -187,7 +187,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, start(accepted, false)).waitFor(ignored -> {});
+                }, start(accepted)).waitFor(ignored -> {});
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -352,7 +352,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                start(accepted, false)).waitFor(ignored -> {});
+                start(accepted)).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -373,7 +373,7 @@ class WaitEngineTest {
             doReturn(0L, 1L).doAnswer(ignored -> { currentThread().interrupt(); return 2L; })
                     .doReturn(2L).when(clock).getAsLong();
             return unsatisfied("not yet");
-        }), false)).waitFor(ignored -> {});
+        }))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -394,7 +394,7 @@ class WaitEngineTest {
                 start(check("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
-                }), false)).waitFor(ignored -> {});
+                }))).waitFor(ignored -> {});
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -579,7 +579,7 @@ class WaitEngineTest {
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
         return new WaitEngine<S>(withTime(config, time, parker), source,
-                start(check("test condition", condition), false)).waitFor(ignored -> {});
+                start(check("test condition", condition))).waitFor(ignored -> {});
     }
 
     private static Object successfulObservation(ExecutionStep<?> attempt) {

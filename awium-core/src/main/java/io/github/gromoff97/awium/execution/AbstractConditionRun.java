@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.execution;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 
 import static io.github.gromoff97.awium.execution.FailureDiagnostics.failure;
@@ -15,9 +16,9 @@ public abstract class AbstractConditionRun<OBSERVED, RESULT> implements Conditio
     protected final AwaitCondition condition;
     private final AttemptHistory<OBSERVED> history;
 
-    protected AbstractConditionRun(AwaitCondition condition, boolean recording) {
+    protected AbstractConditionRun(AwaitCondition condition) {
         this.condition = condition;
-        history = new AttemptHistory<>(recording);
+        history = new AttemptHistory<>();
     }
 
     @Override
@@ -37,13 +38,8 @@ public abstract class AbstractConditionRun<OBSERVED, RESULT> implements Conditio
         var conditions = history.conditions(historyConditions());
         return outcome instanceof SatisfiedWait
                 ? new Succeeded<>(conditions, result())
-                : new Failed<>(conditions, failure(this, outcome, configuration, history.count()));
+                : new Failed<>(conditions, failure(this, outcome, configuration, history.count(), conditions));
     }
 
-    protected void describeAttempt(DiagnosticText text, StringBuilder out) {
-        out.append('\n');
-        text.condition(out, "Condition", condition, "");
-    }
-
-    protected void describeNext(DiagnosticText text, StringBuilder out, ExecutionStep<?> step) {}
+    protected Diagnostic diagnostics(Attempt<?> attempt) { return Diagnostic.EMPTY; }
 }

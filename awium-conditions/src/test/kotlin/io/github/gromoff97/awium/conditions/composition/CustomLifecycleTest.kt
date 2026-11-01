@@ -64,7 +64,7 @@ class CustomLifecycleTest {
         val check = object : Condition<String, Int> {
             override fun description() = "measure text"
             override fun probe(actual: String): ConditionResult<Int> = unsatisfied("observed")
-            override fun newRun(definition: AwaitCondition, recording: Boolean) = object : AbstractConditionRun<String, Int>(definition, recording) {
+            override fun newRun(definition: AwaitCondition) = object : AbstractConditionRun<String, Int>(definition) {
                 private var length: Int? = null
                 override fun probe(actual: String): ConditionResult<*> { length = actual.length; return unsatisfied<Int>("observed") }
                 override fun complete() = length != null
@@ -83,7 +83,7 @@ class CustomLifecycleTest {
             override fun newAttempt(): AwaitAttempt<String, String> {
                 factories++
                 var calls = 0
-                return AwaitAttempt { if (++calls == 2) satisfied(it) else unsatisfied() }
+                return AwaitAttempt { if (++calls == 2) satisfied(it) else unsatisfied("waiting for a second observation") }
             }
         }.because("fresh state")
         val sequence = captured(check, check)

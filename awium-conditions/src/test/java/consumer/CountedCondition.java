@@ -16,8 +16,8 @@ public record CountedCondition(int observations) implements Condition<String, In
     public ConditionResult<Integer> probe(String actual) { return satisfied(actual.length()); }
 
     @Override
-    public ConditionRun<String, Integer> newRun(AwaitCondition definition, boolean recording) {
-        return new AbstractConditionRun<>(definition, recording) {
+    public ConditionRun<String, Integer> newRun(AwaitCondition definition) {
+        return new AbstractConditionRun<>(definition) {
             private int count;
             private int totalLength;
 

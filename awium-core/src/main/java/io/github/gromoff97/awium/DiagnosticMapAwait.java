@@ -33,7 +33,7 @@ public final class DiagnosticMapAwait<OBSERVED extends Map<?, ?>, ENTRY extends 
 
     public AwaitResult<OBSERVED, VALUE> until(
             MapValueCondition<? super OBSERVED> condition) {
-        return capture(condition);
+        return execute(condition);
     }
 
 }

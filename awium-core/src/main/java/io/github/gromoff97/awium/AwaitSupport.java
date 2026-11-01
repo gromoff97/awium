@@ -19,15 +19,11 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
     }
 
     final <RESULT> RESULT complete(AwaitCondition condition) {
-        return this.<RESULT>execute(condition, false).orThrow();
+        return this.<RESULT>execute(condition).orThrow();
     }
 
-    final <RESULT> AwaitResult<OBSERVED, RESULT> capture(AwaitCondition condition) {
-        return execute(condition, true);
-    }
-
-    private <RESULT> AwaitResult<OBSERVED, RESULT> execute(AwaitCondition condition, boolean recording) {
-        var execution = ConditionExecution.<OBSERVED, RESULT>start(condition, recording);
+    final <RESULT> AwaitResult<OBSERVED, RESULT> execute(AwaitCondition condition) {
+        var execution = ConditionExecution.<OBSERVED, RESULT>start(condition);
         var outcome = new WaitEngine<>(configuration, source, execution)
                 .waitFor(step -> execution.record(step.attempt()));
         return execution.finish(outcome, configuration);

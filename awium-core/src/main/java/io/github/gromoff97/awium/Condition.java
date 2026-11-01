@@ -13,8 +13,8 @@ public interface Condition<INPUT, RESULT> extends AwaitCondition.InputCondition<
     default AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception { return this::probe; }
 
     @Override
-    default ConditionRun<INPUT, RESULT> newRun(AwaitCondition definition, boolean recording) {
-        return new CheckRun<>(definition, this::newAttempt, recording);
+    default ConditionRun<INPUT, RESULT> newRun(AwaitCondition definition) {
+        return new CheckRun<>(definition, this::newAttempt);
     }
 
     @Override

@@ -77,7 +77,7 @@ class CompositionDiagnosticsTest {
         val nested = object : Condition<String, String> {
             override fun description() = "custom expectation"
             override fun references() = listOf(Reference("Expected", operand))
-            override fun probe(actual: String) = unsatisfied<String>()
+            override fun probe(actual: String) = unsatisfied<String>("custom expectation was not met")
         }
         assertSame(operand, allValues(nested).references().single().value())
     }
@@ -198,11 +198,11 @@ class CompositionDiagnosticsTest {
 
     @Test
     fun `captured keeps the failed quantifier stage mismatch`() {
-        val check = all(condition<Any, Any>("account is active") { unsatisfied() })
-        val run = start<List<String>, List<List<String>>>(captured(isNotNull, check), false)
+        val check = all(condition<Any, Any>("account is active") { unsatisfied("account is not active") })
+        val run = start<List<String>, List<List<String>>>(captured(isNotNull, check))
         probe(run, listOf("pending"))
         val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, listOf("pending")))
-        assertEquals("not all collection elements matched (checked 1)", rejected.mismatch())
+        assertEquals("not all collection elements matched (checked 1): account is not active", rejected.mismatch())
         assertEquals("all collection elements match: account is active", check.description())
         assertEquals(listOf(listOf("pending")), run.result())
     }
@@ -253,7 +253,7 @@ class CompositionDiagnosticsTest {
     @Test
     fun `a missing captured key retains lookup context without initializing its nested check`() {
         val check = valueFor("customerId", conditionPerWait<String, String>("nested") { throw AssertionError("nested factory called") })
-        val run = start<Map<String, String>, List<Map<String, String>>>(captured(check, check), false)
+        val run = start<Map<String, String>, List<Map<String, String>>>(captured(check, check))
         val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, emptyMap()))
         assertEquals("map did not contain the expected key", rejected.mismatch())
         assertEquals("customerId", check.references().single().value())
@@ -306,26 +306,26 @@ class CompositionDiagnosticsTest {
     companion object {
         @JvmStatic
         fun quantifierMismatches(): List<Arguments> {
-            val rejected = condition<Any, Any>("account is active") { unsatisfied() }
+            val rejected = condition<Any, Any>("account is active") { unsatisfied("account is not active") }
             val matched = condition<Any, Any>("account is active") { satisfied(it) }
             val collection = listOf("pending")
             val map = mapOf("account" to "pending")
             return listOf(
-                argumentSet("all elements", all(rejected), collection, "all collection elements match", "not all collection elements matched (checked 1)"),
-                argumentSet("any element", any(rejected), collection, "some collection elements match", "no collection elements matched (checked 1)"),
+                argumentSet("all elements", all(rejected), collection, "all collection elements match", "not all collection elements matched (checked 1): account is not active"),
+                argumentSet("any element", any(rejected), collection, "some collection elements match", "no collection elements matched (checked 1): account is not active"),
                 argumentSet("no element", none(matched), collection, "no collection elements match", "some collection elements matched (checked 1)"),
-                argumentSet("all entries", allEntries<Any, Any>(rejected), map, "map entries: all collection elements match", "map entries: not all collection elements matched (checked 1)"),
-                argumentSet("any entry", hasEntry<Any, Any>(rejected), map, "map entries: some collection elements match", "map entries: no collection elements matched (checked 1)"),
+                argumentSet("all entries", allEntries<Any, Any>(rejected), map, "map entries: all collection elements match", "map entries: not all collection elements matched (checked 1): account is not active"),
+                argumentSet("any entry", hasEntry<Any, Any>(rejected), map, "map entries: some collection elements match", "map entries: no collection elements matched (checked 1): account is not active"),
                 argumentSet("no entry", hasNoEntry<Any, Any>(matched), map, "map entries: no collection elements match", "map entries: some collection elements matched (checked 1)"),
-                argumentSet("all keys", allKeys(rejected), map, "map keys: all collection elements match", "map keys: not all collection elements matched (checked 1)"),
-                argumentSet("any key", anyKey(rejected), map, "map keys: some collection elements match", "map keys: no collection elements matched (checked 1)"),
+                argumentSet("all keys", allKeys(rejected), map, "map keys: all collection elements match", "map keys: not all collection elements matched (checked 1): account is not active"),
+                argumentSet("any key", anyKey(rejected), map, "map keys: some collection elements match", "map keys: no collection elements matched (checked 1): account is not active"),
                 argumentSet("no key", noKey(matched), map, "map keys: no collection elements match", "map keys: some collection elements matched (checked 1)"),
-                argumentSet("all values", allValues(rejected), map, "map values: all collection elements match", "map values: not all collection elements matched (checked 1)"),
-                argumentSet("any value", anyValue(rejected), map, "map values: some collection elements match", "map values: no collection elements matched (checked 1)"),
+                argumentSet("all values", allValues(rejected), map, "map values: all collection elements match", "map values: not all collection elements matched (checked 1): account is not active"),
+                argumentSet("any value", anyValue(rejected), map, "map values: some collection elements match", "map values: no collection elements matched (checked 1): account is not active"),
                 argumentSet("no value", noValue(matched), map, "map values: no collection elements match", "map values: some collection elements matched (checked 1)"),
                 argumentSet("nested quantifiers", all(any(rejected)), listOf(collection),
                     "all collection elements match: some collection elements match",
-                    "not all collection elements matched (checked 1): no collection elements matched (checked 1)")
+                    "not all collection elements matched (checked 1): no collection elements matched (checked 1): account is not active")
             )
         }
 

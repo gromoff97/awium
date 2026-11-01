@@ -7,6 +7,9 @@
 `tryAwait(source).until(condition)` returns `AwaitResult<OBSERVED, RESULT>` (source,
 then result type). Here `receipt` is a `Condition<Payment, String>`.
 
+Both entry points run and record attempts identically. `await` returns the selected
+value or throws; `tryAwait` returns the outcome for inspection.
+
 ```java
 var result = tryAwait(paymentRepository::load).until(receipt);
 // AwaitResult<Payment, String>
@@ -32,6 +35,39 @@ Wrappers use `AwaitFailure`'s message and cause. Distinct rendering failures are
 retained by identity in `suppressed()` and wrapper `getSuppressed()`; original
 throwables remain unchanged.
 
+Failure messages include the last attempt's details and unsatisfied reasons in
+attempt order, grouped by condition. Earlier reasons may already be resolved.
+`orThrow()` uses the same message as ordinary `await`.
+
+## Condition diagnostics
+
+Implementing `Condition` is enough to return named fields from `probe`:
+
+```java
+final class ThreeItems implements Condition<List<String>, List<String>> {
+    @Override
+    public String description() { return "collection has three items"; }
+
+    @Override
+    public ConditionResult<List<String>> probe(List<String> actual) {
+        int size = actual.size();
+        var details = new Diagnostic(null,
+                new Reference<>("Expected size", 3), new Reference<>("Actual size", size));
+        return size == 3 ? satisfied(actual, details)
+                : unsatisfied(details.withMismatch("collection size did not match"));
+    }
+}
+```
+
+`Diagnostic` contains a `mismatch` and an immutable list of named `fields`.
+The message must be non-blank for an unsatisfied result; success and extra lifecycle
+context may omit it. Null, empty, or whitespace-only mismatch messages cause an
+`IllegalArgumentException`: `unsatisfied message must not be null or blank`.
+Here the size is measured once, so later list changes cannot alter that field.
+Field values are retained by reference; use measured scalars or immutable values to
+preserve their contents. A condition-valued field prints its description, operands,
+and reason. Core supplies the layout, stop reason, attempt number, and timing.
+
 ## Execution failures
 
 Null sources or conditions and invalid eager arguments fail before polling.
@@ -50,13 +86,14 @@ The sealed `Attempt<OBSERVED>` has four immutable records:
 
 | Variant | Fields | Meaning |
 | --- | --- | --- |
-| `SatisfiedObservation` | `observed` | This check passed |
-| `UnsatisfiedObservation` | `observed`, `mismatch`, `cause` | Mismatch; retry allowed even with a cause |
-| `FailedAfterObservation` | `observed`, `operation`, `cause`, `location` | Observation obtained, then execution failed |
+| `SatisfiedObservation` | `observed`, `diagnostic` | This check passed |
+| `UnsatisfiedObservation` | `observed`, `diagnostic`, `cause` | Mismatch; retry allowed even with a cause |
+| `FailedAfterObservation` | `observed`, `operation`, `cause`, `location`, `diagnostic` | Observation obtained, then execution failed |
 | `FailedBeforeObservation` | `operation`, `cause` | Observation unavailable |
 
 Observed nulls and observations preceding a check failure or interruption are retained.
-Every variant has `cause()` (null if absent). Failure variants share
+Every variant has `cause()` (null if absent) and `diagnostic()` (empty if absent).
+`UnsatisfiedObservation.mismatch()` reads the diagnostic message. Failure variants share
 `Attempt.Failure<OBSERVED>`: non-null cause, operation `SOURCE`/`CONDITION`/`WAITING`,
 and optional nested `location()`. Record patterns preserve types without casts.
 
@@ -72,7 +109,7 @@ Each `ConditionHistory<OBSERVED>` exposes:
 | `attempts()` | Immutable `NavigableMap<Long, Attempt<OBSERVED>>` |
 
 Consecutive satisfied or unsatisfied attempts share an entry when observations match
-under `Objects.deepEquals` and status, mismatch, and exception instance stay unchanged.
+under `Objects.deepEquals` and status, diagnostic data, and exception instance stay unchanged.
 Equal exception text is insufficient. Execution failures remain separate.
 Entries retain the latest observation. Returning to an earlier value starts a new
 entry; phase changes alone do not.
@@ -93,12 +130,12 @@ For a single history, ranges start at 1 and then after the preceding key.
 
 Grouping neither trims history nor skips checks. It calls no `hashCode` or `toString`
 and reads no exception messages. Equality should be side-effect free; if it throws,
-observations stay separate. Memory is unbounded. Ordinary `await` neither retains
-nor compares attempts.
+observations stay separate. Memory is unbounded in both entry points.
 
 Mutable observations can lose earlier contents; later mutations affect old entries.
-Fields read inside a check are not recorded separately. Statuses and mismatch strings
-stay fixed. History has no timing or progress objects.
+Measured values explicitly returned in a diagnostic remain available through
+`attempt.diagnostic().fields()`. Statuses and mismatch strings stay fixed.
+History has no timing or progress objects.
 
 ## Reading diagnostics
 

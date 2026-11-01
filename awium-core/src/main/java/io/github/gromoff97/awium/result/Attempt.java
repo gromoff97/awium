@@ -9,14 +9,25 @@ public sealed interface Attempt<OBSERVED> {
         return null;
     }
 
-    record SatisfiedObservation<OBSERVED>(OBSERVED observed) implements Attempt<OBSERVED> {
+    default Diagnostic diagnostic() { return Diagnostic.EMPTY; }
+
+    record SatisfiedObservation<OBSERVED>(OBSERVED observed, Diagnostic diagnostic) implements Attempt<OBSERVED> {
+        public SatisfiedObservation { requireNonNull(diagnostic, "diagnostic must not be null"); }
+        public SatisfiedObservation(OBSERVED observed) { this(observed, Diagnostic.EMPTY); }
         @Override
         public String toString() {
             return attempt(this);
         }
     }
 
-    record UnsatisfiedObservation<OBSERVED>(OBSERVED observed, String mismatch, Throwable cause) implements Attempt<OBSERVED> {
+    record UnsatisfiedObservation<OBSERVED>(OBSERVED observed, Diagnostic diagnostic, Throwable cause) implements Attempt<OBSERVED> {
+        public UnsatisfiedObservation {
+            requireNonNull(diagnostic, "diagnostic must not be null").requireMismatch();
+        }
+        public UnsatisfiedObservation(OBSERVED observed, String mismatch, Throwable cause) {
+            this(observed, new Diagnostic(mismatch), cause);
+        }
+        public String mismatch() { return diagnostic.mismatch(); }
         @Override
         public String toString() {
             return attempt(this);
@@ -24,11 +35,16 @@ public sealed interface Attempt<OBSERVED> {
     }
 
     record FailedAfterObservation<OBSERVED>(OBSERVED observed, Operation operation,
-            Throwable cause, String location) implements Failure<OBSERVED> {
+            Throwable cause, String location, Diagnostic diagnostic) implements Failure<OBSERVED> {
 
         public FailedAfterObservation {
             requireNonNull(operation, "operation must not be null");
             requireNonNull(cause, "cause must not be null");
+            requireNonNull(diagnostic, "diagnostic must not be null");
+        }
+
+        public FailedAfterObservation(OBSERVED observed, Operation operation, Throwable cause, String location) {
+            this(observed, operation, cause, location, Diagnostic.EMPTY);
         }
 
         @Override

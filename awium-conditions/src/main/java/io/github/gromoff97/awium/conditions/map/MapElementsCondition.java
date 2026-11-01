@@ -52,7 +52,8 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
             if (actual == null) return unsatisfied("map was null");
             var result = evaluator.probeAt(view(actual), "map " + part.label());
             return result instanceof Unsatisfied<?> failure
-                    ? unsatisfied("map " + part.label() + ": " + failure.mismatch(), failure.cause())
+                    ? unsatisfied(failure.diagnostic().withMismatch(
+                            "map " + part.label() + ": " + failure.mismatch()), failure.cause())
                     : result.mapValue(ignored -> actual);
         };
     }

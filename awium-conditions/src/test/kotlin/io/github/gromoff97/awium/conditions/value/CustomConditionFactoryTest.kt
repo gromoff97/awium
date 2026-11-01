@@ -61,9 +61,9 @@ class CustomConditionFactoryTest {
     }
 
     @Test
-    fun `can fail without repeating its description`() {
-        val condition = condition<Any, Any>("status is ready") { unsatisfied() }
-        assertNull(rejection(condition, "pending").mismatch())
+    fun `keeps the callback mismatch separate from its description`() {
+        val condition = condition<Any, Any>("status is ready") { unsatisfied("status was pending") }
+        assertEquals("status was pending", rejection(condition, "pending").mismatch())
     }
 
     @Test

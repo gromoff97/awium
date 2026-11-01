@@ -2,12 +2,14 @@ package io.github.gromoff97.awium.execution;
 
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
+import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,8 +17,23 @@ import static org.junit.jupiter.api.Assertions.*;
 class AttemptHistoryTest {
 
     @Test
+    void failingDiagnosticEqualityKeepsAttemptsSeparate() {
+        record Uncomparable() {
+            @Override public boolean equals(Object other) { throw new AssertionError("cannot compare"); }
+        }
+        var history = new AttemptHistory<String>();
+        var condition = new TestCondition<>("ready", null, ConditionResult::satisfied);
+        for (int i = 0; i < 2; i++) {
+            history.add(1, new SatisfiedObservation<>("same observation",
+                    new Diagnostic(null, new Reference<>("Detail", new Uncomparable()))));
+        }
+
+        assertThat(history.conditions(List.of(condition)).getFirst().attempts().keySet()).containsExactly(1L, 2L);
+    }
+
+    @Test
     void snapshotsRemainUnchangedAsTheLastNumberMovesAndAnotherStateBegins() {
-        var history = new AttemptHistory<String>(true);
+        var history = new AttemptHistory<String>();
         var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
         var empty = history.conditions(List.of(condition)).getFirst().attempts();
         var first = new UnsatisfiedObservation<>(new String("pending"), "pending", null);
@@ -40,7 +57,7 @@ class AttemptHistoryTest {
 
     @Test
     void rejectsNullAttemptsWithoutAdvancingTheNumber() {
-        var history = new AttemptHistory<String>(true);
+        var history = new AttemptHistory<String>();
         history.add(1, new SatisfiedObservation<>("ready"));
 
         assertThrows(NullPointerException.class, () -> history.add(1, null));
@@ -48,8 +65,8 @@ class AttemptHistoryTest {
     }
 
     @Test
-    void countsWithoutRetainingOrInspectingRecordsForOrdinaryAwait() {
-        var history = new AttemptHistory<String>(false);
+    void groupsRepeatedAttemptsWithoutReadingCauseMessages() {
+        var history = new AttemptHistory<String>();
         var cause = new AssertionError("unreadable") {
             @Override public String getMessage() { throw new AssertionError("must not be read"); }
         };
@@ -58,12 +75,12 @@ class AttemptHistoryTest {
         assertEquals(0, history.count());
         for (int i = 0; i < 300; i++) history.add(1, attempt);
         assertEquals(300, history.count());
-        assertTrue(history.conditions(List.of(condition)).isEmpty());
+        assertEquals(Map.of(300L, attempt), history.conditions(List.of(condition)).getFirst().attempts());
     }
 
     @Test
     void diagnosticChangesRemainInOrderEvenWhenAnEarlierMessageReturns() {
-        var history = new AttemptHistory<String>(true);
+        var history = new AttemptHistory<String>();
         var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
         for (String mismatch : List.of("queued", "queued", "running", "queued", "queued")) {
             history.add(1, new UnsatisfiedObservation<>("observation", mismatch, null));
@@ -77,11 +94,11 @@ class AttemptHistoryTest {
 
     @Test
     void observationEqualityHandlesNullArraysAndReturningToAnEarlierValue() {
-        var history = new AttemptHistory<Object>(true);
+        var history = new AttemptHistory<Object>();
         var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
         var observations = asList(null, null,
                 new int[]{1}, new int[]{1}, new int[]{2}, new int[]{2}, new int[]{1});
-        for (Object observation : observations) history.add(1, new UnsatisfiedObservation<>(observation, null, null));
+        for (Object observation : observations) history.add(1, new UnsatisfiedObservation<>(observation, "not ready", null));
         var attempts = history.conditions(List.of(condition)).getFirst().attempts();
         assertThat(attempts.keySet()).containsExactly(2L, 4L, 6L, 7L);
         attempts.forEach((through, attempt) -> {

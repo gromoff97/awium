@@ -29,7 +29,7 @@ class ConditionBindingTest {
 
     @Test
     void interruptedPreparationSkipsTheNestedProbe() throws Throwable {
-        when(condition.newRun(condition, false)).thenReturn(run);
+        when(condition.newRun(condition)).thenReturn(run);
         doAnswer(ignored -> {
             currentThread().interrupt();
             return null;
@@ -42,7 +42,7 @@ class ConditionBindingTest {
 
     @Test
     void interruptedProbeSkipsCompletionAndKeepsItsCause() throws Throwable {
-        when(condition.newRun(condition, false)).thenReturn(run);
+        when(condition.newRun(condition)).thenReturn(run);
         doAnswer(ignored -> {
             currentThread().interrupt();
             return unsatisfied("stopped", cause);
@@ -57,7 +57,7 @@ class ConditionBindingTest {
 
     @Test
     void interruptedCompletionSkipsResultAndKeepsTheProbeCause() throws Throwable {
-        when(condition.newRun(condition, false)).thenReturn(run);
+        when(condition.newRun(condition)).thenReturn(run);
         doReturn(unsatisfied("observed", cause)).when(run).probe("actual");
         when(run.complete()).thenAnswer(ignored -> {
             currentThread().interrupt();

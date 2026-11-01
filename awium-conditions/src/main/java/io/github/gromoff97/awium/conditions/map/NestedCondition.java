@@ -40,10 +40,11 @@ record NestedCondition<INPUT, VALUE, RESULT>(String selection, AwaitCondition ne
             case Satisfied<? extends VALUE> success -> {
                 var result = evaluator.probeAt(success.value(), selection);
                 yield result instanceof Unsatisfied<?> failure
-                        ? unsatisfied(failure.mismatch() == null ? selection : selection + ": " + failure.mismatch(), failure.cause())
+                        ? unsatisfied(failure.diagnostic().withMismatch(
+                                selection + ": " + failure.mismatch()), failure.cause())
                         : result;
             }
-            case Unsatisfied<?> failure -> unsatisfied(failure.mismatch(), failure.cause());
+            case Unsatisfied<?> failure -> unsatisfied(failure.diagnostic(), failure.cause());
         };
     }
 }

@@ -3,11 +3,15 @@ package io.github.gromoff97.awium.api;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.ValueAwait;
 import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.AwaitAssertionError;
+import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.support.AwaitAssertions;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
@@ -39,8 +43,9 @@ class TryAwaitTest {
 
     private final FakeTime time = new FakeTime(0);
 
-    @Test
-    void ordinaryAwaitDoesNotCompareObservationsForHistory() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void bothTerminalsGroupObservationsAndReturnTheSelectedValue(boolean returnResult) {
         int[] comparisons = {0};
         class Observation {
             @Override public boolean equals(Object other) { comparisons[0]++; return true; }
@@ -49,11 +54,55 @@ class TryAwaitTest {
         var ready = new Observation();
         var observations = List.of(new Observation(), new Observation(), ready).iterator();
 
-        var result = withTime(await(observations::next), time, time).every(ofNanos(1))
-                .until(matching(actual -> actual == ready));
+        var waiting = withTime(await(observations::next), time, time).every(ofNanos(1));
+        var condition = matching((Observation actual) -> actual == ready);
+        var result = returnResult ? diagnostic(waiting).until(condition).orThrow() : waiting.until(condition);
 
         assertSame(ready, result);
-        assertEquals(0, comparisons[0]);
+        assertEquals(1, comparisons[0]);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void timeoutShowsEarlierReasonsIncludingOneThatReturns(boolean returnResult) {
+        var reasons = List.of("payment pending", "payment pending", "stock missing", "payment pending", "payment pending").iterator();
+        var condition = check("order ready", actual -> unsatisfied(reasons.next()));
+        var waiting = timedAwait(() -> "order", config(1, 5, 0), time, time);
+        AwaitAssertionError error;
+        if (returnResult) {
+            var result = diagnostic(waiting).until(condition);
+            error = assertThrows(AwaitAssertionError.class, result::orThrow);
+            assertThat(error.getMessage()).isEqualTo(((AwaitResult.Failed<?, ?>) result).failure().message());
+        } else {
+            error = assertThrows(AwaitAssertionError.class, () -> waiting.until(condition));
+        }
+
+        assertThat(error.getMessage()).contains("""
+                Unsatisfied attempts (condition 1):
+                    Through #2: payment pending
+                    Through #3: stock missing
+                    Through #5: payment pending
+                """.stripTrailing());
+        assertFalse(reasons.hasNext());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void anExecutionFailureKeepsEarlierRejections(boolean returnResult) {
+        var cause = new IllegalStateException("source unavailable");
+        int[] calls = {0};
+        var waiting = timedAwait(() -> {
+            if (++calls[0] == 3) throw cause;
+            return "order";
+        }, config(1, 5, 0), time, time);
+        var condition = check("order ready", actual -> unsatisfied("payment pending"));
+        var error = assertThrows(AwaitExecutionException.class, () -> {
+            if (returnResult) diagnostic(waiting).until(condition).orThrow();
+            else waiting.until(condition);
+        });
+
+        assertSame(cause, error.getCause());
+        assertThat(error.getMessage()).contains("Through #2: payment pending", "source unavailable");
     }
 
     @Test
@@ -93,10 +142,10 @@ class TryAwaitTest {
         assertNull(result.orThrow());
         assertFalse(outcomes.hasNext());
         switch (result.conditions().getFirst().attempts().firstEntry().getValue()) {
-            case UnsatisfiedObservation(var observed, var mismatch, var error) -> {
+            case UnsatisfiedObservation(var observed, var diagnostic, var error) -> {
                 String actual = observed;
                 assertNull(actual);
-                assertEquals("pending", mismatch);
+                assertEquals("pending", diagnostic.mismatch());
                 assertSame(cause, error);
             }
             default -> fail("a returned mismatch must remain a completed check");

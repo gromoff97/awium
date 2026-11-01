@@ -106,7 +106,7 @@ public final class CustomConsumer {
 
     public static Map<String, User> noMissingId(Map<String, User> users) {
         return await(() -> users).until(hasNoEntry(condition("missing id", entry -> entry.getValue().id() == 0
-                ? satisfied(entry.getValue()) : unsatisfied())));
+                ? satisfied(entry.getValue()) : unsatisfied("entry value is not active"))));
     }
     public static List<User> inferredIdentities(User user) {
         var check = condition("identity", (User actual) -> satisfied(actual));

@@ -27,12 +27,12 @@ class HasSizeConditionTest {
     fun `a mismatch keeps the size observed during its probe`() {
         val values = mutableListOf<Int>()
         val check = CollectionConditions.hasSize(4)
-        val mismatches = (1..3).map { value ->
+        val sizes = (1..3).map { value ->
             values += value
-            rejection(check, values).mismatch()
+            rejection(check, values).diagnostic().fields().single().value()
         }
         values += 99
-        assertEquals(listOf("collection size was 1", "collection size was 2", "collection size was 3"), mismatches)
+        assertEquals(listOf(1, 2, 3), sizes)
     }
 
     @Test
@@ -52,8 +52,10 @@ class HasSizeConditionTest {
 
     @ParameterizedTest
     @MethodSource("diagnostics")
-    fun `reports the observed size`(condition: AwaitCondition, actual: Any, expected: String) {
-        assertEquals(expected, rejection(condition, actual).mismatch())
+    fun `reports the observed size`(condition: AwaitCondition, actual: Any, label: String, expected: Int) {
+        val field = rejection(condition, actual).diagnostic().fields().single()
+        assertEquals(label, field.label())
+        assertEquals(expected, field.value())
     }
 
     @ParameterizedTest
@@ -140,9 +142,9 @@ class HasSizeConditionTest {
 
         @JvmStatic
         fun diagnostics() = listOf(
-            argumentSet("collection", CollectionConditions.hasSize(2), listOf("value"), "collection size was 1"),
-            argumentSet("map", MapConditions.hasSize(2), mapOf("key" to "value"), "map size was 1"),
-            argumentSet("text", StringConditions.hasLength(5), "read", "string length was 4")
+            argumentSet("collection", CollectionConditions.hasSize(2), listOf("value"), "Actual size", 1),
+            argumentSet("map", MapConditions.hasSize(2), mapOf("key" to "value"), "Actual size", 1),
+            argumentSet("text", StringConditions.hasLength(5), "read", "Actual length", 4)
         )
 
         @JvmStatic

@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.execution.AbstractConditionRun;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -8,9 +9,11 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,6 +60,40 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class FailureDiagnosticsTest {
+
+    @Test
+    void aRunCanAddFailureDetailsWithoutRepeatingItsProbe() {
+        var run = describedRun(() -> new Diagnostic(null, new Reference<>("Detail", "custom")));
+        var attempt = new UnsatisfiedObservation<Object>("actual", "not ready", null);
+        run.record(attempt);
+        var outcome = new Timeout(new ExecutionStep<>(false, ACQUISITION, 2, attempt));
+
+        var report = failure(run.finish(outcome, config(1, 2, 0)));
+
+        assertThat(report.message()).contains("Attempt: 1 (ACQUISITION)", "Condition: ready",
+                "Expected: \"ready\"", "Actual: \"actual\"", "Mismatch: not ready", "Timing:")
+                .containsOnlyOnce("Detail: \"custom\"");
+    }
+
+    @ParameterizedTest
+    @MethodSource("failureCases")
+    void aBrokenFailureHookPreservesTheOriginalCategory(
+            Reason reason, Throwable original, Phase phase, Attempt<Object> retained,
+            Function<ExecutionStep<Object>, WaitCompletion> completion) {
+        var rendering = new AssertionError("custom diagnostics failed");
+        var run = describedRun(() -> { throw rendering; });
+        run.record(retained);
+        var outcome = completion.apply(new ExecutionStep<>(false, phase, 2, retained));
+
+        var report = failure(run.finish(outcome, config(1, 2, 0)));
+
+        assertEquals(reason, report.reason());
+        assertSame(original, report.cause());
+        assertThat(report.suppressed()).containsExactly(rendering);
+        assertThat(report.message()).contains("Attempt: 1 (" + phase + ")", "Timing:",
+                "Cause:", "Rendering failure: java.lang.AssertionError");
+        assertEquals(0, original.getSuppressed().length);
+    }
 
     @Test
     void brokenUserMetadataDoesNotHideTheProbeFailure() {
@@ -137,7 +174,7 @@ class FailureDiagnosticsTest {
         var attempt = new ExecutionStep<>(false, phase, 2, retained);
         var outcome = completion.apply(attempt);
         var configuration = config(1, 2, 0);
-        var run = ConditionExecution.<Object, Object>start(metadata, true);
+        var run = ConditionExecution.<Object, Object>start(metadata);
         run.record(retained);
         var report = run.finish(outcome, configuration);
         var returned = failure(report);
@@ -169,6 +206,15 @@ class FailureDiagnosticsTest {
         assertSame(original, failure.getCause());
         assertEquals(0, failure.getSuppressed().length);
         assertEquals(0, original.getSuppressed().length);
+    }
+
+    private static AbstractConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
+        return new AbstractConditionRun<>(diagnosticCondition("ready", new Reference<>("Expected", "ready"))) {
+            @Override public ConditionResult<?> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
+            @Override public boolean complete() { throw new AssertionError("diagnostics must not evaluate completion"); }
+            @Override public Object result() { throw new AssertionError("diagnostics must not retrieve a result"); }
+            @Override protected Diagnostic diagnostics(Attempt<?> attempt) { return diagnostic.get(); }
+        };
     }
 
     private static List<Arguments> failureCases() {

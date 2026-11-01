@@ -99,7 +99,7 @@ class CompositionFailureTest {
             if (interrupted) Thread.currentThread().interrupt()
             null
         }
-        val run = start<String, List<String>>(captured(broken, isNotNull), false)
+        val run = start<String, List<String>>(captured(broken, isNotNull))
         assertThat(assertThrows(NullPointerException::class.java) { probe(run, "actual") })
             .hasMessage("condition returned null ConditionResult")
         assertTrue(run.result().isEmpty())

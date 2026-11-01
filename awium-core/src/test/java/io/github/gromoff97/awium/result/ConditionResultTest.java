@@ -1,14 +1,31 @@
 package io.github.gromoff97.awium.result;
 
 import org.junit.jupiter.api.Test;
+import io.github.gromoff97.awium.AwaitCondition.Reference;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ConditionResultTest {
+
+    @Test
+    void mappingAValuePreservesItsDiagnosticObject() {
+        var diagnostic = new Diagnostic(null, new Reference<>("Length", 3));
+        assertSame(diagnostic, satisfied("abc", diagnostic).mapValue(String::length).diagnostic());
+    }
+
+    @Test
+    void mappingAMismatchPreservesItsDiagnosticObject() {
+        var diagnostic = new Diagnostic("pending", new Reference<>("Progress", 2));
+        assertSame(diagnostic, unsatisfied(diagnostic).mapValue(value -> "unused").diagnostic());
+    }
 
     @Test
     void mapsSuccessfulValues() {
@@ -31,20 +48,32 @@ class ConditionResultTest {
         var mismatch = ConditionResult.<String>unsatisfied("retry", cause).mapValue(value -> {
             throw new AssertionError("mismatches must not be mapped");
         });
-        assertEquals(new Unsatisfied<>("retry", cause), mismatch);
+        assertEquals(new Unsatisfied<>(new Diagnostic("retry"), cause), mismatch);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t\n", "\u2003"})
+    void unsatisfiedRequiresANonBlankMessage(String message) {
+        var failure = assertThrows(IllegalArgumentException.class, () -> unsatisfied(message));
+        assertEquals("unsatisfied message must not be null or blank", failure.getMessage());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t\n", "\u2003"})
+    void diagnosticFieldsAndACauseDoNotReplaceTheRequiredMessage(String message) {
+        var diagnostic = new Diagnostic(message, new Reference<>("Actual size", 2));
+        var cause = new IllegalStateException("details");
+        var failure = assertThrows(IllegalArgumentException.class, () -> new Unsatisfied<>(diagnostic, cause));
+        assertEquals("unsatisfied message must not be null or blank", failure.getMessage());
     }
 
     @Test
-    void unsatisfiedAcceptsOptionalDiagnostics() {
-        var plain = unsatisfied();
-        assertEquals(new Unsatisfied<>(null, null), plain);
-        assertEquals(plain, unsatisfied(null));
-        assertEquals(plain, unsatisfied(null, null));
+    void unsatisfiedPreservesTheProvidedMessageAndCause() {
         var cause = new IllegalStateException("details");
-        var detailed = unsatisfied("not ready", cause);
-        assertEquals("not ready", detailed.mismatch());
+        var detailed = unsatisfied("  not ready\ntry again  ", cause);
+        assertEquals("  not ready\ntry again  ", detailed.mismatch());
         assertSame(cause, detailed.cause());
-        assertSame(cause, unsatisfied(null, cause).cause());
-        assertEquals(new Unsatisfied<>("failed", null), unsatisfied("failed", null));
     }
 }

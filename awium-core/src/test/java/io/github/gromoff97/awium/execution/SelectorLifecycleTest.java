@@ -23,8 +23,8 @@ class SelectorLifecycleTest {
         var selector = new SelectedCondition<List<String>>() {
             @Override public String description() { return definition.description(); }
             @Override public ConditionResult<?> probe(List<String> actual) throws Throwable { return definition.probe(actual); }
-            @Override public ConditionRun<List<String>, ?> newRun(AwaitCondition original, boolean recording) {
-                return definition.newRun(original, recording);
+            @Override public ConditionRun<List<String>, ?> newRun(AwaitCondition original) {
+                return definition.newRun(original);
             }
         };
 
@@ -38,8 +38,8 @@ class SelectorLifecycleTest {
         var selector = new MapValueCondition<Map<String, String>>() {
             @Override public String description() { return definition.description(); }
             @Override public ConditionResult<?> probe(Map<String, String> actual) throws Throwable { return definition.probe(actual); }
-            @Override public ConditionRun<Map<String, String>, ?> newRun(AwaitCondition original, boolean recording) {
-                return definition.newRun(original, recording);
+            @Override public ConditionRun<Map<String, String>, ?> newRun(AwaitCondition original) {
+                return definition.newRun(original);
             }
         };
 
@@ -50,8 +50,8 @@ class SelectorLifecycleTest {
         var first = ConditionExecution.<INPUT, String>bind(selector);
         var second = ConditionExecution.<INPUT, String>bind(selector);
 
-        assertEquals(unsatisfied(), first.probe(actual));
-        assertEquals(unsatisfied(), second.probe(actual));
+        assertEquals(unsatisfied("condition is not yet complete"), first.probe(actual));
+        assertEquals(unsatisfied("condition is not yet complete"), second.probe(actual));
         assertEquals(satisfied("ready"), first.probe(actual));
         assertEquals(satisfied("ready"), second.probe(actual));
     }
@@ -62,8 +62,8 @@ class SelectorLifecycleTest {
             @Override public ConditionResult<String> probe(INPUT actual) {
                 throw new AssertionError("the custom run must perform the check");
             }
-            @Override public ConditionRun<INPUT, String> newRun(AwaitCondition definition, boolean recording) {
-                return new AbstractConditionRun<>(definition, recording) {
+            @Override public ConditionRun<INPUT, String> newRun(AwaitCondition definition) {
+                return new AbstractConditionRun<>(definition) {
                     private int observations;
                     private String value;
 

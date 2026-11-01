@@ -59,8 +59,8 @@ class CollectingConditionTest {
     @Test
     void newRunsKeepTheirCollectedValuesIndependent() throws Throwable {
         var condition = new RecordOnce();
-        var first = ConditionExecution.<String, List<String>>start(condition, false);
-        var second = ConditionExecution.<String, List<String>>start(condition, false);
+        var first = ConditionExecution.<String, List<String>>start(condition);
+        var second = ConditionExecution.<String, List<String>>start(condition);
         first.probe("first");
 
         assertFalse(second.complete());
@@ -73,8 +73,8 @@ class CollectingConditionTest {
         @Override public String description() { return "record one observation"; }
 
         @Override
-        public ConditionRun<?, ?> newRun(AwaitCondition definition, boolean recording) {
-            return new AbstractConditionRun<Object, List<Object>>(definition, recording) {
+        public ConditionRun<?, ?> newRun(AwaitCondition definition) {
+            return new AbstractConditionRun<Object, List<Object>>(definition) {
                 private List<Object> values = List.of();
 
                 @Override

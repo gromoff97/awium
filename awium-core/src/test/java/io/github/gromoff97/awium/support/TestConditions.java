@@ -41,7 +41,7 @@ public final class TestConditions {
     public static <INPUT> PreservingCondition<INPUT> matching(Predicate<? super INPUT> predicate) {
         return new PreservingCondition<>() {
             @Override public String description() { return "test predicate"; }
-            @Override public ConditionResult<?> probe(INPUT actual) { return predicate.test(actual) ? satisfied(actual) : unsatisfied(); }
+            @Override public ConditionResult<?> probe(INPUT actual) { return predicate.test(actual) ? satisfied(actual) : unsatisfied("predicate returned false"); }
         };
     }
 

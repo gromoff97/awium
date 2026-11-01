@@ -27,7 +27,7 @@ public final class ConditionExecution<OBSERVED, RESULT> {
     private static <INPUT, RESULT> ConditionExecution<INPUT, RESULT> bindRun(AwaitCondition condition) {
         requireNonNull(condition, "condition must not be null");
         return new ConditionExecution<>(() -> {
-            ConditionRun<INPUT, RESULT> run = start(condition, false);
+            ConditionRun<INPUT, RESULT> run = start(condition);
             return (INPUT actual) -> {
                 run.beginAttempt();
                 if (currentThread().isInterrupted()) throw interrupted(null);
@@ -35,17 +35,23 @@ public final class ConditionExecution<OBSERVED, RESULT> {
                 if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
                 if (run.complete()) {
                     if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
-                    return satisfied(run.result());
+                    return satisfied(run.result(), attempted.diagnostic());
                 }
-                return attempted instanceof Satisfied<?> ? unsatisfied() : attempted.<RESULT>mapValue(ignored -> null);
+                if (attempted instanceof Satisfied<?>) {
+                    var diagnostic = attempted.diagnostic();
+                    String message = diagnostic.mismatch();
+                    return unsatisfied(message == null || message.isBlank()
+                            ? diagnostic.withMismatch("condition is not yet complete") : diagnostic);
+                }
+                return attempted.<RESULT>mapValue(ignored -> null);
             };
         });
     }
 
     @SuppressWarnings("unchecked")
-    public static <INPUT, RESULT> ConditionRun<INPUT, RESULT> start(AwaitCondition condition, boolean recording) {
+    public static <INPUT, RESULT> ConditionRun<INPUT, RESULT> start(AwaitCondition condition) {
         // Terminal bounds determine the result of source-dependent selectors and preserving checks.
-        return (ConditionRun<INPUT, RESULT>) requireNonNull(condition, "condition must not be null").newRun(condition, recording);
+        return (ConditionRun<INPUT, RESULT>) requireNonNull(condition, "condition must not be null").newRun(condition);
     }
 
     private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;

@@ -46,15 +46,19 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | `ConditionExecution` | Lazy evaluator initialization and nested check invocation |
 | `WaitEngine` | Polling, deadlines, and persistence from immutable step snapshots |
 | `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
-| `FailureDiagnostics`; `DiagnosticText` | Terminal formatting and guarded value rendering |
+| `FailureDiagnostics`; `DiagnosticText` | Stop reason, attempt number, timing, cause, and guarded rendering |
 
 Implement `description()` and `probe(actual)` directly; no base constructor is required.
 The default `because` returns a separate definition and preserves custom lifecycle methods.
 Override `newAttempt()` for a stateful evaluator, created lazily for each use.
-For a custom lifecycle, override `newRun(definition, recording)` and return a fresh
+For a custom lifecycle, override `newRun(definition)` and return a fresh
 `AbstractConditionRun`. Its `probe` checks observations, `complete` decides completion,
 and `result` supplies the final value, including when nested. The supplied definition
-carries the `because` reason; protected hooks customize history scopes and diagnostics.
+carries the `because` reason. Checks return `Diagnostic` data in their `ConditionResult`;
+they do not format terminal messages. A lifecycle can add final context through
+`diagnostics(attempt)`. Core renders both sets of fields and adds the stop reason,
+timing, and cause, retaining diagnostic failures separately. History scopes have
+separate protected hooks.
 Mutable state stays within a run; definitions stay immutable.
 `ProbeFailure` adds a nested location while preserving the original cause.
 

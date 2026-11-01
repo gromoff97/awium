@@ -40,7 +40,7 @@ It is separate from `build`, `check`, and `test`.
 | --- | --- |
 | `*Conditions` | Public factories |
 | Package-private neighbors | Checks, metadata, and lifecycle |
-| `CapturedCondition.Run` | Stage transitions, collected observations, and stage diagnostics |
+| `CapturedCondition.Run` | Stage transitions, collected observations, and diagnostic data about the stages |
 
 Mutable state belongs to each run; reusable definitions stay immutable.
 Factories live in `conditions.common`, `conditions.collection`, `conditions.map`,

@@ -74,8 +74,8 @@ class ConditionContractTest {
         var condition = new Condition<String, Integer>() {
             @Override public String description() { return "measure text"; }
             @Override public ConditionResult<Integer> probe(String actual) { return unsatisfied("observed"); }
-            @Override public ConditionRun<String, Integer> newRun(AwaitCondition definition, boolean recording) {
-                return new AbstractConditionRun<>(definition, recording) {
+            @Override public ConditionRun<String, Integer> newRun(AwaitCondition definition) {
+                return new AbstractConditionRun<>(definition) {
                     private Integer length;
                     @Override public ConditionResult<?> probe(String actual) {
                         length = actual.length();
@@ -104,7 +104,7 @@ class ConditionContractTest {
             @Override public AwaitAttempt<String, String> newAttempt() {
                 factories[0]++;
                 int[] calls = {0};
-                return actual -> ++calls[0] == 2 ? satisfied(actual) : unsatisfied();
+                return actual -> ++calls[0] == 2 ? satisfied(actual) : unsatisfied("waiting for a second observation");
             }
         }.because("fresh state");
         var waiting = timedAwait(() -> "ready", new FakeTime(0));

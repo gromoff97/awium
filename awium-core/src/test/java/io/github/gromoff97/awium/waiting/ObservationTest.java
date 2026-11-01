@@ -127,7 +127,7 @@ class ObservationTest {
         var execution = start(check("test condition", (Object value) -> {
             time.advanceNanos(3);
             return ConditionResult.satisfied(result);
-        }), false);
+        }));
         WaitCompletion terminal = new WaitEngine<>(withTime(config(1, 20, 0), time, time), () -> {
             time.advanceNanos(2);
             return actual;
@@ -250,7 +250,7 @@ class ObservationTest {
     @ParameterizedTest
     @MethodSource("completionInterruptions")
     void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(
-            boolean recording, long persistence, int interruptedAttempt,
+            boolean returnResult, long persistence, int interruptedAttempt,
             ConditionResult<?> state, Consumer<Throwable> assertCause) {
         var actual = new Object();
         var time = new FakeTime(0);
@@ -262,7 +262,7 @@ class ObservationTest {
         var check = check("completion boundary", value ->
                 ++evaluations[0] == interruptedAttempt ? state : satisfied(actual));
         AwaitFailure failure;
-        if (recording) {
+        if (returnResult) {
             var result = diagnostic(waiting).until(check);
             failure = failure(result);
             assertEquals(interruptedAttempt, attempts(result).size());
@@ -282,12 +282,12 @@ class ObservationTest {
             assertInstanceOf(NullPointerException.class, cause);
             assertEquals("condition returned null ConditionResult", cause.getMessage());
         };
-        return Stream.of(false, true).flatMap(recording -> Stream.of(Map.entry(0L, 1), Map.entry(2L, 2)).flatMap(timing -> {
-            String label = (recording ? "tryAwait" : "await") + ", persistence=" + timing.getKey() + " / ";
+        return Stream.of(false, true).flatMap(returnResult -> Stream.of(Map.entry(0L, 1), Map.entry(2L, 2)).flatMap(timing -> {
+            String label = (returnResult ? "tryAwait" : "await") + ", persistence=" + timing.getKey() + " / ";
             return Stream.of(
-                    argumentSet(label + "satisfied", recording, timing.getKey(), timing.getValue(), satisfied(null), interruption),
-                    argumentSet(label + "unsatisfied", recording, timing.getKey(), timing.getValue(), unsatisfied("not ready"), interruption),
-                    argumentSet(label + "null", recording, timing.getKey(), timing.getValue(), null, missingResult));
+                    argumentSet(label + "satisfied", returnResult, timing.getKey(), timing.getValue(), satisfied(null), interruption),
+                    argumentSet(label + "unsatisfied", returnResult, timing.getKey(), timing.getValue(), unsatisfied("not ready"), interruption),
+                    argumentSet(label + "null", returnResult, timing.getKey(), timing.getValue(), null, missingResult));
         }));
     }
 
@@ -365,7 +365,7 @@ class ObservationTest {
             ConditionResult<?> evaluation = condition.probe(actual);
             time.advanceNanos(2);
             return evaluation;
-        }), false)).waitFor(ignored -> {}).step().attempt();
+        }))).waitFor(ignored -> {}).step().attempt();
     }
 
     @Test

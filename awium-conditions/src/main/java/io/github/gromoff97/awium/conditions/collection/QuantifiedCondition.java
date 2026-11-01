@@ -6,13 +6,13 @@ import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ProbeFailure;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.Collection;
 import java.util.List;
 
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
 import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
@@ -60,9 +60,11 @@ record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>
     }
 
     private ConditionResult<INPUT> result(INPUT actual, boolean successful, long checked, ConditionResult<?> last) {
-        if (successful) return satisfied(actual);
+        var diagnostic = last == null ? Diagnostic.EMPTY : last.diagnostic();
+        if (successful) return satisfied(actual, diagnostic.withMismatch(null));
         String mismatch = quantifier.mismatch + " collection elements matched (checked " + checked + ")";
-        if (!(last instanceof Unsatisfied<?> failure)) return unsatisfied(mismatch);
-        return unsatisfied(failure.mismatch() == null ? mismatch : mismatch + ": " + failure.mismatch(), failure.cause());
+        return unsatisfied(diagnostic.withMismatch(
+                diagnostic.mismatch() == null ? mismatch : mismatch + ": " + diagnostic.mismatch()),
+                last == null ? null : last.cause());
     }
 }

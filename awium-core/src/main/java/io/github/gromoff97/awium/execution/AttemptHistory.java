@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.result.ConditionHistory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-import java.util.Objects;
 import java.util.TreeMap;
 
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
@@ -17,17 +16,12 @@ import static java.util.Objects.requireNonNull;
 
 final class AttemptHistory<OBSERVED> {
 
-    private final List<NavigableMap<Long, Attempt<OBSERVED>>> histories;
+    private final List<NavigableMap<Long, Attempt<OBSERVED>>> histories = new ArrayList<>();
     private long count;
-
-    AttemptHistory(boolean recording) {
-        histories = recording ? new ArrayList<>() : null;
-    }
 
     void add(int stageNumber, Attempt<OBSERVED> attempt) {
         requireNonNull(attempt, "attempt must not be null");
         count++;
-        if (histories == null) return;
         while (histories.size() < stageNumber) histories.add(new TreeMap<>());
         var attempts = histories.get(stageNumber - 1);
         var previous = attempts.lastEntry();
@@ -40,7 +34,6 @@ final class AttemptHistory<OBSERVED> {
     }
 
     List<ConditionHistory<OBSERVED>> conditions(List<? extends AwaitCondition> definitions) {
-        if (histories == null) return List.of();
         var result = new ArrayList<ConditionHistory<OBSERVED>>(definitions.size());
         for (int i = 0; i < definitions.size(); i++) {
             NavigableMap<Long, Attempt<OBSERVED>> attempts = i < histories.size()
@@ -53,15 +46,17 @@ final class AttemptHistory<OBSERVED> {
     private static boolean sameGroup(Attempt<?> previous, Attempt<?> next) {
         return switch (previous) {
             case SatisfiedObservation<?> first -> next instanceof SatisfiedObservation<?> last
-                    && sameObservation(first.observed(), last.observed());
+                    && sameValue(first.diagnostic(), last.diagnostic())
+                    && sameValue(first.observed(), last.observed());
             case UnsatisfiedObservation<?> first -> next instanceof UnsatisfiedObservation<?> last
-                    && first.cause() == last.cause() && Objects.equals(first.mismatch(), last.mismatch())
-                    && sameObservation(first.observed(), last.observed());
+                    && first.cause() == last.cause()
+                    && sameValue(first.diagnostic(), last.diagnostic())
+                    && sameValue(first.observed(), last.observed());
             default -> false;
         };
     }
 
-    private static boolean sameObservation(Object previous, Object next) {
+    private static boolean sameValue(Object previous, Object next) {
         try {
             return deepEquals(previous, next);
         } catch (Throwable failure) {

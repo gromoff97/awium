@@ -14,13 +14,13 @@ public interface AwaitCondition {
     default String explanation() { return null; }
     default List<Reference<?>> references() { return List.of(); }
     AwaitCondition because(String explanation);
-    ConditionRun<?, ?> newRun(AwaitCondition definition, boolean recording);
+    ConditionRun<?, ?> newRun(AwaitCondition definition);
 
     interface ApplicableCondition<INPUT, REFERENCE> extends AwaitCondition {
         ConditionResult<?> probe(INPUT actual) throws Throwable;
         default AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return this::probe; }
-        @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition, boolean recording) {
-            return new CheckRun<>(definition, this::newAttempt, recording);
+        @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition) {
+            return new CheckRun<>(definition, this::newAttempt);
         }
         @Override ApplicableCondition<INPUT, REFERENCE> because(String explanation);
     }
@@ -30,11 +30,11 @@ public interface AwaitCondition {
     }
 
     interface PreservesObservation<INPUT, REFERENCE> extends ApplicableCondition<INPUT, REFERENCE> {
-        @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition, boolean recording) {
+        @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition) {
             return new CheckRun<INPUT, INPUT>(definition, () -> {
                 var evaluation = requireNonNull(newAttempt(), "evaluator must not be null");
                 return actual -> evaluation.probe(actual).mapValue(ignored -> actual);
-            }, recording);
+            });
         }
     }
 

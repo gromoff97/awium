@@ -4,23 +4,49 @@ import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
+import static io.github.gromoff97.awium.AwaitCondition.Reference;
+import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 class ConditionExecutionTest {
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "waiting for another observation"})
+    void anIncompleteRunRetainsItsFieldsAndAlwaysExplainsTheMismatch(String message) throws Throwable {
+        Condition<String, String> condition = mock();
+        ConditionRun<String, String> run = mock();
+        var diagnostic = new Diagnostic(message, new Reference<>("Completed checks", 1));
+        doReturn(run).when(condition).newRun(condition);
+        doReturn(satisfied("selected", diagnostic)).when(run).probe("actual");
+
+        var rejected = assertInstanceOf(Unsatisfied.class, bind(condition).probe("actual"));
+
+        assertEquals(message == null || message.isBlank() ? "condition is not yet complete" : message,
+                rejected.mismatch());
+        assertEquals(diagnostic.fields(), rejected.diagnostic().fields());
+    }
 
     @Test
     void evaluatorFactoriesAcceptBroaderInputsAndNarrowerResults() throws Throwable {

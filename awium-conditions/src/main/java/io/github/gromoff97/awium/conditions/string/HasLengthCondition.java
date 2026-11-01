@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
 import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 import java.util.function.Function;
 
@@ -31,6 +32,7 @@ final class HasLengthCondition implements PreservingCondition<CharSequence> {
     public ConditionResult<?> probe(CharSequence actual) throws Throwable {
         if (actual == null) return unsatisfied("string was null");
         int length = actual.length();
-        return comparison.probe(length) instanceof Satisfied<?> ? satisfied(actual) : unsatisfied("string length was " + length);
+        var diagnostic = new Diagnostic(null, new Reference<>("Actual length", length));
+        return comparison.probe(length) instanceof Satisfied<?> ? satisfied(actual, diagnostic) : unsatisfied(diagnostic.withMismatch("string length did not match"));
     }
 }

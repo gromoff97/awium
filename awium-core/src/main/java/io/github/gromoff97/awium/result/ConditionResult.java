@@ -11,12 +11,14 @@ public sealed interface ConditionResult<RESULT> {
         return null;
     }
 
+    Diagnostic diagnostic();
+
     static <RESULT> Satisfied<RESULT> satisfied(RESULT value) {
         return new Satisfied<>(value);
     }
 
-    static <RESULT> Unsatisfied<RESULT> unsatisfied() {
-        return unsatisfied(null, null);
+    static <RESULT> Satisfied<RESULT> satisfied(RESULT value, Diagnostic diagnostic) {
+        return new Satisfied<>(value, diagnostic);
     }
 
     static <RESULT> Unsatisfied<RESULT> unsatisfied(String mismatch) {
@@ -24,23 +26,39 @@ public sealed interface ConditionResult<RESULT> {
     }
 
     static <RESULT> Unsatisfied<RESULT> unsatisfied(String mismatch, Throwable cause) {
-        return new Unsatisfied<>(mismatch, cause);
+        return unsatisfied(new Diagnostic(mismatch), cause);
+    }
+
+    static <RESULT> Unsatisfied<RESULT> unsatisfied(Diagnostic diagnostic) {
+        return unsatisfied(diagnostic, null);
+    }
+
+    static <RESULT> Unsatisfied<RESULT> unsatisfied(Diagnostic diagnostic, Throwable cause) {
+        return new Unsatisfied<>(diagnostic, cause);
     }
 
     default <NEXT> ConditionResult<NEXT> mapValue(Function<? super RESULT, ? extends NEXT> mapping) {
         requireNonNull(mapping, "mapping must not be null");
         return switch (this) {
-            case Satisfied<RESULT> success -> satisfied(mapping.apply(success.value()));
-            case Unsatisfied<RESULT> mismatch -> unsatisfied(mismatch.mismatch(), mismatch.cause());
+            case Satisfied<RESULT> success -> satisfied(mapping.apply(success.value()), success.diagnostic());
+            case Unsatisfied<RESULT> mismatch -> unsatisfied(mismatch.diagnostic(), mismatch.cause());
         };
     }
 
-    record Satisfied<RESULT>(RESULT value) implements ConditionResult<RESULT> {}
+    record Satisfied<RESULT>(RESULT value, Diagnostic diagnostic) implements ConditionResult<RESULT> {
+        public Satisfied { requireNonNull(diagnostic, "diagnostic must not be null"); }
+        public Satisfied(RESULT value) { this(value, Diagnostic.EMPTY); }
+    }
 
-    record Unsatisfied<RESULT>(String mismatch, Throwable cause) implements ConditionResult<RESULT> {
+    record Unsatisfied<RESULT>(Diagnostic diagnostic, Throwable cause) implements ConditionResult<RESULT> {
+        public Unsatisfied {
+            requireNonNull(diagnostic, "diagnostic must not be null").requireMismatch();
+        }
+        public String mismatch() { return diagnostic.mismatch(); }
+
         @Override
         public String toString() {
-            return "Unsatisfied[mismatch=" + mismatch + ", cause=" + new DiagnosticText(cause).cause(cause) + "]";
+            return "Unsatisfied[diagnostic=" + diagnostic + ", cause=" + new DiagnosticText(cause).cause(cause) + "]";
         }
     }
 }

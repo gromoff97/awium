@@ -13,6 +13,6 @@ record SingleEntryCondition() implements SelectedCondition<Map<?, ?>> {
     @Override public ConditionResult<?> probe(Map<?, ?> actual) throws Throwable {
         if (actual == null) return unsatisfied("map was null");
         var result = singleElement.probe(actual.entrySet());
-        return result instanceof Unsatisfied<?> failure ? unsatisfied("map entries: " + failure.mismatch(), failure.cause()) : result;
+        return result instanceof Unsatisfied<?> failure ? unsatisfied(failure.diagnostic().withMismatch("map entries: " + failure.mismatch()), failure.cause()) : result;
     }
 }

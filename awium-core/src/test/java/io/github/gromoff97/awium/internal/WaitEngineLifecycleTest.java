@@ -2,6 +2,7 @@ package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.WaitCompletion;
+import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
 import java.util.concurrent.Callable;
@@ -13,6 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
+import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
@@ -60,7 +62,8 @@ class WaitEngineLifecycleTest {
     @Test
     void completionFailuresRetainTheObservation() throws Throwable {
         var cause = new IllegalStateException("completion failed");
-        doReturn(satisfied("chosen")).when(run).probe("actual");
+        var diagnostic = new Diagnostic(null, new Reference<>("Chosen", "chosen"));
+        doReturn(satisfied("chosen", diagnostic)).when(run).probe("actual");
         when(run.complete()).thenThrow(cause);
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
@@ -68,6 +71,7 @@ class WaitEngineLifecycleTest {
         assertEquals("actual", attempt.observed());
         assertEquals(CONDITION, attempt.operation());
         assertSame(cause, attempt.cause());
+        assertSame(diagnostic, attempt.diagnostic());
     }
 
     @ParameterizedTest
@@ -124,7 +128,8 @@ class WaitEngineLifecycleTest {
     @Test
     void cancellationDuringCompletionPreservesTheMismatchCause() throws Throwable {
         var cause = new AssertionError("value is still pending");
-        doReturn(unsatisfied("pending", cause)).when(run).probe("actual");
+        var diagnostic = new Diagnostic("pending", new Reference<>("Progress", 2));
+        doReturn(unsatisfied(diagnostic, cause)).when(run).probe("actual");
         when(run.complete()).thenAnswer(ignored -> {
             currentThread().interrupt();
             return false;
@@ -133,6 +138,7 @@ class WaitEngineLifecycleTest {
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
         assertTrue(outcome.interrupted());
         assertSame(cause, outcome.step().attempt().cause());
+        assertSame(diagnostic, outcome.step().attempt().diagnostic());
     }
 
     private WaitCompletion execute(Callable<String> source) {

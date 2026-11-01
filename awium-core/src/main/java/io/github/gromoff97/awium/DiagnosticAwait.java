@@ -29,15 +29,15 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
     }
 
     public AwaitResult<OBSERVED, OBSERVED> until(PreservesObservation<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
-        return capture(condition);
+        return execute(condition);
     }
 
     public <RESULT> AwaitResult<OBSERVED, RESULT> until(Condition<? super OBSERVED, ? extends RESULT> condition) {
-        return capture(condition);
+        return execute(condition);
     }
 
     public AwaitResult<OBSERVED, List<OBSERVED>> until(
             CollectingCondition<? extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>>> condition) {
-        return capture(condition);
+        return execute(condition);
     }
 }

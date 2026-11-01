@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.execution;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.ConditionHistory;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -72,15 +73,13 @@ public final class DiagnosticText {
         var text = new DiagnosticText(cause);
         switch (attempt) {
             case SatisfiedObservation<?> ignored -> field(out, "", label, "satisfied");
-            case UnsatisfiedObservation<?> mismatch -> {
-                field(out, "", label, "unsatisfied");
-                if (mismatch.mismatch() != null) field(out, "Mismatch", mismatch.mismatch());
-            }
+            case UnsatisfiedObservation<?> ignored -> field(out, "", label, "unsatisfied");
             case Failure<?> failure -> {
                 field(out, "", label, "failed (" + failure.operation() + ")");
                 if (failure.location() != null) field(out, "Within", failure.location());
             }
         }
+        text.diagnostic(out, attempt.diagnostic());
         String observation = text.observation(attempt);
         if (observation != null) {
             field(out, "Observed now", observation);
@@ -113,7 +112,7 @@ public final class DiagnosticText {
         return result.toString();
     }
 
-    private String render(Supplier<String> rendering) {
+    String render(Supplier<String> rendering) {
         boolean interrupted = currentThread().isInterrupted();
         try {
             return rendering.get();
@@ -134,6 +133,26 @@ public final class DiagnosticText {
             case FailedAfterObservation<?> failed -> value(failed.observed());
             case FailedBeforeObservation<?> ignored -> null;
         };
+    }
+
+    void attemptDetails(StringBuilder out, Attempt<?> attempt) {
+        String actual = observation(attempt);
+        if (actual != null) field(out, "Actual", actual);
+        diagnostic(out, attempt.diagnostic());
+        if (attempt instanceof Failure<?> failure && failure.location() != null) {
+            field(out, "Within", failure.location());
+        }
+    }
+
+    void diagnostic(StringBuilder out, Diagnostic diagnostic) {
+        if (diagnostic.mismatch() != null) field(out, "Mismatch", diagnostic.mismatch());
+        for (var detail : diagnostic.fields()) {
+            if (detail.value() instanceof AwaitCondition condition) {
+                condition(out, detail.label(), condition, "    ");
+            } else {
+                field(out, detail.label(), value(detail.value()));
+            }
+        }
     }
 
     public String value(Object value) {

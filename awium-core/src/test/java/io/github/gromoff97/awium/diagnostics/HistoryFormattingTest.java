@@ -149,7 +149,7 @@ class HistoryFormattingTest {
             @Override public boolean equals(Object other) { throw new AssertionError("unexpected equals"); }
             @Override public int hashCode() { throw new AssertionError("unexpected hashCode"); }
         };
-        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied(observed)).iterator();
+        var outcomes = List.of(unsatisfied("not ready"), unsatisfied("not ready"), satisfied(observed)).iterator();
         var result = withTime(tryAwait(() -> observed), time, time).every(ofNanos(1))
                 .until(check("ready", actual -> outcomes.next()));
 
@@ -175,7 +175,7 @@ class HistoryFormattingTest {
         var first = new Observation();
         var last = new Observation();
         var values = List.of(first, last, last).iterator();
-        var outcomes = List.of(unsatisfied(), unsatisfied(), satisfied(last)).iterator();
+        var outcomes = List.of(unsatisfied("not ready"), unsatisfied("not ready"), satisfied(last)).iterator();
         var result = withTime(tryAwait(values::next), time, time).every(ofNanos(1))
                 .until(check("ready", actual -> outcomes.next()));
 

@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.ProbeFailure;
 import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.concurrent.Callable;
 import java.util.function.LongSupplier;
 
@@ -43,25 +44,28 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
         }
 
         Attempt<OBSERVED> attempt;
+        Diagnostic diagnostic = Diagnostic.EMPTY;
         boolean complete = false;
         try {
-            attempt = switch (execution.probe(actual)) {
-                case Satisfied<?> ignored -> new SatisfiedObservation<>(actual);
+            var checked = execution.probe(actual);
+            diagnostic = checked.diagnostic();
+            attempt = switch (checked) {
+                case Satisfied<?> success -> new SatisfiedObservation<>(actual, success.diagnostic());
                 case Unsatisfied<?> mismatch ->
-                        new UnsatisfiedObservation<>(actual, mismatch.mismatch(), mismatch.cause());
+                        new UnsatisfiedObservation<>(actual, mismatch.diagnostic(), mismatch.cause());
             };
             if (!currentThread().isInterrupted()) complete = execution.complete();
         } catch (ProbeFailure failure) {
             attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
-                    failure.getCause(), failure.location());
+                    failure.getCause(), failure.location(), diagnostic);
         } catch (Throwable failure) {
-            attempt = new FailedAfterObservation<>(actual, Operation.CONDITION, failure, null);
+            attempt = new FailedAfterObservation<>(actual, Operation.CONDITION, failure, null, diagnostic);
         }
         long completed = clock.getAsLong();
         if (!(attempt instanceof Failure<?>) && currentThread().isInterrupted()) {
             var cause = attempt.cause();
             attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
-                    cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause, null);
+                    cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause, null, attempt.diagnostic());
             complete = false;
         }
         return new ExecutionStep<>(complete, phase, completed - started, attempt);

@@ -32,14 +32,14 @@ abstract class Explained<ORIGINAL extends AwaitCondition> implements AwaitCondit
         private Check(ORIGINAL original, String explanation) { super(original, explanation); }
         public ConditionResult<?> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         public AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return original.newAttempt(); }
-        public ConditionRun<INPUT, ?> newRun(AwaitCondition definition, boolean recording) { return original.newRun(definition, recording); }
+        public ConditionRun<INPUT, ?> newRun(AwaitCondition definition) { return original.newRun(definition); }
     }
 
     static final class Typed<INPUT, RESULT> extends Explained<Condition<INPUT, RESULT>> implements Condition<INPUT, RESULT> {
         Typed(Condition<INPUT, RESULT> original, String explanation) { super(original, explanation); }
         @Override public ConditionResult<RESULT> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         @Override public AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception { return original.newAttempt(); }
-        @Override public ConditionRun<INPUT, RESULT> newRun(AwaitCondition definition, boolean recording) { return original.newRun(definition, recording); }
+        @Override public ConditionRun<INPUT, RESULT> newRun(AwaitCondition definition) { return original.newRun(definition); }
         @Override public Condition<INPUT, RESULT> because(String explanation) { return original.because(explanation); }
     }
 
@@ -66,7 +66,7 @@ abstract class Explained<ORIGINAL extends AwaitCondition> implements AwaitCondit
     static final class Collecting<CHECK extends AwaitCondition> extends Explained<CollectingCondition<CHECK>> implements CollectingCondition<CHECK> {
         Collecting(CollectingCondition<CHECK> original, String explanation) { super(original, explanation); }
         @Override public List<AwaitCondition> stages() { return original.stages(); }
-        @Override public ConditionRun<?, ?> newRun(AwaitCondition definition, boolean recording) { return original.newRun(definition, recording); }
+        @Override public ConditionRun<?, ?> newRun(AwaitCondition definition) { return original.newRun(definition); }
         @Override public CollectingCondition<CHECK> because(String explanation) { return original.because(explanation); }
     }
 }
