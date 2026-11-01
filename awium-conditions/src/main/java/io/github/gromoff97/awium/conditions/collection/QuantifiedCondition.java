@@ -23,8 +23,18 @@ record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>
         final String description;
         final String mismatch;
         Quantifier(String description, String mismatch) { this.description = description; this.mismatch = mismatch; }
-        boolean stops(boolean matched) { return this == ALL ? !matched : matched; }
-        boolean satisfied(boolean stopped) { return this == ANY ? stopped : !stopped; }
+        boolean stops(boolean matched) {
+            if (this == ALL) {
+                return !matched;
+            }
+            return matched;
+        }
+        boolean satisfied(boolean stopped) {
+            if (this == ANY) {
+                return stopped;
+            }
+            return !stopped;
+        }
     }
 
     QuantifiedCondition { requireNonNull(nested, "condition must not be null"); }
@@ -59,11 +69,21 @@ record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>
     }
 
     private AttemptResult<INPUT> result(INPUT actual, boolean successful, long checked, AttemptResult<?> last) {
-        var diagnostic = last == null ? Diagnostic.EMPTY : last.diagnostic();
-        if (successful) return satisfied(actual, diagnostic.withMismatch(null));
+        Diagnostic diagnostic = Diagnostic.EMPTY;
+        if (last != null) {
+            diagnostic = last.diagnostic();
+        }
+        if (successful) {
+            return satisfied(actual, diagnostic.withMismatch(null));
+        }
         String mismatch = quantifier.mismatch + " collection elements matched (checked " + checked + ")";
-        return unsatisfied(diagnostic.withMismatch(
-                diagnostic.mismatch() == null ? mismatch : mismatch + ": " + diagnostic.mismatch()),
-                last == null ? null : last.cause());
+        if (diagnostic.mismatch() != null) {
+            mismatch += ": " + diagnostic.mismatch();
+        }
+        Throwable cause = null;
+        if (last != null) {
+            cause = last.cause();
+        }
+        return unsatisfied(diagnostic.withMismatch(mismatch), cause);
     }
 }

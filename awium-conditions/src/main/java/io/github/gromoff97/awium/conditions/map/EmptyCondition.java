@@ -8,12 +8,25 @@ import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record EmptyCondition(boolean expectEmpty) implements PreservingCondition<Map<?, ?>> {
-    @Override public String description() { return "map" + (expectEmpty ? " is empty" : " is not empty"); }
+    @Override
+    public String description() {
+        if (expectEmpty) {
+            return "map is empty";
+        }
+        return "map is not empty";
+    }
 
     @Override
     public AttemptResult<?> probe(Map<?, ?> actual) {
-        return actual == null ? unsatisfied("map was null")
-                : actual.isEmpty() == expectEmpty ? satisfied(actual)
-                        : unsatisfied("map" + (expectEmpty ? " was not empty" : " was empty"));
+        if (actual == null) {
+            return unsatisfied("map was null");
+        }
+        if (actual.isEmpty() == expectEmpty) {
+            return satisfied(actual);
+        }
+        if (expectEmpty) {
+            return unsatisfied("map was not empty");
+        }
+        return unsatisfied("map was empty");
     }
 }

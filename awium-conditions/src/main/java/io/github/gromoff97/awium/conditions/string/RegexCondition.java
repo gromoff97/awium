@@ -17,13 +17,31 @@ record RegexCondition(Pattern pattern, boolean negated) implements PreservingCon
         this(compile(text(regex, "regex")), negated);
     }
 
-    @Override public String description() { return negated ? "string does not match unexpected pattern" : "string matches expected pattern"; }
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", pattern)); }
+    @Override
+    public String description() {
+        if (negated) {
+            return "string does not match unexpected pattern";
+        }
+        return "string matches expected pattern";
+    }
+
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", pattern));
+        }
+        return List.of(new Reference<>("Expected", pattern));
+    }
 
     @Override
     public AttemptResult<?> probe(CharSequence actual) {
         if (actual == null) return unsatisfied("string was null");
-        return pattern.matcher(actual).matches() != negated ? satisfied(actual)
-                : unsatisfied(negated ? "string matched unexpected pattern" : "string did not match expected pattern");
+        if (pattern.matcher(actual).matches() != negated) {
+            return satisfied(actual);
+        }
+        if (negated) {
+            return unsatisfied("string matched unexpected pattern");
+        }
+        return unsatisfied("string did not match expected pattern");
     }
 }

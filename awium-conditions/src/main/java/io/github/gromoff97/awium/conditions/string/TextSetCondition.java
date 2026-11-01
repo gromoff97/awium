@@ -12,24 +12,49 @@ import static java.util.stream.StreamSupport.stream;
 
 record TextSetCondition(List<String> values, boolean negated) implements PreservingCondition<CharSequence> {
     TextSetCondition(Iterable<? extends CharSequence> expected, boolean negated) {
-        this(texts(expected, negated ? "unexpected strings" : "expected strings"), negated);
+        this(texts(expected, negated), negated);
     }
 
-    @Override public String description() { return negated ? "string does not contain unexpected strings" : "string contains all expected strings"; }
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", values)); }
+    @Override
+    public String description() {
+        if (negated) {
+            return "string does not contain unexpected strings";
+        }
+        return "string contains all expected strings";
+    }
+
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", values));
+        }
+        return List.of(new Reference<>("Expected", values));
+    }
 
     @Override
     public AttemptResult<?> probe(CharSequence actual) {
         if (actual == null) return unsatisfied("string was null");
         if (values.isEmpty()) return satisfied(actual);
         String text = actual.toString();
-        boolean matches = negated ? values.stream().noneMatch(text::contains) : values.stream().allMatch(text::contains);
-        return matches ? satisfied(actual)
-                : unsatisfied(negated ? "string contained an unexpected string" : "string did not contain all expected strings");
+        if (negated) {
+            if (values.stream().noneMatch(text::contains)) {
+                return satisfied(actual);
+            }
+            return unsatisfied("string contained an unexpected string");
+        }
+        if (values.stream().allMatch(text::contains)) {
+            return satisfied(actual);
+        }
+        return unsatisfied("string did not contain all expected strings");
     }
 
-    private static List<String> texts(Iterable<? extends CharSequence> values, String name) {
-        return stream(requireNonNull(values, name + " must not be null").spliterator(), false)
+    private static List<String> texts(Iterable<? extends CharSequence> values, boolean negated) {
+        if (negated) {
+            requireNonNull(values, "unexpected strings must not be null");
+        } else {
+            requireNonNull(values, "expected strings must not be null");
+        }
+        return stream(values.spliterator(), false)
                 .map(value -> text(value, "text")).toList();
     }
 }

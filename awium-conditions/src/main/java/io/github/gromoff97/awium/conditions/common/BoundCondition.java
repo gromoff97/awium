@@ -31,7 +31,12 @@ record BoundCondition<BOUND, INPUT extends Comparable<? super BOUND>>(
 
     @Override
     public AttemptResult<?> probe(INPUT actual) {
-        return actual == null ? unsatisfied("value was null") : relation.accepts(actual.compareTo(bound))
-                ? satisfied(actual) : unsatisfied("value was not " + relation.label + " the bound");
+        if (actual == null) {
+            return unsatisfied("value was null");
+        }
+        if (relation.accepts(actual.compareTo(bound))) {
+            return satisfied(actual);
+        }
+        return unsatisfied("value was not " + relation.label + " the bound");
     }
 }

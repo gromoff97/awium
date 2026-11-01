@@ -17,11 +17,24 @@ record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?>
     enum Sequence { PREFIX, SUFFIX, SEQUENCE, SUBSEQUENCE }
 
     CollectionSequenceCondition(Iterable<?> expected, Sequence sequence, boolean negated) {
-        this(snapshot(expected, negated ? "unexpected elements" : "expected elements"), sequence, negated);
+        this(snapshot(expected, negated), sequence, negated);
     }
 
-    @Override public String description() { return "collection " + (negated ? "does not contain unexpected " : "contains expected ") + sequence.name().toLowerCase(java.util.Locale.ROOT); }
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
+    @Override
+    public String description() {
+        if (negated) {
+            return "collection does not contain unexpected " + sequence.name().toLowerCase(java.util.Locale.ROOT);
+        }
+        return "collection contains expected " + sequence.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", expected));
+        }
+        return List.of(new Reference<>("Expected", expected));
+    }
 
     @Override
     public AttemptResult<?> probe(INPUT actual) {
@@ -32,8 +45,13 @@ record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?>
             case SEQUENCE -> containsSequence(actual, expected);
             case SUBSEQUENCE -> containsSubsequence(actual, expected);
         };
-        return matched != negated ? satisfied(actual) : unsatisfied("collection "
-                + (negated ? "contained unexpected " : "did not contain expected ") + sequence.name().toLowerCase(java.util.Locale.ROOT));
+        if (matched != negated) {
+            return satisfied(actual);
+        }
+        if (negated) {
+            return unsatisfied("collection contained unexpected " + sequence.name().toLowerCase(java.util.Locale.ROOT));
+        }
+        return unsatisfied("collection did not contain expected " + sequence.name().toLowerCase(java.util.Locale.ROOT));
     }
 
     private static boolean containsSequence(SequencedCollection<?> actual, List<?> expected) {

@@ -11,11 +11,32 @@ import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 
 record ContainsCondition<ELEMENT>(ELEMENT expected, boolean negated) implements PreservingCondition<Collection<? super ELEMENT>> {
-    @Override public String description() { return negated ? "collection does not contain unexpected element" : "collection contains expected element"; }
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
+    @Override
+    public String description() {
+        if (negated) {
+            return "collection does not contain unexpected element";
+        }
+        return "collection contains expected element";
+    }
+
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", expected));
+        }
+        return List.of(new Reference<>("Expected", expected));
+    }
+
     @Override public AttemptResult<?> probe(Collection<? super ELEMENT> actual) {
-        return actual == null ? unsatisfied("collection was null")
-                : matchesAny(actual, value -> deepEquals(value, expected)) != negated ? satisfied(actual)
-                : unsatisfied(negated ? "collection contained unexpected element" : "collection did not contain expected element");
+        if (actual == null) {
+            return unsatisfied("collection was null");
+        }
+        if (matchesAny(actual, value -> deepEquals(value, expected)) != negated) {
+            return satisfied(actual);
+        }
+        if (negated) {
+            return unsatisfied("collection contained unexpected element");
+        }
+        return unsatisfied("collection did not contain expected element");
     }
 }

@@ -12,15 +12,42 @@ import static java.util.stream.StreamSupport.stream;
 
 record InCondition<EXPECTED>(List<? extends EXPECTED> expected, boolean negated) implements ComparisonCondition<EXPECTED> {
     InCondition(Iterable<? extends EXPECTED> expected, boolean negated) {
-        this(stream(requireNonNull(expected, (negated ? "unexpected" : "expected") + " values must not be null").spliterator(), false).toList(), negated);
+        this(snapshot(expected, negated), negated);
     }
 
-    @Override public String description() { return negated ? "value is not in the unexpected values" : "value is in the expected values"; }
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
+    @Override
+    public String description() {
+        if (negated) {
+            return "value is not in the unexpected values";
+        }
+        return "value is in the expected values";
+    }
+
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", expected));
+        }
+        return List.of(new Reference<>("Expected", expected));
+    }
 
     @Override
     public AttemptResult<?> probe(Object actual) {
-        return expected.stream().anyMatch(candidate -> deepEquals(actual, candidate)) != negated ? satisfied(actual)
-                : unsatisfied(negated ? "value was in the unexpected values" : "value was not in the expected values");
+        if (expected.stream().anyMatch(candidate -> deepEquals(actual, candidate)) != negated) {
+            return satisfied(actual);
+        }
+        if (negated) {
+            return unsatisfied("value was in the unexpected values");
+        }
+        return unsatisfied("value was not in the expected values");
+    }
+
+    private static <EXPECTED> List<EXPECTED> snapshot(Iterable<EXPECTED> expected, boolean negated) {
+        if (negated) {
+            requireNonNull(expected, "unexpected values must not be null");
+        } else {
+            requireNonNull(expected, "expected values must not be null");
+        }
+        return stream(expected.spliterator(), false).toList();
     }
 }

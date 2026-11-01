@@ -12,14 +12,35 @@ import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 record NullElementsCondition(Nulls nulls) implements PreservingCondition<Collection<?>> {
     enum Nulls { ANY, NONE, ONLY }
 
-    @Override public String description() { return nulls == Nulls.ONLY ? "collection contains only nulls" : nulls == Nulls.NONE ? "collection does not contain null" : "collection contains null"; }
+    @Override
+    public String description() {
+        if (nulls == Nulls.ONLY) {
+            return "collection contains only nulls";
+        }
+        if (nulls == Nulls.NONE) {
+            return "collection does not contain null";
+        }
+        return "collection contains null";
+    }
 
     @Override
     public AttemptResult<?> probe(Collection<?> actual) {
         if (actual == null) return unsatisfied("collection was null");
-        boolean matches = nulls == Nulls.ONLY ? !actual.isEmpty() && matchesAll(actual, value -> value == null)
-                : matchesAny(actual, value -> value == null) != (nulls == Nulls.NONE);
-        return matches ? satisfied(actual) : unsatisfied(nulls == Nulls.ONLY ? "collection did not contain only nulls"
-                : nulls == Nulls.NONE ? "collection contained null" : "collection did not contain null");
+        boolean matches;
+        if (nulls == Nulls.ONLY) {
+            matches = !actual.isEmpty() && matchesAll(actual, value -> value == null);
+        } else {
+            matches = matchesAny(actual, value -> value == null) != (nulls == Nulls.NONE);
+        }
+        if (matches) {
+            return satisfied(actual);
+        }
+        if (nulls == Nulls.ONLY) {
+            return unsatisfied("collection did not contain only nulls");
+        }
+        if (nulls == Nulls.NONE) {
+            return unsatisfied("collection contained null");
+        }
+        return unsatisfied("collection did not contain null");
     }
 }

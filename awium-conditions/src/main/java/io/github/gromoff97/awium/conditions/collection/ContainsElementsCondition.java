@@ -16,7 +16,12 @@ record ContainsElementsCondition<ELEMENT>(List<? extends ELEMENT> expected, Memb
         implements PreservingCondition<Collection<? super ELEMENT>> {
     enum Membership {
         ALL, ANY, NONE, NOT_ALL;
-        String operand() { return this == NONE || this == NOT_ALL ? "Unexpected" : "Expected"; }
+        String operand() {
+            if (this == NONE || this == NOT_ALL) {
+                return "Unexpected";
+            }
+            return "Expected";
+        }
     }
 
     ContainsElementsCondition(Iterable<? extends ELEMENT> expected, Membership membership) {
@@ -36,10 +41,22 @@ record ContainsElementsCondition<ELEMENT>(List<? extends ELEMENT> expected, Memb
 
     @Override public AttemptResult<?> probe(Collection<? super ELEMENT> actual) {
         if (actual == null) return unsatisfied("collection was null");
-        int index = membership == Membership.ALL || membership == Membership.NOT_ALL
-                ? firstMissingExpectedIndex(actual, expected) : firstPresentExpectedIndex(actual, expected);
-        boolean matched = membership == Membership.ALL || membership == Membership.NONE ? index < 0 : index >= 0;
-        return matched ? satisfied(actual) : unsatisfied("collection " + switch (membership) {
+        int index;
+        if (membership == Membership.ALL || membership == Membership.NOT_ALL) {
+            index = firstMissingExpectedIndex(actual, expected);
+        } else {
+            index = firstPresentExpectedIndex(actual, expected);
+        }
+        boolean matched;
+        if (membership == Membership.ALL || membership == Membership.NONE) {
+            matched = index < 0;
+        } else {
+            matched = index >= 0;
+        }
+        if (matched) {
+            return satisfied(actual);
+        }
+        return unsatisfied("collection " + switch (membership) {
             case ALL -> "did not contain all expected elements; first missing at expected index " + index;
             case NONE -> "contained unexpected elements; first at unexpected index " + index;
             case NOT_ALL -> "contained all unexpected elements";

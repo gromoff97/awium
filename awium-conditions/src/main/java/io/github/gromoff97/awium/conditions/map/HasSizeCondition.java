@@ -34,6 +34,9 @@ final class HasSizeCondition implements PreservingCondition<Map<?, ?>> {
         if (actual == null) return unsatisfied("map was null");
         int size = actual.size();
         var diagnostic = new Diagnostic(null, new Reference<>("Actual size", size));
-        return comparison.probe(size) instanceof Satisfied<?> ? satisfied(actual, diagnostic) : unsatisfied(diagnostic.withMismatch("map size did not match"));
+        if (comparison.probe(size) instanceof Satisfied<?>) {
+            return satisfied(actual, diagnostic);
+        }
+        return unsatisfied(diagnostic.withMismatch("map size did not match"));
     }
 }

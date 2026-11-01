@@ -20,19 +20,35 @@ record CollectionContentCondition<INPUT extends Collection<?>>(List<?> expected,
     enum Content { EXACT, ANY_ORDER, ONLY, SUBSET }
 
     CollectionContentCondition(Iterable<?> expected, Content content, boolean negated) {
-        this(snapshot(expected, negated ? "unexpected elements" : "expected elements"), content, negated);
+        this(snapshot(expected, negated), content, negated);
     }
 
     @Override
     public String description() {
         return "collection " + switch (content) {
-            case EXACT, ANY_ORDER -> (negated ? "does not contain exactly the unexpected elements" : "contains exactly the expected elements")
-                    + (content == Content.ANY_ORDER ? " in any order" : "");
+            case EXACT, ANY_ORDER -> {
+                String description;
+                if (negated) {
+                    description = "does not contain exactly the unexpected elements";
+                } else {
+                    description = "contains exactly the expected elements";
+                }
+                if (content == Content.ANY_ORDER) {
+                    description += " in any order";
+                }
+                yield description;
+            }
             case ONLY -> "contains only the expected elements";
             case SUBSET -> "is a subset of the expected elements";
         };
     }
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", expected));
+        }
+        return List.of(new Reference<>("Expected", expected));
+    }
 
     @Override
     public AttemptResult<?> probe(INPUT actual) {
@@ -43,9 +59,22 @@ record CollectionContentCondition<INPUT extends Collection<?>>(List<?> expected,
             case ONLY -> sameDistinctElements(actual, expected);
             case SUBSET -> matchesAll(actual, value -> matchesAny(expected, candidate -> deepEquals(value, candidate)));
         };
-        return matched != negated ? satisfied(actual) : unsatisfied("collection " + switch (content) {
-            case EXACT, ANY_ORDER -> (negated ? "contained exactly the unexpected elements" : "did not contain exactly the expected elements")
-                + (content == Content.ANY_ORDER ? " in any order" : "");
+        if (matched != negated) {
+            return satisfied(actual);
+        }
+        return unsatisfied("collection " + switch (content) {
+            case EXACT, ANY_ORDER -> {
+                String mismatch;
+                if (negated) {
+                    mismatch = "contained exactly the unexpected elements";
+                } else {
+                    mismatch = "did not contain exactly the expected elements";
+                }
+                if (content == Content.ANY_ORDER) {
+                    mismatch += " in any order";
+                }
+                yield mismatch;
+            }
             case ONLY -> "did not contain only the expected elements";
             case SUBSET -> "was not a subset of the expected elements";
         });

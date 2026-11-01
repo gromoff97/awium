@@ -16,15 +16,29 @@ record RangeCondition<BOUND extends Comparable<? super BOUND>, INPUT extends Com
         if (lower.compareTo(upper) > 0) throw new IllegalArgumentException("lower bound must not be greater than upper bound");
     }
 
-    @Override public String description() { return inclusive ? "value is between the inclusive bounds" : "value is strictly between the bounds"; }
+    @Override
+    public String description() {
+        if (inclusive) {
+            return "value is between the inclusive bounds";
+        }
+        return "value is strictly between the bounds";
+    }
     @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", List.of(lower, upper))); }
 
     @Override
     public AttemptResult<?> probe(INPUT actual) {
-        return actual == null ? unsatisfied("value was null")
-                : (inclusive ? actual.compareTo(lower) >= 0 && actual.compareTo(upper) <= 0
-                             : actual.compareTo(lower) > 0 && actual.compareTo(upper) < 0)
-                        ? satisfied(actual) : unsatisfied(inclusive ? "value was outside the inclusive range"
-                                : "value was outside the exclusive range");
+        if (actual == null) {
+            return unsatisfied("value was null");
+        }
+        if (inclusive) {
+            if (actual.compareTo(lower) >= 0 && actual.compareTo(upper) <= 0) {
+                return satisfied(actual);
+            }
+            return unsatisfied("value was outside the inclusive range");
+        }
+        if (actual.compareTo(lower) > 0 && actual.compareTo(upper) < 0) {
+            return satisfied(actual);
+        }
+        return unsatisfied("value was outside the exclusive range");
     }
 }

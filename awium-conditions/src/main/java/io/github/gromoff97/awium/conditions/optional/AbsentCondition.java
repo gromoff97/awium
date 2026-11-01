@@ -10,7 +10,12 @@ import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 record AbsentCondition() implements PreservingCondition<Optional<?>> {
     @Override public String description() { return "optional is absent"; }
     @Override public AttemptResult<?> probe(Optional<?> actual) {
-        return actual == null ? unsatisfied("optional was null")
-                : actual.isEmpty() ? satisfied(actual) : unsatisfied("optional was present");
+        if (actual == null) {
+            return unsatisfied("optional was null");
+        }
+        if (actual.isEmpty()) {
+            return satisfied(actual);
+        }
+        return unsatisfied("optional was present");
     }
 }

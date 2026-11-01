@@ -46,8 +46,10 @@ record TextMatchCondition(String value, Match match) implements PreservingCondit
     @Override
     public AttemptResult<?> probe(CharSequence actual) {
         if (actual == null) return unsatisfied("string was null");
-        return match.matches.test(actual, value) ? satisfied(actual)
-                : unsatisfied("string " + match.mismatch);
+        if (match.matches.test(actual, value)) {
+            return satisfied(actual);
+        }
+        return unsatisfied("string " + match.mismatch);
     }
 
 }

@@ -59,8 +59,10 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
             var diagnostic = stageResult.diagnostic();
             if (results.size() == stages.size()) return satisfied(results.stream().toList(), diagnostic);
             var mismatch = diagnostic.mismatch();
-            return unsatisfied(mismatch == null || mismatch.isBlank()
-                    ? diagnostic.withMismatch("condition is not yet complete") : diagnostic, stageResult.cause());
+            if (mismatch == null || mismatch.isBlank()) {
+                diagnostic = diagnostic.withMismatch("condition is not yet complete");
+            }
+            return unsatisfied(diagnostic, stageResult.cause());
         }
 
         @Override
@@ -68,9 +70,11 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
 
         @Override
         public int historySlot(Attempt<?> attempt) {
-            return attempt instanceof FailedBeforeObservation<?>
-                    || attempt instanceof Failure<?> failure && failure.operation() != CONDITION
-                    ? min(results.size() + 1, stages.size()) : attemptedStage;
+            if (attempt instanceof FailedBeforeObservation<?>
+                    || attempt instanceof Failure<?> failure && failure.operation() != CONDITION) {
+                return min(results.size() + 1, stages.size());
+            }
+            return attemptedStage;
         }
 
         @Override

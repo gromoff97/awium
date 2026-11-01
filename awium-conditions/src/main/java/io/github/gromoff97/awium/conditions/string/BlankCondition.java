@@ -7,12 +7,23 @@ import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record BlankCondition(boolean expectBlank) implements PreservingCondition<CharSequence> {
-    @Override public String description() { return expectBlank ? "string is blank" : "string is not blank"; }
+    @Override
+    public String description() {
+        if (expectBlank) {
+            return "string is blank";
+        }
+        return "string is not blank";
+    }
 
     @Override
     public AttemptResult<?> probe(CharSequence actual) throws Throwable {
         if (actual == null) return unsatisfied("string was null");
-        return actual.codePoints().sequential().allMatch(Character::isWhitespace) == expectBlank ? satisfied(actual)
-                : unsatisfied(expectBlank ? "string was not blank" : "string was blank");
+        if (actual.codePoints().sequential().allMatch(Character::isWhitespace) == expectBlank) {
+            return satisfied(actual);
+        }
+        if (expectBlank) {
+            return unsatisfied("string was not blank");
+        }
+        return unsatisfied("string was blank");
     }
 }

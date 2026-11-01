@@ -15,8 +15,8 @@ record ElementAtCondition(int index, Position position) implements SelectedCondi
         this(index, Position.INDEX);
     }
 
-    ElementAtCondition(boolean last) {
-        this(0, last ? Position.LAST : Position.FIRST);
+    ElementAtCondition(Position position) {
+        this(0, position);
     }
 
     @Override
@@ -30,7 +30,10 @@ record ElementAtCondition(int index, Position position) implements SelectedCondi
 
     @Override
     public AttemptResult<?> probe(SequencedCollection<?> actual) {
-        return selectElement(position == Position.LAST && actual != null ? actual.reversed() : actual, index);
+        if (position == Position.LAST && actual != null) {
+            return selectElement(actual.reversed(), index);
+        }
+        return selectElement(actual, index);
     }
 
     private static <ELEMENT> AttemptResult<ELEMENT> selectElement(SequencedCollection<? extends ELEMENT> actual, int index) {

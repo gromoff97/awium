@@ -15,6 +15,9 @@ record SingleElementCondition() implements SelectedCondition<Collection<?>> {
         var iterator = actual.iterator();
         if (!iterator.hasNext()) return unsatisfied("collection size was 0");
         var value = iterator.next();
-        return iterator.hasNext() ? unsatisfied("collection size was greater than 1") : satisfied(value);
+        if (iterator.hasNext()) {
+            return unsatisfied("collection size was greater than 1");
+        }
+        return satisfied(value);
     }
 }

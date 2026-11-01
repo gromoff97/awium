@@ -10,7 +10,12 @@ import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 record PresentCondition() implements SelectedCondition<Optional<?>> {
     @Override public String description() { return "optional is present"; }
     @Override public AttemptResult<?> probe(Optional<?> actual) {
-        return actual == null ? unsatisfied("optional was null")
-                : actual.isPresent() ? satisfied(actual.orElseThrow()) : unsatisfied("optional was empty");
+        if (actual == null) {
+            return unsatisfied("optional was null");
+        }
+        if (actual.isPresent()) {
+            return satisfied(actual.orElseThrow());
+        }
+        return unsatisfied("optional was empty");
     }
 }

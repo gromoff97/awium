@@ -6,6 +6,7 @@ import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.collection.CollectionContentCondition.Content;
 import io.github.gromoff97.awium.conditions.collection.CollectionSequenceCondition.Sequence;
 import io.github.gromoff97.awium.conditions.collection.ContainsElementsCondition.Membership;
+import io.github.gromoff97.awium.conditions.collection.ElementAtCondition.Position;
 import io.github.gromoff97.awium.conditions.collection.NullElementsCondition.Nulls;
 import io.github.gromoff97.awium.conditions.collection.QuantifiedCondition.Quantifier;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
@@ -186,7 +187,7 @@ public final class CollectionConditions {
         return new CollectionSequenceCondition<>(unexpected, Sequence.SUBSEQUENCE, true);
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> firstElement = new ElementAtCondition(false);
+    public static final SelectedCondition<SequencedCollection<?>> firstElement = new ElementAtCondition(Position.FIRST);
 
     public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> firstElement(
             CheckedPredicate<? super ELEMENT> predicate) {
@@ -208,7 +209,7 @@ public final class CollectionConditions {
         return compose("first element", nested, firstElement);
     }
 
-    public static final SelectedCondition<SequencedCollection<?>> lastElement = new ElementAtCondition(true);
+    public static final SelectedCondition<SequencedCollection<?>> lastElement = new ElementAtCondition(Position.LAST);
 
     public static <ELEMENT> SelectedCondition<SequencedCollection<? extends ELEMENT>> lastElement(
             CheckedPredicate<? super ELEMENT> predicate) {

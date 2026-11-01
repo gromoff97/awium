@@ -50,10 +50,11 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         return actual -> {
             if (actual == null) return unsatisfied("map was null");
             var result = evaluator.probeAt(view(actual), "map " + part.label());
-            return result instanceof Unsatisfied<?> failure
-                    ? unsatisfied(failure.diagnostic().withMismatch(
-                            "map " + part.label() + ": " + failure.mismatch()), failure.cause())
-                    : result.mapValue(ignored -> actual);
+            if (result instanceof Unsatisfied<?> failure) {
+                return unsatisfied(failure.diagnostic().withMismatch(
+                        "map " + part.label() + ": " + failure.mismatch()), failure.cause());
+            }
+            return result.mapValue(ignored -> actual);
         };
     }
     private Collection<Object> view(INPUT actual) {

@@ -33,6 +33,9 @@ final class HasLengthCondition implements PreservingCondition<CharSequence> {
         if (actual == null) return unsatisfied("string was null");
         int length = actual.length();
         var diagnostic = new Diagnostic(null, new Reference<>("Actual length", length));
-        return comparison.probe(length) instanceof Satisfied<?> ? satisfied(actual, diagnostic) : unsatisfied(diagnostic.withMismatch("string length did not match"));
+        if (comparison.probe(length) instanceof Satisfied<?>) {
+            return satisfied(actual, diagnostic);
+        }
+        return unsatisfied(diagnostic.withMismatch("string length did not match"));
     }
 }

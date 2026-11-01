@@ -21,7 +21,9 @@ record ContainsIgnoringCaseCondition(Pattern pattern) implements PreservingCondi
     @Override
     public AttemptResult<?> probe(CharSequence actual) throws Throwable {
         if (actual == null) return unsatisfied("string was null");
-        return pattern.matcher(actual).find() ? satisfied(actual)
-                : unsatisfied("string did not contain expected string ignoring case");
+        if (pattern.matcher(actual).find()) {
+            return satisfied(actual);
+        }
+        return unsatisfied("string did not contain expected string ignoring case");
     }
 }

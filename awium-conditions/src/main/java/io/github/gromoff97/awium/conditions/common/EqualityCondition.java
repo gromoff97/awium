@@ -11,17 +11,46 @@ import static java.util.Objects.deepEquals;
 record EqualityCondition<EXPECTED>(EXPECTED expected, boolean sameInstance, boolean negated) implements ComparisonCondition<EXPECTED> {
     @Override
     public String description() {
-        return sameInstance ? negated ? "value is not the same instance" : "value is the same instance"
-                : negated ? "value does not equal unexpected" : "value equals expected";
+        if (sameInstance) {
+            if (negated) {
+                return "value is not the same instance";
+            }
+            return "value is the same instance";
+        }
+        if (negated) {
+            return "value does not equal unexpected";
+        }
+        return "value equals expected";
     }
 
-    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
+    @Override
+    public List<Reference<?>> references() {
+        if (negated) {
+            return List.of(new Reference<>("Unexpected", expected));
+        }
+        return List.of(new Reference<>("Expected", expected));
+    }
 
     @Override
     public AttemptResult<?> probe(Object actual) {
-        return (sameInstance ? actual == expected : deepEquals(actual, expected)) != negated
-                ? satisfied(actual) : unsatisfied(sameInstance
-                        ? negated ? "value was the same instance" : "value was a different instance"
-                        : negated ? "value was equal" : "value was not equal");
+        boolean matches;
+        if (sameInstance) {
+            matches = actual == expected;
+        } else {
+            matches = deepEquals(actual, expected);
+        }
+        if (matches != negated) {
+            return satisfied(actual);
+        }
+        if (sameInstance) {
+            if (negated) {
+                return unsatisfied("value was the same instance");
+            }
+            return unsatisfied("value was a different instance");
+        }
+        if (negated) {
+            return unsatisfied("value was equal");
+        }
+        return unsatisfied("value was not equal");
     }
 }

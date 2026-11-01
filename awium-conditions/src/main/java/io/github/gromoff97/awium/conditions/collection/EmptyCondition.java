@@ -8,12 +8,25 @@ import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record EmptyCondition(boolean expectEmpty) implements PreservingCondition<Collection<?>> {
-    @Override public String description() { return "collection" + (expectEmpty ? " is empty" : " is not empty"); }
+    @Override
+    public String description() {
+        if (expectEmpty) {
+            return "collection is empty";
+        }
+        return "collection is not empty";
+    }
 
     @Override
     public AttemptResult<?> probe(Collection<?> actual) {
-        return actual == null ? unsatisfied("collection was null")
-                : actual.isEmpty() == expectEmpty ? satisfied(actual)
-                        : unsatisfied("collection" + (expectEmpty ? " was not empty" : " was empty"));
+        if (actual == null) {
+            return unsatisfied("collection was null");
+        }
+        if (actual.isEmpty() == expectEmpty) {
+            return satisfied(actual);
+        }
+        if (expectEmpty) {
+            return unsatisfied("collection was not empty");
+        }
+        return unsatisfied("collection was empty");
     }
 }

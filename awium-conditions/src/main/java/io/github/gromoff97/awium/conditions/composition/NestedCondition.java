@@ -27,10 +27,11 @@ record NestedCondition<INPUT, VALUE, RESULT>(String selection, AwaitCondition ne
         return actual -> switch (extractionRun.probe(actual)) {
             case Satisfied<? extends VALUE> success -> {
                 var result = evaluator.probeAt(success.value(), selection);
-                yield result instanceof Unsatisfied<?> failure
-                        ? unsatisfied(failure.diagnostic().withMismatch(
-                                selection + ": " + failure.mismatch()), failure.cause())
-                        : result;
+                if (result instanceof Unsatisfied<?> failure) {
+                    yield unsatisfied(failure.diagnostic().withMismatch(
+                            selection + ": " + failure.mismatch()), failure.cause());
+                }
+                yield result;
             }
             case Unsatisfied<?> failure -> unsatisfied(failure.diagnostic(), failure.cause());
         };

@@ -7,12 +7,25 @@ import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record EmptyCondition(boolean expectEmpty) implements PreservingCondition<CharSequence> {
-    @Override public String description() { return "string" + (expectEmpty ? " is empty" : " is not empty"); }
+    @Override
+    public String description() {
+        if (expectEmpty) {
+            return "string is empty";
+        }
+        return "string is not empty";
+    }
 
     @Override
     public AttemptResult<?> probe(CharSequence actual) {
-        return actual == null ? unsatisfied("string was null")
-                : actual.isEmpty() == expectEmpty ? satisfied(actual)
-                        : unsatisfied("string" + (expectEmpty ? " was not empty" : " was empty"));
+        if (actual == null) {
+            return unsatisfied("string was null");
+        }
+        if (actual.isEmpty() == expectEmpty) {
+            return satisfied(actual);
+        }
+        if (expectEmpty) {
+            return unsatisfied("string was not empty");
+        }
+        return unsatisfied("string was empty");
     }
 }

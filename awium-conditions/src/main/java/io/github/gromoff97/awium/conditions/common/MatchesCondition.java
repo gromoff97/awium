@@ -15,6 +15,9 @@ record MatchesCondition<INPUT>(CheckedPredicate<? super INPUT> predicate) implem
 
     @Override
     public AttemptResult<?> probe(INPUT actual) throws Throwable {
-        return predicate.test(actual) ? satisfied(actual) : unsatisfied("value did not match");
+        if (predicate.test(actual)) {
+            return satisfied(actual);
+        }
+        return unsatisfied("value did not match");
     }
 }
