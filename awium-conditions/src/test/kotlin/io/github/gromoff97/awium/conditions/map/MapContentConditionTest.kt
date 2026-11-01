@@ -29,6 +29,7 @@ class MapContentConditionTest {
     fun `compares all entries regardless of iteration order`(factory: (Map<*, *>?) -> AwaitCondition, negated: Boolean) {
         val maps = listOf(emptyMap(), mapOf("a" to "1"), mapOf("a" to "2"),
             linkedMapOf("a" to "1", "b" to "2"), linkedMapOf("b" to "2", "a" to "1"),
+            mapOf("a" to "2", "b" to "1"),
             mapOf(null to "1"), mapOf("a" to null))
         for (expected in maps) for (actual in maps) {
             assertEquals((actual == expected) != negated, evaluate(factory(expected), actual) is Satisfied<*>,

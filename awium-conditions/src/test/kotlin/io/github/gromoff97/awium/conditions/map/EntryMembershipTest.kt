@@ -50,6 +50,12 @@ class EntryMembershipTest {
         assertSame(actual, result(evaluate(hasEntry<Any?, Any?>(null, null), actual)))
     }
 
+    @ParameterizedTest
+    @MethodSource("factories")
+    fun `a null expected value still requires its key`(factory: (Any?, Any?) -> AwaitCondition, negated: Boolean) {
+        assertEquals(negated, evaluate(factory("missing", null), mapOf("present" to null)) is Satisfied<*>)
+    }
+
     @Test
     fun `compares array keys and values by content`() {
         val actual = EntryMap(listOf(ProbeEntry(intArrayOf(1), arrayOf("value"))))
@@ -95,13 +101,14 @@ class EntryMembershipTest {
             argumentSet("empty", emptyMap<String, String>(), false),
             argumentSet("other key", mapOf("other" to "1"), false),
             argumentSet("other value", mapOf("ready" to "0"), false),
+            argumentSet("key and value in different entries", mapOf("ready" to "0", "other" to "1"), false),
             argumentSet("null value", mapOf("ready" to null), false),
             argumentSet("null key", mapOf(null to "1"), false),
             argumentSet("matching entry", linkedMapOf("pending" to "0", "ready" to "1"), true))
 
         @JvmStatic
         fun factories() = listOf(
-            argumentSet("present", { key: Any?, value: Any? -> hasEntry(key, value) }),
-            argumentSet("absent", { key: Any?, value: Any? -> hasNoEntry(key, value) }))
+            argumentSet("present", { key: Any?, value: Any? -> hasEntry(key, value) }, false),
+            argumentSet("absent", { key: Any?, value: Any? -> hasNoEntry(key, value) }, true))
     }
 }
