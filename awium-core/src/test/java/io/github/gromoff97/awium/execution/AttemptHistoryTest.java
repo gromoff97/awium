@@ -25,8 +25,6 @@ class AttemptHistoryTest {
         var before = history.conditions(List.of(condition)).getFirst().attempts();
         history.add(1, second);
         var repeated = history.conditions(List.of(condition)).getFirst().attempts();
-        assertThrows(NullPointerException.class, () -> history.add(1, null));
-        assertEquals(2, history.count());
         history.add(1, third);
 
         assertTrue(empty.isEmpty());
@@ -37,6 +35,15 @@ class AttemptHistoryTest {
                 history.conditions(List.of(condition)).getFirst().attempts());
         assertEquals(3, history.count());
         assertThrows(UnsupportedOperationException.class, repeated::pollLastEntry);
+    }
+
+    @Test
+    void rejectsNullAttemptsWithoutAdvancingTheNumber() {
+        var history = new AttemptHistory<String>(true);
+        history.add(1, new SatisfiedObservation<>("ready"));
+
+        assertThrows(NullPointerException.class, () -> history.add(1, null));
+        assertEquals(1, history.count());
     }
 
     @Test
