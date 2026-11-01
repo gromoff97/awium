@@ -30,10 +30,11 @@ For non-null observations:
 | `containsOnly`, `containsOnlyKeys`, exact-content checks | Only empty observations match; negative exact checks have the opposite result |
 | Ordered prefix/suffix/sequence/subsequence | Satisfied; negative sequence/subsequence checks are unsatisfied |
 
-Checks with empty fragment sets read no characters. Empty ordered patterns need
-neither size nor elements. A non-empty pattern longer than the collection fails
-by size without reading elements. Every non-null text contains `""`, so a set with
-that fragment behaves differently from an empty set.
+`containsAll`/`containsAny` and their negatives skip observation reads for empty
+expectations, including map forms. So do empty text fragment sets and ordered
+collection patterns. Non-empty patterns longer than the collection fail by size
+without reading elements. Every non-null text contains `""`; a set with that
+fragment differs from an empty set.
 
 ### Size and length
 

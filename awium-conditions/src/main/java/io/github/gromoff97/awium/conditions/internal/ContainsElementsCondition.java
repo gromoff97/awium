@@ -32,7 +32,7 @@ public final class ContainsElementsCondition<INPUT, ACTUAL, EXPECTED> extends Pr
                     case NOT_ALL -> " does not contain all unexpected " + items;
                 }, new Reference<>(membership == Membership.NONE || membership == Membership.NOT_ALL ? "Unexpected" : "Expected", expected), actual -> {
             if (actual == null) return unsatisfied(subject + " was null");
-            var values = elements.apply(actual);
+            Collection<? extends ACTUAL> values = expected.isEmpty() ? List.of() : elements.apply(actual);
             int index = membership == Membership.ALL || membership == Membership.NOT_ALL
                     ? firstMissingExpectedIndex(values, expected, matches) : firstPresentExpectedIndex(values, expected, matches);
             boolean matched = membership == Membership.ALL || membership == Membership.NONE ? index < 0 : index >= 0;

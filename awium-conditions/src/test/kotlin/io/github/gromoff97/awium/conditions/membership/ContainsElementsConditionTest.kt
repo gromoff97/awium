@@ -18,7 +18,6 @@ import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyKeys
 import io.github.gromoff97.awium.conditions.MapConditions.doesNotContainAnyValues
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
-import io.github.gromoff97.awium.conditions.support.ProbeContainers.membershipCollection
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.ConditionResult.Satisfied
 import org.assertj.core.api.Assertions.assertThat
@@ -29,9 +28,7 @@ import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito.never
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
+import org.mockito.Mockito.mock
 
 class ContainsElementsConditionTest {
     data class Membership(
@@ -64,9 +61,8 @@ class ContainsElementsConditionTest {
 
     @ParameterizedTest
     @MethodSource("mapMemberships")
-    fun `empty map expectations need no traversal`(membership: MapMembership) {
-        val actual = EntryMap(listOf(ProbeEntry("a", "1")))
-        actual.beforeIterator = Runnable { error("unnecessary traversal") }
+    fun `empty map expectations do not read the observation`(membership: MapMembership) {
+        val actual = mock(Map::class.java) { throw AssertionError("empty expectations need no map reads") }
         assertEquals(membership.accepts(mapOf("a" to "1"), emptyMap()),
             evaluate(membership.factory(emptyMap()), actual) is Satisfied<*>)
     }
@@ -106,12 +102,10 @@ class ContainsElementsConditionTest {
 
     @ParameterizedTest
     @MethodSource("memberships")
-    fun `empty expectations do not traverse the observation`(membership: Membership) {
-        val actual = membershipCollection(emptyList<String>())
-        `when`(actual.iterator()).thenThrow(AssertionError("unnecessary traversal"))
+    fun `empty expectations do not read the observation`(membership: Membership) {
+        val actual = mock(Collection::class.java) { throw AssertionError("empty expectations need no collection reads") }
 
         assertEquals(membership.accepts(emptyList(), emptyList()), evaluate(membership.factory(emptyList()), actual) is Satisfied<*>)
-        verify(actual, never()).iterator()
     }
 
     @ParameterizedTest
