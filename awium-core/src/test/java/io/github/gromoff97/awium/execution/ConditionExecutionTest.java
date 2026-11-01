@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.execution;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.ArrayList;
@@ -10,16 +9,11 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
-import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
-import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -48,7 +42,7 @@ class ConditionExecutionTest {
             factories[0]++;
             return actual -> {
                 observations.add(actual);
-                return ConditionResult.satisfied(observations.size());
+                return satisfied(observations.size());
             };
         });
         var execution = bind(condition);
@@ -66,21 +60,21 @@ class ConditionExecutionTest {
     }
 
     @Test
-    void thrownAndInvalidResultsBelongToTheirOwnCalls() {
+    void thrownAndInvalidResultsBelongToTheirOwnCalls() throws Throwable {
         var failure = new AssertionError("first call failed");
         int[] calls = {0};
         Condition<String, Integer> condition = new DefinedCondition<>("three calls", null,
                 () -> actual -> switch (++calls[0]) {
                     case 1 -> throw failure;
                     case 2 -> null;
-                    default -> ConditionResult.satisfied(actual.length());
+                    default -> satisfied(actual.length());
                 });
         var execution = bind(condition);
 
         assertSame(failure, assertThrows(Throwable.class, () -> execution.probe("ready")));
         var invalid = assertThrows(NullPointerException.class, () -> execution.probe("ready"));
         assertEquals("condition returned null ConditionResult", invalid.getMessage());
-        assertEquals(5, result(assertDoesNotThrow(() -> execution.probe("ready"))));
+        assertEquals(5, result(execution.probe("ready")));
     }
 
     @Test
@@ -127,34 +121,18 @@ class ConditionExecutionTest {
     }
 
     @Test
-    void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() {
+    void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() throws Throwable {
         Condition<Integer, Integer> ordinary = new DefinedCondition<>(
                 "counted", null, () -> {
                     int[] calls = {0};
-                    return ignored -> ConditionResult.satisfied(++calls[0]);
+                    return ignored -> satisfied(++calls[0]);
                 });
         assertEquals("counted", ordinary.description());
         var first = bind(ordinary);
         var second = bind(ordinary);
 
-        assertEquals(1, result(assertDoesNotThrow(() -> first.probe(0))));
-        assertEquals(2, result(assertDoesNotThrow(() -> first.probe(0))));
-        assertEquals(1, result(assertDoesNotThrow(() -> second.probe(0))));
-    }
-    private final FakeTime time = new FakeTime(0);
-
-    @Test
-    void brokenUserMetadataDoesNotHideTheProbeFailure() {
-        var probeFailure = new AssertionError("probe failed");
-        var renderingFailure = new IllegalStateException("description failed");
-        var condition = new Condition<String, String>() {
-            @Override public String description() { throw renderingFailure; }
-            @Override public ConditionResult<String> probe(String actual) { throw probeFailure; }
-        };
-        var waiting = timedAwait(() -> "ready", time);
-        var result = diagnostic(waiting).until(condition);
-        assertSame(probeFailure, failure(result).cause());
-        assertThat(failure(result).suppressed()).containsExactly(renderingFailure);
-        assertThat(result.toString()).contains("Condition: <unprintable>", "probe failed");
+        assertEquals(1, result(first.probe(0)));
+        assertEquals(2, result(first.probe(0)));
+        assertEquals(1, result(second.probe(0)));
     }
 }

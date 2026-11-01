@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.diagnostics;
 
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -7,6 +8,7 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
+import io.github.gromoff97.awium.result.ConditionResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.function.Function;
@@ -57,6 +59,20 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 class FailureDiagnosticsTest {
+
+    @Test
+    void brokenUserMetadataDoesNotHideTheProbeFailure() {
+        var probeFailure = new AssertionError("probe failed");
+        var renderingFailure = new IllegalStateException("description failed");
+        var condition = new Condition<String, String>() {
+            @Override public String description() { throw renderingFailure; }
+            @Override public ConditionResult<String> probe(String actual) { throw probeFailure; }
+        };
+        var result = tryAwait(() -> "ready").until(condition);
+        assertSame(probeFailure, failure(result).cause());
+        assertThat(failure(result).suppressed()).containsExactly(renderingFailure);
+        assertThat(result.toString()).contains("Condition: <unprintable>", "probe failed");
+    }
 
     @Test
     void locatedFailuresRetainTheirCauseAndObservation() {
