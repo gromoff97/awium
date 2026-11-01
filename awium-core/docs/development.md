@@ -57,7 +57,9 @@ Checks return `Diagnostic` data in their `AttemptResult`; `diagnostics(attempt)`
 can add final context. Core adds the stop reason, timing, and cause, retaining
 rendering failures separately. `historyResult` defaults to the probe result;
 composites can report a stage's outcome without completing the whole wait.
-`historyConditions` lists the reported conditions and `historySlot` selects one.
+`historyConditions(definition)` lists the reported conditions; `definition` retains
+the original `because` reason. `historySlot(attempt)` selects a condition by its
+1-based position in that list.
 These hooks belong to `Condition`; no lifecycle base class is needed.
 `ProbeFailure` adds a nested location while preserving the original cause.
 
