@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.diagnosticCondition;
 import static java.util.Collections.singletonMap;
 import static java.util.Comparator.nullsFirst;
 import static java.util.Comparator.reverseOrder;

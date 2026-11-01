@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.waiting;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.internal.WaitEngine;
@@ -46,7 +45,7 @@ import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
 import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.start;
+import static io.github.gromoff97.awium.execution.ConditionExecution.start;
 import static io.github.gromoff97.awium.support.TestConditions.check;
 import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static java.lang.Thread.currentThread;
@@ -126,10 +125,10 @@ class ObservationTest {
         var actual = new Object();
         var result = new Object();
 
-        var execution = start(new DefinedCondition<>("test condition", null, (Object value) -> {
+        var execution = start(check("test condition", (Object value) -> {
             time.advanceNanos(3);
             return ConditionResult.satisfied(result);
-        }));
+        }), false);
         WaitCompletion terminal = new WaitEngine<>(withTime(config(1, 20, 0), time, time), () -> {
             time.advanceNanos(2);
             return actual;
@@ -367,7 +366,7 @@ class ObservationTest {
             ConditionResult<?> evaluation = condition.probe(actual);
             time.advanceNanos(2);
             return evaluation;
-        }))).waitFor(ignored -> {}).step().attempt();
+        }), false)).waitFor(ignored -> {}).step().attempt();
     }
 
     @Test

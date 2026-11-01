@@ -3,6 +3,7 @@ package io.github.gromoff97.awium.support;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.function.Predicate;
 import java.util.concurrent.Callable;
 
@@ -18,6 +19,10 @@ public final class TestConditions {
 
     public static final PreservingCondition<Object> accepted = new PreservingCondition<>(
             "accepted", null, actual -> satisfied(actual)) {};
+
+    public static Condition<Object, Object> diagnosticCondition(String description, Reference<?> reference) {
+        return new DefinedCondition<>(description, reference, ConditionResult::satisfied);
+    }
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> check(
             String description, AwaitAttempt<? super INPUT, ? extends RESULT> attempt) {

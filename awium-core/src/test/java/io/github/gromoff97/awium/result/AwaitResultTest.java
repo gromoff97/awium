@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.diagnosticCondition;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;

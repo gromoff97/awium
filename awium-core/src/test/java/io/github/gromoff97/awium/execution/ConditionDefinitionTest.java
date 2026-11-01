@@ -22,7 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.result;
+import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;

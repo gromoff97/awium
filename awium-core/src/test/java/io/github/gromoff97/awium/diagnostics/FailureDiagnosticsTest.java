@@ -47,7 +47,7 @@ import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.diagnosticCondition;
 import static io.github.gromoff97.awium.support.TestConditions.check;
 import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.lang.Thread.interrupted;

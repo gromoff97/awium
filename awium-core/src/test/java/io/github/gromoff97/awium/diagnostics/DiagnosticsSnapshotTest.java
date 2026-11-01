@@ -43,7 +43,7 @@ import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
-import static io.github.gromoff97.awium.support.ConditionTestRuntime.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.diagnosticCondition;
 import static io.github.gromoff97.awium.support.TestConditions.accepted;
 import static io.github.gromoff97.awium.support.TestConditions.check;
 import static io.github.gromoff97.awium.support.TestConditions.expected;
