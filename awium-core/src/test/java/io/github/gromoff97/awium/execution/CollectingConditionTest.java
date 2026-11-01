@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.execution;
 
-import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
 import io.github.gromoff97.awium.AwaitCondition.InputCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -12,7 +12,6 @@ import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -63,7 +62,6 @@ class CollectingConditionTest {
         var second = ConditionExecution.<String, List<String>>start(condition);
         first.probe("first");
 
-        assertFalse(second.complete());
         second.probe("second");
         assertEquals(List.of("first"), first.result());
         assertEquals(List.of("second"), second.result());
@@ -73,18 +71,14 @@ class CollectingConditionTest {
         @Override public String description() { return "record one observation"; }
 
         @Override
-        public ConditionRun<?, ?> newRun(AwaitCondition definition) {
-            return new ConditionRun<Object, List<Object>>(definition) {
-                private List<Object> values = List.of();
+        public Condition<?, ?> newRun() {
+            return new Condition<Object, List<Object>>() {
+                @Override public String description() { return "record one observation"; }
 
                 @Override
-                public AttemptResult<Object> probe(Object actual) {
-                    values = singletonList(actual);
-                    return satisfied(actual);
+                public AttemptResult<List<Object>> probe(Object actual) {
+                    return satisfied(singletonList(actual));
                 }
-
-                @Override public boolean complete() { return !values.isEmpty(); }
-                @Override public List<Object> result() { return values; }
             };
         }
     }

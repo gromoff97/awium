@@ -1,11 +1,10 @@
 package consumer;
 
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.result.AttemptResult;
 
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 public record CountedCondition(int observations) implements Condition<String, Integer> {
     @Override
@@ -15,23 +14,21 @@ public record CountedCondition(int observations) implements Condition<String, In
     public AttemptResult<Integer> probe(String actual) { return satisfied(actual.length()); }
 
     @Override
-    public ConditionRun<String, Integer> newRun(AwaitCondition definition) {
-        return new ConditionRun<>(definition) {
+    public Condition<String, Integer> newRun() {
+        return new Condition<>() {
             private int count;
             private int totalLength;
+
+            @Override
+            public String description() { return CountedCondition.this.description(); }
 
             @Override
             public AttemptResult<Integer> probe(String actual) {
                 count++;
                 totalLength += actual.length();
-                return CountedCondition.this.probe(actual);
+                return count >= observations ? satisfied(totalLength)
+                        : unsatisfied("condition is not yet complete");
             }
-
-            @Override
-            public boolean complete() { return count >= observations; }
-
-            @Override
-            public Integer result() { return totalLength; }
         };
     }
 }

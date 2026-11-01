@@ -5,7 +5,6 @@ import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.execution.ConditionExecution
-import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.result.Attempt
 import io.github.gromoff97.awium.result.AwaitFailure
@@ -20,11 +19,6 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.fail
 
 object ConditionAssertions {
-    fun <INPUT> probe(run: ConditionRun<INPUT, *>, actual: INPUT): AttemptResult<*> {
-        run.beginAttempt()
-        return run.probe(actual)
-    }
-
     fun evaluate(condition: AwaitCondition, actual: Any?): AttemptResult<*> =
         ConditionExecution.bind<Any?, Any?>(condition).probe(actual)
 

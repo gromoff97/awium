@@ -7,9 +7,10 @@ import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.function.AwaitAttempt;
+import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -32,14 +33,18 @@ abstract class Explained<ORIGINAL extends AwaitCondition> implements AwaitCondit
         private Check(ORIGINAL original, String explanation) { super(original, explanation); }
         public AttemptResult<?> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         public AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return original.newAttempt(); }
-        public ConditionRun<INPUT, ?> newRun(AwaitCondition definition) { return original.newRun(definition); }
+        public Condition<INPUT, ?> newRun() { return original.newRun(); }
     }
 
     static final class Typed<INPUT, RESULT> extends Explained<Condition<INPUT, RESULT>> implements Condition<INPUT, RESULT> {
         Typed(Condition<INPUT, RESULT> original, String explanation) { super(original, explanation); }
         @Override public AttemptResult<RESULT> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         @Override public AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception { return original.newAttempt(); }
-        @Override public ConditionRun<INPUT, RESULT> newRun(AwaitCondition definition) { return original.newRun(definition); }
+        @Override public Condition<INPUT, RESULT> newRun() { return original.newRun(); }
+        @Override public AttemptResult<?> historyResult(AttemptResult<? extends RESULT> attempt) throws Throwable { return original.historyResult(attempt); }
+        @Override public int historySlot(Attempt<?> attempt) { return original.historySlot(attempt); }
+        @Override public List<? extends AwaitCondition> historyConditions(AwaitCondition definition) { return original.historyConditions(definition); }
+        @Override public Diagnostic diagnostics(Attempt<?> attempt) { return original.diagnostics(attempt); }
         @Override public Condition<INPUT, RESULT> because(String explanation) { return original.because(explanation); }
     }
 
@@ -66,7 +71,7 @@ abstract class Explained<ORIGINAL extends AwaitCondition> implements AwaitCondit
     static final class Collecting<CHECK extends AwaitCondition> extends Explained<CollectingCondition<CHECK>> implements CollectingCondition<CHECK> {
         Collecting(CollectingCondition<CHECK> original, String explanation) { super(original, explanation); }
         @Override public List<AwaitCondition> stages() { return original.stages(); }
-        @Override public ConditionRun<?, ?> newRun(AwaitCondition definition) { return original.newRun(definition); }
+        @Override public Condition<?, ?> newRun() { return original.newRun(); }
         @Override public CollectingCondition<CHECK> because(String explanation) { return original.because(explanation); }
     }
 }

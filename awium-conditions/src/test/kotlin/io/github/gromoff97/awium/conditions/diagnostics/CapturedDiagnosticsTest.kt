@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.Reference
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
@@ -97,7 +96,7 @@ class CapturedDiagnosticsTest {
         val pending = condition<String, String>("payment status is pending") { throw cause }
         val run = start<String, List<String>>(lifecycle(pending))
         step(run, "created")
-        assertSame(cause, assertThrows(Throwable::class.java) { probe(run, "created") })
+        assertSame(cause, assertThrows(Throwable::class.java) { run.probe("created") })
         val attempt = FailedAfterObservation("created", CONDITION, cause, null)
         run.record(attempt)
         val failure = diagnose(run, Uncontrolled(ExecutionStep(false, ACQUISITION, 0, attempt)))
@@ -188,7 +187,6 @@ class CapturedDiagnosticsTest {
         val run = start<String, List<String>>(captured(first, last))
         val values = listOf("ready", "done").take(completed)
         values.forEach { step(run, it) }
-        run.beginAttempt()
         val cause = IllegalStateException("external failure")
         val attempt = FailedBeforeObservation<String>(operation, cause)
         run.record(attempt)
@@ -196,7 +194,9 @@ class CapturedDiagnosticsTest {
 
         assertSame(cause, failure(result).cause())
         assertThat(failure(result).message()).contains("Sequence: \"captured $completed/2; stage 2/2\"")
-        assertEquals(values, run.result())
+        val observations = result.conditions().flatMap { it.attempts().values }
+            .filterIsInstance<SatisfiedObservation<*>>().map { it.observed() }
+        assertEquals(values, observations)
         assertEquals(listOf(first, last), result.conditions().map { it.condition() })
         assertSame(attempt, result.conditions().last().attempts().lastEntry().value)
     }
@@ -232,12 +232,13 @@ class CapturedDiagnosticsTest {
         failure(run.finish(outcome, mock(WaitTiming::class.java)))
 
     private fun <OBSERVED> step(run: ConditionRun<OBSERVED, *>, actual: OBSERVED): ExecutionStep<OBSERVED> {
-        val attempt: Attempt<OBSERVED> = when (val checked = probe(run, actual)) {
+        val result = run.probe(actual)
+        val attempt: Attempt<OBSERVED> = when (val checked = run.historyResult()) {
             is Satisfied -> SatisfiedObservation(actual, checked.diagnostic())
             is Unsatisfied -> UnsatisfiedObservation(actual, checked.diagnostic(), checked.cause())
         }
         run.record(attempt)
-        return ExecutionStep(run.complete(), ACQUISITION, 0, attempt)
+        return ExecutionStep(result is Satisfied<*>, ACQUISITION, 0, attempt)
     }
 
     private class RenderingValue(val render: () -> String) {

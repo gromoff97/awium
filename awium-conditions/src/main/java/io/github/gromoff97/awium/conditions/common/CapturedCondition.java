@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition;
-import io.github.gromoff97.awium.execution.ConditionRun;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -10,7 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
+import static io.github.gromoff97.awium.result.Attempt.Failure;
+import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Math.min;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -27,51 +32,58 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
 
     @Override public String description() { return "conditions are satisfied in order"; }
     @Override public List<AwaitCondition> stages() { return stages; }
-    @Override public ConditionRun<?, ?> newRun(AwaitCondition definition) {
-        return new Run<>(definition);
+    @Override public Condition<?, ?> newRun() {
+        return new Run<>();
     }
 
-    private final class Run<OBSERVED> extends ConditionRun<OBSERVED, List<OBSERVED>> {
+    private final class Run<OBSERVED> implements Condition<OBSERVED, List<OBSERVED>> {
 
         private final List<ConditionExecution<OBSERVED, Object>> evaluations;
         private final List<OBSERVED> results = new ArrayList<>();
         private int attemptedStage = 1;
+        private AttemptResult<?> stageResult;
 
-        private Run(AwaitCondition definition) {
-            super(definition);
+        private Run() {
             evaluations = stages.stream().map(ConditionExecution::<OBSERVED, Object>bind).toList();
         }
 
         @Override
-        public void beginAttempt() { attemptedStage = min(results.size() + 1, stages.size()); }
+        public String description() { return CapturedCondition.this.description(); }
 
         @Override
-        public AttemptResult<?> probe(OBSERVED actual) throws Throwable {
-            if (complete()) results.removeLast();
-            var evaluated = evaluations.get(attemptedStage - 1).probe(actual);
-            if (evaluated instanceof Satisfied<?>) results.add(actual);
-            return evaluated;
+        public AttemptResult<List<OBSERVED>> probe(OBSERVED actual) throws Throwable {
+            attemptedStage = min(results.size() + 1, stages.size());
+            if (results.size() == stages.size()) results.removeLast();
+            stageResult = evaluations.get(attemptedStage - 1).probe(actual);
+            if (stageResult instanceof Satisfied<?>) results.add(actual);
+            var diagnostic = stageResult.diagnostic();
+            if (results.size() == stages.size()) return satisfied(results.stream().toList(), diagnostic);
+            var mismatch = diagnostic.mismatch();
+            return unsatisfied(mismatch == null || mismatch.isBlank()
+                    ? diagnostic.withMismatch("condition is not yet complete") : diagnostic, stageResult.cause());
         }
 
         @Override
-        public boolean complete() { return results.size() == stages.size(); }
+        public AttemptResult<?> historyResult(AttemptResult<? extends List<OBSERVED>> attempt) { return stageResult; }
 
         @Override
-        public List<OBSERVED> result() { return results.stream().toList(); }
+        public int historySlot(Attempt<?> attempt) {
+            return attempt instanceof FailedBeforeObservation<?>
+                    || attempt instanceof Failure<?> failure && failure.operation() != CONDITION
+                    ? min(results.size() + 1, stages.size()) : attemptedStage;
+        }
 
         @Override
-        protected int historySlot() { return attemptedStage; }
+        public List<AwaitCondition> historyConditions(AwaitCondition definition) { return stages; }
 
         @Override
-        protected List<AwaitCondition> historyConditions() { return stages; }
-
-        @Override
-        protected Diagnostic diagnostics(Attempt<?> attempt) {
+        public Diagnostic diagnostics(Attempt<?> attempt) {
+            int stage = historySlot(attempt);
             var fields = new ArrayList<Reference<?>>();
             fields.add(new Reference<>("Sequence", "captured " + results.size() + "/" + stages.size()
-                    + "; stage " + attemptedStage + "/" + stages.size()));
-            fields.add(new Reference<>("Current stage", stages.get(attemptedStage - 1)));
-            if (attempt instanceof SatisfiedObservation<?> && !complete()) {
+                    + "; stage " + stage + "/" + stages.size()));
+            fields.add(new Reference<>("Current stage", stages.get(stage - 1)));
+            if (attempt instanceof SatisfiedObservation<?> && results.size() != stages.size()) {
                 int next = results.size() + 1;
                 fields.add(new Reference<>("Next stage " + next + "/" + stages.size(), stages.get(next - 1)));
             }

@@ -7,9 +7,6 @@ import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
-import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
-import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
@@ -27,31 +24,21 @@ public final class ConditionExecution<OBSERVED, RESULT> implements AwaitAttempt<
     private static <INPUT, RESULT> ConditionExecution<INPUT, RESULT> bindRun(AwaitCondition condition) {
         requireNonNull(condition, "condition must not be null");
         return new ConditionExecution<>(() -> {
-            ConditionRun<INPUT, RESULT> run = start(condition);
-            return (INPUT actual) -> {
-                run.beginAttempt();
-                if (currentThread().isInterrupted()) throw interrupted(null);
-                var attempted = requireNonNull(run.probe(actual), "condition returned null AttemptResult");
-                if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
-                if (run.complete()) {
-                    if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
-                    return satisfied(run.result(), attempted.diagnostic());
-                }
-                if (attempted instanceof Satisfied<?>) {
-                    var diagnostic = attempted.diagnostic();
-                    String message = diagnostic.mismatch();
-                    return unsatisfied(message == null || message.isBlank()
-                            ? diagnostic.withMismatch("condition is not yet complete") : diagnostic);
-                }
-                return attempted.<RESULT>mapValue(ignored -> null);
-            };
+            var check = ConditionExecution.<INPUT, RESULT>prepare(condition);
+            if (currentThread().isInterrupted()) throw new InterruptedException("caller thread interrupt flag was set");
+            return check.newAttempt();
         });
     }
 
-    @SuppressWarnings("unchecked")
     public static <INPUT, RESULT> ConditionRun<INPUT, RESULT> start(AwaitCondition condition) {
+        return new ConditionRun<>(condition, prepare(condition));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <INPUT, RESULT> Condition<INPUT, RESULT> prepare(AwaitCondition condition) {
         // Terminal bounds determine the result of source-dependent selectors and preserving checks.
-        return (ConditionRun<INPUT, RESULT>) requireNonNull(condition, "condition must not be null").newRun(condition);
+        return (Condition<INPUT, RESULT>) requireNonNull(
+                requireNonNull(condition, "condition must not be null").newRun(), "condition returned null run");
     }
 
     private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;

@@ -10,42 +10,37 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
-import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class ConditionExecutionTest {
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" ", "waiting for another observation"})
-    void anIncompleteRunRetainsItsFieldsAndAlwaysExplainsTheMismatch(String message) throws Throwable {
-        Condition<String, String> condition = mock();
-        ConditionRun<String, String> run = mock();
-        var diagnostic = new Diagnostic(message, new Reference<>("Completed checks", 1));
-        doReturn(run).when(condition).newRun(condition);
-        doReturn(satisfied("selected", diagnostic)).when(run).probe("actual");
+    @Test
+    void nestedChecksKeepTheirOutcomeWithoutBuildingHistory() throws Throwable {
+        Condition<String, String> condition = mock(CALLS_REAL_METHODS);
+        var diagnostic = new Diagnostic("stage passed", new Reference<>("Completed checks", 1));
+        var verdict = unsatisfied(diagnostic.withMismatch("waiting for another observation"));
+        doReturn(verdict).when(condition).probe("actual");
+        doReturn(satisfied("selected", diagnostic)).when(condition).historyResult(any());
 
-        var rejected = assertInstanceOf(Unsatisfied.class, bind(condition).probe("actual"));
-
-        assertEquals(message == null || message.isBlank() ? "condition is not yet complete" : message,
-                rejected.mismatch());
-        assertEquals(diagnostic.fields(), rejected.diagnostic().fields());
+        assertSame(verdict, bind(condition).probe("actual"));
+        verify(condition, never()).historyResult(any());
     }
 
     @Test

@@ -209,12 +209,13 @@ class FailureDiagnosticsTest {
     }
 
     private static ConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
-        return new ConditionRun<>(diagnosticCondition("ready", new Reference<>("Expected", "ready"))) {
-            @Override public AttemptResult<?> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
-            @Override public boolean complete() { throw new AssertionError("diagnostics must not evaluate completion"); }
-            @Override public Object result() { throw new AssertionError("diagnostics must not retrieve a result"); }
-            @Override protected Diagnostic diagnostics(Attempt<?> attempt) { return diagnostic.get(); }
-        };
+        return ConditionExecution.start(new Condition<Object, Object>() {
+            @Override public String description() { return "ready"; }
+            @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", "ready")); }
+            @Override public AttemptResult<Object> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
+            @Override public AttemptResult<?> historyResult(AttemptResult<?> attempt) { throw new AssertionError("diagnostics must not project history"); }
+            @Override public Diagnostic diagnostics(Attempt<?> attempt) { return diagnostic.get(); }
+        });
     }
 
     private static List<Arguments> failureCases() {

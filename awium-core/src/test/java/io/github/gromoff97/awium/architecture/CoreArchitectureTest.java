@@ -36,7 +36,7 @@ class CoreArchitectureTest {
                     independent(Set.of("ConditionRun"), Set.of("WaitEngine", "AttemptExecution", "WaitConfiguration",
                             "Await", "AwaitSupport", "ValueAwait", "DiagnosticAwait"))
                             .as("run lifecycle owns history and results without polling or facade dependencies"),
-                    independent(Set.of("AwaitSupport"), Set.of("CheckRun", "AttemptHistory", "FailureDiagnostics"))
+                    independent(Set.of("AwaitSupport"), Set.of("AttemptHistory", "FailureDiagnostics"))
                             .as("waiting facades do not depend on run implementations"),
                     independent(Set.of("AttemptResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"))
                             .as("check outcomes do not depend on execution"),

@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
 import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
@@ -57,9 +56,9 @@ class CapturedHistoryTest {
         val first = equalTo("created").because("payment must be created")
         val second = equalTo("paid").because("payment must be completed")
         val run = start<String, List<String>>(captured(first, second).because("checkout lifecycle"))
-        probe(run, "created")
+        run.probe("created")
         run.record(SatisfiedObservation("created"))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, "created"))
+        val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe("created"))
         val attempt = UnsatisfiedObservation("created", rejected.diagnostic(), rejected.cause())
         run.record(attempt)
         val result = run.finish(Timeout(ExecutionStep(false, ACQUISITION, 0, attempt)), mock(WaitTiming::class.java))
@@ -78,7 +77,8 @@ class CapturedHistoryTest {
         val shipped = condition<String, String>("shipped") { unsatisfied("tracking number missing") }
         val run = start<String, List<String>>(captured(paid, shipped))
         for (actual in listOf("created", "paid", "paid")) {
-            val checked = probe(run, actual)
+            run.probe(actual)
+            val checked = run.historyResult()
             val attempt = if (checked is Unsatisfied<*>)
                 UnsatisfiedObservation(actual, checked.diagnostic(), checked.cause())
             else SatisfiedObservation(actual)
@@ -175,10 +175,10 @@ class CapturedHistoryTest {
             AwaitAttempt { satisfied(it) }
         }.because("last check")
         val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(3), unreached))
-        probe(run, 1)
+        run.probe(1)
         run.record(SatisfiedObservation(1))
         for (actual in listOf(0, 0, 2, 2)) {
-            val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, actual))
+            val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(actual))
             run.record(UnsatisfiedObservation(actual, rejected.diagnostic(), rejected.cause()))
         }
         val step = ExecutionStep(false, ACQUISITION, 0, UnsatisfiedObservation(2, "value was not equal", null))
@@ -197,7 +197,7 @@ class CapturedHistoryTest {
     fun `rechecking a complete run records only its final stage`() {
         val run = start<Int, List<Int>>(captured(equalTo(1), equalTo(2)))
         for (actual in listOf(1, 2, 2, 2)) {
-            probe(run, actual)
+            run.probe(actual)
             run.record(SatisfiedObservation(actual))
         }
         val step = ExecutionStep(true, ACQUISITION, 0, SatisfiedObservation(2))
@@ -240,6 +240,23 @@ class CapturedHistoryTest {
         assertEquals(SOURCE, attempt.operation())
         assertTrue(result.conditions().last().attempts().isEmpty())
         assertThat(pending.toString()).contains("Observed: unavailable")
+    }
+
+    @Test
+    fun `a source that returns while interrupted belongs to the next stage`() {
+        var reads = 0
+        val result = tryAwait(Callable {
+            if (++reads == 2) Thread.currentThread().interrupt()
+            "ready"
+        }).every(ofNanos(1)).until(captured(equalTo("ready"), equalTo("done"), equalTo("closed")))
+
+        val pending = result.conditions()[1]
+        val attempt = assertInstanceOf(FailedAfterObservation::class.java, pending.attempts().lastEntry().value)
+        assertEquals(2L, pending.attempts().lastKey())
+        assertEquals("ready", attempt.observed())
+        assertEquals(SOURCE, attempt.operation())
+        assertTrue(result.conditions().last().attempts().isEmpty())
+        assertThat(failure(INTERRUPTED, result).message()).contains("captured 1/3; stage 2/3")
     }
 
     @Test

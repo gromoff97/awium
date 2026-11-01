@@ -23,8 +23,8 @@ class SelectorLifecycleTest {
         var selector = new SelectedCondition<List<String>>() {
             @Override public String description() { return definition.description(); }
             @Override public AttemptResult<?> probe(List<String> actual) throws Throwable { return definition.probe(actual); }
-            @Override public ConditionRun<List<String>, ?> newRun(AwaitCondition original) {
-                return definition.newRun(original);
+            @Override public Condition<List<String>, ?> newRun() {
+                return definition.newRun();
             }
         };
 
@@ -38,8 +38,8 @@ class SelectorLifecycleTest {
         var selector = new MapValueCondition<Map<String, String>>() {
             @Override public String description() { return definition.description(); }
             @Override public AttemptResult<?> probe(Map<String, String> actual) throws Throwable { return definition.probe(actual); }
-            @Override public ConditionRun<Map<String, String>, ?> newRun(AwaitCondition original) {
-                return definition.newRun(original);
+            @Override public Condition<Map<String, String>, ?> newRun() {
+                return definition.newRun();
             }
         };
 
@@ -62,18 +62,17 @@ class SelectorLifecycleTest {
             @Override public AttemptResult<String> probe(INPUT actual) {
                 throw new AssertionError("the custom run must perform the check");
             }
-            @Override public ConditionRun<INPUT, String> newRun(AwaitCondition definition) {
-                return new ConditionRun<>(definition) {
+            @Override public Condition<INPUT, String> newRun() {
+                return new Condition<>() {
                     private int observations;
-                    private String value;
 
-                    @Override public AttemptResult<?> probe(INPUT actual) {
+                    @Override public String description() { return "two observations"; }
+
+                    @Override public AttemptResult<String> probe(INPUT actual) {
                         observations++;
-                        value = extract.apply(actual);
-                        return satisfied(value);
+                        var value = extract.apply(actual);
+                        return observations == 2 ? satisfied(value) : unsatisfied("condition is not yet complete");
                     }
-                    @Override public boolean complete() { return observations == 2; }
-                    @Override public String result() { return value; }
                 };
             }
         };

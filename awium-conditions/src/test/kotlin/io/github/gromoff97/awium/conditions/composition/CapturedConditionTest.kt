@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium.conditions.composition
 
 import consumer.collection.CapturedConsumer
+import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
@@ -19,8 +20,9 @@ import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import io.github.gromoff97.awium.result.AttemptResult.satisfied
 import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
+import java.time.Duration.ofNanos
+import java.util.concurrent.Callable
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertNotSame
@@ -102,9 +104,8 @@ class CapturedConditionTest {
         val run = start<List<Any>, List<List<Any>>>(captured(firstElement(instanceOf(String::class.java)),
             lastElement(instanceOf(String::class.java))))
 
-        probe(run, first)
-        probe(run, last)
-        assertTrue(run.complete())
+        run.probe(first)
+        assertInstanceOf(Satisfied::class.java, run.probe(last))
         assertSame(first, run.result().first())
         assertSame(last, run.result().last())
     }
@@ -114,11 +115,12 @@ class CapturedConditionTest {
         val pending = listOf(false)
         val run = start<List<Boolean>, List<List<Boolean>>>(captured(
             singleElement(matches { ready: Boolean -> !ready }), singleElement(matches { ready: Boolean -> ready })))
-        probe(run, pending)
+        run.probe(pending)
 
-        repeat(2) { assertInstanceOf(Unsatisfied::class.java, probe(run, pending)) }
-        assertEquals(listOf(pending), run.result())
-        assertFalse(run.complete())
+        repeat(2) { assertInstanceOf(Unsatisfied::class.java, run.probe(pending)) }
+        val ready = listOf(true)
+        assertInstanceOf(Satisfied::class.java, run.probe(ready))
+        assertEquals(listOf(pending, ready), run.result())
     }
 
     @Test
@@ -131,8 +133,8 @@ class CapturedConditionTest {
         }
         val run = start<List<String>, List<List<String>>>(captured(singleElement(nested), singleElement(nested)))
 
-        repeat(4) { probe(run, listOf("ready")) }
-        assertTrue(run.complete())
+        repeat(4) { run.probe(listOf("ready")) }
+        assertEquals(List(2) { listOf("ready") }, run.result())
         assertEquals(2, factories)
     }
 
@@ -147,9 +149,8 @@ class CapturedConditionTest {
         val sequence = captured(afterRetry, equalTo("pending"), afterRetry)
         repeat(2) {
             val run = start<String, List<String>>(sequence)
-            for (actual in listOf("created", "created", "pending", "created", "created")) probe(run, actual)
+            for (actual in listOf("created", "created", "pending", "created", "created")) run.probe(actual)
             assertEquals(listOf("created", "pending", "created"), run.result())
-            assertTrue(run.complete())
         }
         assertEquals(4, factories)
     }
@@ -157,7 +158,7 @@ class CapturedConditionTest {
     @Test
     fun `captured results cannot be modified`() {
         val run = start<List<String>, List<List<String>>>(captured(singleElement, singleElement))
-        repeat(2) { probe(run, listOf("ready")) }
+        repeat(2) { run.probe(listOf("ready")) }
         assertThrows(UnsupportedOperationException::class.java) { (run.result() as MutableList).clear() }
     }
 
@@ -169,11 +170,10 @@ class CapturedConditionTest {
         val run = start<Map<String, Number?>, List<Map<String, Number?>>>(
             captured(valueFor("first"), valueFor("last", isNotNull)))
 
-        probe(run, first)
-        probe(run, acquired)
+        run.probe(first)
+        run.probe(acquired)
         val initial = run.result()
-        probe(run, refreshed)
-        assertTrue(run.complete())
+        assertInstanceOf(Satisfied::class.java, run.probe(refreshed))
         assertSame(first, run.result().first())
         assertSame(refreshed, run.result().last())
         assertSame(acquired, initial.last())
@@ -185,7 +185,7 @@ class CapturedConditionTest {
         val acquired = listOf("ignored", "acquired")
         val refreshed = listOf("ignored", "refreshed")
         val run = start<List<String>, List<List<String>>>(captured(firstElement, lastElement))
-        for (actual in listOf(first, acquired, refreshed)) probe(run, actual)
+        for (actual in listOf(first, acquired, refreshed)) run.probe(actual)
         assertSame(first, run.result().first())
         assertSame(refreshed, run.result().last())
     }
@@ -198,12 +198,10 @@ class CapturedConditionTest {
             stage == 2 || matching
         }
         val second = matches { _: String -> Thread.currentThread().interrupt(); matching }
-        val run = start<String, List<String>>(captured(first, second))
-        if (stage == 2) probe(run, "ready")
+        val result = tryAwait(Callable { "ready" }).every(ofNanos(1)).until(captured(first, second))
 
-        assertThrows(InterruptedException::class.java) { probe(run, "ready") }
-        assertEquals(stage - 1, run.result().size)
-        assertFalse(run.complete())
+        assertInstanceOf(InterruptedException::class.java, failure(result).cause())
+        assertTrue(failure(result).message().contains("captured ${stage - 1}/2"))
         assertTrue(Thread.currentThread().isInterrupted)
     }
 
@@ -213,11 +211,12 @@ class CapturedConditionTest {
         val stage = matches { value: Int -> calls++; value == 1 }
         val run = start<Int, List<Int>>(captured(stage, stage, stage))
         for (count in 1..3) {
-            assertInstanceOf(Satisfied::class.java, probe(run, 1))
+            val outcome = run.probe(1)
+            assertEquals(count == 3, outcome is Satisfied<*>)
+            assertInstanceOf(Satisfied::class.java, run.historyResult())
             assertEquals(count, calls)
-            assertEquals(count, run.result().size)
-            assertEquals(count == 3, run.complete())
         }
+        assertEquals(listOf(1, 1, 1), run.result())
     }
 
     @Test
@@ -228,7 +227,7 @@ class CapturedConditionTest {
             matches { value: String -> earlyCalls++; value == "early" },
             matches { value: String -> finalCalls++; value != "early" }))
 
-        for (actual in listOf("early", "acquired", "refreshed", "latest")) probe(run, actual)
+        for (actual in listOf("early", "acquired", "refreshed", "latest")) run.probe(actual)
         assertEquals(listOf("early", "latest"), run.result())
         assertEquals(1, earlyCalls)
         assertEquals(3, finalCalls)
@@ -237,43 +236,41 @@ class CapturedConditionTest {
     @Test
     fun `a final stage mismatch removes its previous capture`() {
         val run = start<String, List<String>>(captured(equalTo("early"), equalTo("final")))
-        probe(run, "early")
-        probe(run, "final")
+        run.probe("early")
+        run.probe("final")
 
-        assertInstanceOf(Unsatisfied::class.java, probe(run, "rejected"))
-        assertFalse(run.complete())
-        assertEquals(listOf("early"), run.result())
-        probe(run, "final")
-        assertTrue(run.complete())
+        assertInstanceOf(Unsatisfied::class.java, run.probe("rejected"))
+        assertInstanceOf(Satisfied::class.java, run.probe("final"))
         assertEquals(listOf("early", "final"), run.result())
     }
 
     @Test
     fun `later states cannot skip an unfinished intermediate stage`() {
         val run = start<String, List<String>>(captured(equalTo("created"), equalTo("pending"), equalTo("finished")))
-        probe(run, "created")
-        repeat(2) { assertInstanceOf(Unsatisfied::class.java, probe(run, "finished")) }
-        assertFalse(run.complete())
-        assertEquals(listOf("created"), run.result())
+        run.probe("created")
+        repeat(2) { assertInstanceOf(Unsatisfied::class.java, run.probe("finished")) }
+        assertInstanceOf(Unsatisfied::class.java, run.probe("pending"))
+        assertInstanceOf(Satisfied::class.java, run.probe("finished"))
+        assertEquals(listOf("created", "pending", "finished"), run.result())
     }
 
     @Test
     fun `new runs are independent of completed and incomplete executions`() {
         val condition = captured(equalTo("created"), equalTo("finished"))
         val complete = start<String, List<String>>(condition)
-        probe(complete, "created")
-        probe(complete, "finished")
+        complete.probe("created")
+        complete.probe("finished")
         val incomplete = start<String, List<String>>(condition)
-        probe(incomplete, "created")
-        probe(incomplete, "pending")
+        incomplete.probe("created")
+        incomplete.probe("pending")
         val next = start<String, List<String>>(condition)
 
-        assertInstanceOf(Unsatisfied::class.java, probe(next, "finished"))
-        assertTrue(next.result().isEmpty())
-        probe(next, "created")
-        probe(next, "finished")
+        assertInstanceOf(Unsatisfied::class.java, next.probe("finished"))
+        next.probe("created")
+        next.probe("finished")
         assertEquals(listOf("created", "finished"), next.result())
         assertEquals(next.result(), complete.result())
-        assertEquals(listOf("created"), incomplete.result())
+        assertInstanceOf(Satisfied::class.java, incomplete.probe("finished"))
+        assertEquals(next.result(), incomplete.result())
     }
 }

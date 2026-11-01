@@ -25,16 +25,6 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
     ExecutionStep<OBSERVED> call(Phase phase) {
         var interrupted = interruptedBefore(phase);
         if (interrupted != null) return interrupted;
-        try {
-            execution.beginAttempt();
-        } catch (Throwable failure) {
-            return failed(phase,
-                    new FailedBeforeObservation<>(Operation.CONDITION, failure), clock.getAsLong());
-        }
-        if (currentThread().isInterrupted()) {
-            return failed(phase, new FailedBeforeObservation<>(Operation.CONDITION,
-                    new InterruptedException("caller thread interrupt flag was set")), clock.getAsLong());
-        }
         OBSERVED actual;
         try {
             actual = source.call();
@@ -50,16 +40,20 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
 
         Attempt<OBSERVED> attempt;
         Diagnostic diagnostic = Diagnostic.EMPTY;
+        Throwable conditionCause = null;
         boolean complete = false;
         try {
             var checked = execution.probe(actual);
             diagnostic = checked.diagnostic();
-            attempt = switch (checked) {
+            conditionCause = checked.cause();
+            var recorded = execution.historyResult();
+            diagnostic = recorded.diagnostic();
+            attempt = switch (recorded) {
                 case Satisfied<?> success -> new SatisfiedObservation<>(actual, success.diagnostic());
                 case Unsatisfied<?> mismatch ->
                         new UnsatisfiedObservation<>(actual, mismatch.diagnostic(), mismatch.cause());
             };
-            if (!currentThread().isInterrupted()) complete = execution.complete();
+            complete = checked instanceof Satisfied<?>;
         } catch (ProbeFailure failure) {
             attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
                     failure.getCause(), failure.location(), diagnostic);
@@ -68,7 +62,7 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
         }
         long completed = clock.getAsLong();
         if (!(attempt instanceof Failure<?>) && currentThread().isInterrupted()) {
-            var cause = attempt.cause();
+            var cause = conditionCause == null ? attempt.cause() : conditionCause;
             attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
                     cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause, null, attempt.diagnostic());
             complete = false;
@@ -89,7 +83,6 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
     }
 
     ExecutionStep<OBSERVED> waitingFailure(Phase phase, Throwable failure) {
-        execution.beginAttempt();
         return failed(phase,
                 new FailedBeforeObservation<>(Operation.WAITING, failure), clock.getAsLong());
     }

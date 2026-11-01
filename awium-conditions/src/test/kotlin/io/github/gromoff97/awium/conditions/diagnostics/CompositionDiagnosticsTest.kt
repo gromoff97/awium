@@ -12,7 +12,6 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.uncontrolled
@@ -46,7 +45,6 @@ import java.util.Optional
 import java.util.concurrent.Callable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
@@ -200,11 +198,11 @@ class CompositionDiagnosticsTest {
     fun `captured keeps the failed quantifier stage mismatch`() {
         val check = all(condition<Any, Any>("account is active") { unsatisfied("account is not active") })
         val run = start<List<String>, List<List<String>>>(captured(isNotNull, check))
-        probe(run, listOf("pending"))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, listOf("pending")))
+        run.probe(listOf("pending"))
+        val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(listOf("pending")))
         assertEquals("not all collection elements matched (checked 1): account is not active", rejected.mismatch())
         assertEquals("all collection elements match: account is active", check.description())
-        assertEquals(listOf(listOf("pending")), run.result())
+        assertEquals(rejected, run.historyResult())
     }
 
     @ParameterizedTest
@@ -254,11 +252,10 @@ class CompositionDiagnosticsTest {
     fun `a missing captured key retains lookup context without initializing its nested check`() {
         val check = valueFor("customerId", conditionPerWait<String, String>("nested") { throw AssertionError("nested factory called") })
         val run = start<Map<String, String>, List<Map<String, String>>>(captured(check, check))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, probe(run, emptyMap()))
+        val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(emptyMap()))
         assertEquals("map did not contain the expected key", rejected.mismatch())
         assertEquals("customerId", check.references().single().value())
-        assertTrue(run.result().isEmpty())
-        assertFalse(run.complete())
+        assertEquals(rejected, run.historyResult())
     }
 
     @Test

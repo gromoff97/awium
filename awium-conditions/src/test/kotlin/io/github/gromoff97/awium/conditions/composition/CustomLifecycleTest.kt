@@ -4,14 +4,12 @@ import consumer.ArtifactConsumer.Length
 import consumer.CountedCondition
 import consumer.value.OpenConditionConsumer
 import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
-import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult
@@ -60,16 +58,11 @@ class CustomLifecycleTest {
     }
 
     @Test
-    fun `a nested lifecycle can complete after an unsatisfied probe`() {
+    fun `history projection does not change a nested selected result`() {
         val check = object : Condition<String, Int> {
             override fun description() = "measure text"
-            override fun probe(actual: String): AttemptResult<Int> = unsatisfied("observed")
-            override fun newRun(definition: AwaitCondition) = object : ConditionRun<String, Int>(definition) {
-                private var length: Int? = null
-                override fun probe(actual: String): AttemptResult<*> { length = actual.length; return unsatisfied<Int>("observed") }
-                override fun complete() = length != null
-                override fun result() = checkNotNull(length)
-            }
+            override fun probe(actual: String) = satisfied(actual.length)
+            override fun historyResult(attempt: AttemptResult<out Int>) = unsatisfied<Int>("observed")
         }
         assertEquals(5, result(evaluate(singleElement(check), listOf("ready"))))
     }

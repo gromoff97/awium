@@ -6,7 +6,6 @@ import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.probe
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.uncontrolled
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
@@ -23,6 +22,7 @@ import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AwaitResult
 import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.satisfied
 import java.io.IOException
 import java.time.Duration.ofNanos
@@ -95,16 +95,22 @@ class CompositionFailureTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `a missing captured result never completes the stage`(interrupted: Boolean) {
+        var brokenResult = true
         val broken = condition<String, String>("first stage") {
-            if (interrupted) Thread.currentThread().interrupt()
-            null
+            if (brokenResult) {
+                if (interrupted) Thread.currentThread().interrupt()
+                null
+            } else satisfied(it)
         }
         val run = start<String, List<String>>(captured(broken, isNotNull))
-        assertThat(assertThrows(NullPointerException::class.java) { probe(run, "actual") })
+        assertThat(assertThrows(NullPointerException::class.java) { run.probe("actual") })
             .hasMessage("condition returned null AttemptResult")
-        assertTrue(run.result().isEmpty())
-        assertFalse(run.complete())
         assertEquals(interrupted, Thread.currentThread().isInterrupted)
+        Thread.interrupted()
+        brokenResult = false
+        assertInstanceOf(Unsatisfied::class.java, run.probe("first"))
+        run.probe("second")
+        assertEquals(listOf("first", "second"), run.result())
     }
 
     companion object {

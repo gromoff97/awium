@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
@@ -18,7 +18,6 @@ import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
-import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
@@ -28,6 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static io.github.gromoff97.awium.execution.ConditionExecution.start;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -39,45 +41,17 @@ import static org.mockito.Mockito.when;
 
 class WaitEngineLifecycleTest {
     private final FakeTime time = new FakeTime(0);
-    private final ConditionRun<String, String> run = mock();
+    private final Condition<String, String> run = mock(CALLS_REAL_METHODS);
 
     @AfterEach
     void clearInterruptFlag() { interrupted(); }
 
     @Test
-    void preparationFailureStopsBeforeSourceRetrieval() throws Exception {
-        Callable<String> source = mock();
-        var cause = new AssertionError("preparation failed");
-        doThrow(cause).when(run).beginAttempt();
-
-        var outcome = assertInstanceOf(Uncontrolled.class, execute(source));
-        var attempt = assertInstanceOf(FailedBeforeObservation.class, outcome.step().attempt());
-        assertEquals(CONDITION, attempt.operation());
-        assertSame(cause, attempt.cause());
-        verify(source, never()).call();
-    }
-
-    @Test
-    void interruptedPreparationSkipsSourceRetrieval() throws Exception {
-        Callable<String> source = mock();
-        doAnswer(ignored -> {
-            currentThread().interrupt();
-            return null;
-        }).when(run).beginAttempt();
-
-        var outcome = assertInstanceOf(Uncontrolled.class, execute(source));
-        var attempt = assertInstanceOf(FailedBeforeObservation.class, outcome.step().attempt());
-        assertEquals(CONDITION, attempt.operation());
-        verify(source, never()).call();
-        verify(run).beginAttempt();
-    }
-
-    @Test
-    void completionFailuresRetainTheObservation() throws Throwable {
-        var cause = new IllegalStateException("completion failed");
+    void historyProjectionFailuresRetainTheObservation() throws Throwable {
+        var cause = new IllegalStateException("history projection failed");
         var diagnostic = new Diagnostic(null, new Reference<>("Chosen", "chosen"));
         doReturn(satisfied("chosen", diagnostic)).when(run).probe("actual");
-        when(run.complete()).thenThrow(cause);
+        when(run.historyResult(any())).thenThrow(cause);
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
         var attempt = assertInstanceOf(FailedAfterObservation.class, outcome.step().attempt());
@@ -89,11 +63,11 @@ class WaitEngineLifecycleTest {
 
     @ParameterizedTest
     @ValueSource(longs = {10, 11})
-    void completionMustFinishBeforeTheAcquisitionDeadline(long elapsed) throws Throwable {
+    void historyProjectionMustFinishBeforeTheAcquisitionDeadline(long elapsed) throws Throwable {
         doReturn(satisfied("chosen")).when(run).probe("actual");
-        when(run.complete()).thenAnswer(ignored -> {
+        when(run.historyResult(any())).thenAnswer(ignored -> {
             time.advanceNanos(elapsed);
-            return true;
+            return satisfied("chosen");
         });
 
         var outcome = assertInstanceOf(Timeout.class, execute(() -> "actual"));
@@ -101,51 +75,51 @@ class WaitEngineLifecycleTest {
     }
 
     @Test
-    void sourceFailuresDoNotAskTheConditionForCompletion() {
+    void sourceFailuresDoNotProjectAHistoryResult() throws Throwable {
         var cause = new IOException("source failed");
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> { throw cause; }));
 
         assertSame(cause, outcome.step().attempt().cause());
-        verify(run, never()).complete();
+        verify(run, never()).historyResult(any());
     }
 
     @Test
-    void probeFailuresDoNotAskTheConditionForCompletion() throws Throwable {
+    void probeFailuresDoNotProjectAHistoryResult() throws Throwable {
         var cause = new IOException("check failed");
         doThrow(cause).when(run).probe("actual");
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
         assertSame(cause, outcome.step().attempt().cause());
-        verify(run, never()).complete();
+        verify(run, never()).historyResult(any());
     }
 
     @ParameterizedTest
-    @CsvSource({"probe, 0", "completion, 1"})
-    void cancellationStopsTheLifecycle(String interruptAt, int completionCalls) throws Throwable {
+    @CsvSource({"probe, 0", "history, 1"})
+    void cancellationStopsTheLifecycle(String interruptAt, int historyCalls) throws Throwable {
         doAnswer(ignored -> {
             if (interruptAt.equals("probe")) currentThread().interrupt();
             return satisfied("chosen");
         }).when(run).probe("actual");
-        when(run.complete()).thenAnswer(ignored -> {
+        when(run.historyResult(any())).thenAnswer(ignored -> {
             currentThread().interrupt();
-            return true;
+            return satisfied("chosen");
         });
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
         assertTrue(outcome.interrupted());
         assertInstanceOf(InterruptedException.class, outcome.step().attempt().cause());
         assertTrue(currentThread().isInterrupted());
-        verify(run, times(completionCalls)).complete();
+        verify(run, times(historyCalls)).historyResult(any());
     }
 
     @Test
-    void cancellationDuringCompletionPreservesTheMismatchCause() throws Throwable {
+    void cancellationDuringHistoryProjectionPreservesTheMismatchCause() throws Throwable {
         var cause = new AssertionError("value is still pending");
         var diagnostic = new Diagnostic("pending", new Reference<>("Progress", 2));
         doReturn(unsatisfied(diagnostic, cause)).when(run).probe("actual");
-        when(run.complete()).thenAnswer(ignored -> {
+        when(run.historyResult(any())).thenAnswer(ignored -> {
             currentThread().interrupt();
-            return false;
+            return satisfied("chosen", diagnostic);
         });
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
@@ -155,7 +129,7 @@ class WaitEngineLifecycleTest {
     }
 
     private WaitCompletion execute(Callable<String> source) {
-        return new WaitEngine<>(withTime(config(1, 10, 0), time, time), source, run)
+        return new WaitEngine<>(withTime(config(1, 10, 0), time, time), source, start(run))
                 .waitFor();
     }
 }

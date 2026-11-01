@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.support.FakeTime;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
@@ -44,7 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -62,17 +64,20 @@ class WaitEngineTest {
     }
 
     @Test
-    void runControlsCompletionIndependentlyOfEachProbeResult() throws Throwable {
-        ConditionRun<String, Integer> run = mock();
-        doReturn(satisfied(5)).when(run).probe("ready");
-        when(run.complete()).thenReturn(false, true);
+    void historyDoesNotDecideWhenAConditionCompletes() throws Throwable {
+        Condition<String, Integer> condition = mock(CALLS_REAL_METHODS);
+        doReturn(unsatisfied("another observation is required"), satisfied(5)).when(condition).probe("ready");
+        doReturn(satisfied(5)).when(condition).historyResult(any());
+        ConditionRun<String, Integer> run = start(condition);
 
         var outcome = new WaitEngine<>(withTime(config(1, 10, 0), time, time), () -> "ready", run)
                 .waitFor();
 
         assertInstanceOf(SatisfiedWait.class, outcome);
-        verify(run, times(2)).record(argThat(attempt -> attempt instanceof SatisfiedObservation<?>));
-        verify(run, times(2)).probe("ready");
+        var history = run.finish(outcome, config(1, 10, 0)).conditions().getFirst().attempts();
+        assertEquals(2L, history.lastKey());
+        assertInstanceOf(SatisfiedObservation.class, history.lastEntry().getValue());
+        verify(condition, times(2)).probe("ready");
     }
 
     @Test

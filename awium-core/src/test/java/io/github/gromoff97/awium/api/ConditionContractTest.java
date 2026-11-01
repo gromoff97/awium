@@ -1,8 +1,6 @@
 package io.github.gromoff97.awium.api;
 
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -69,21 +67,11 @@ class ConditionContractTest {
     }
 
     @Test
-    void aUserRunCanCompleteEvenWhenItsLastProbeWasUnsatisfied() {
+    void aConditionCanCompleteWhileRecordingAnUnsatisfiedCheck() {
         var condition = new Condition<String, Integer>() {
             @Override public String description() { return "measure text"; }
-            @Override public AttemptResult<Integer> probe(String actual) { return unsatisfied("observed"); }
-            @Override public ConditionRun<String, Integer> newRun(AwaitCondition definition) {
-                return new ConditionRun<>(definition) {
-                    private Integer length;
-                    @Override public AttemptResult<?> probe(String actual) {
-                        length = actual.length();
-                        return unsatisfied("observed");
-                    }
-                    @Override public boolean complete() { return length != null; }
-                    @Override public Integer result() { return length; }
-                };
-            }
+            @Override public AttemptResult<Integer> probe(String actual) { return satisfied(actual.length()); }
+            @Override public AttemptResult<?> historyResult(AttemptResult<? extends Integer> attempt) { return unsatisfied("observed"); }
         }.because("use the completed measurement");
         var waiting = timedAwait(() -> "ready", new FakeTime(0));
 

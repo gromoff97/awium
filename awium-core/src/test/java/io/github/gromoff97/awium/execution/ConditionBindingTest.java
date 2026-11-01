@@ -12,8 +12,9 @@ import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,51 +22,34 @@ import static org.mockito.Mockito.when;
 
 class ConditionBindingTest {
     private final Condition<String, String> condition = mock();
-    private final ConditionRun<String, String> run = mock();
+    private final Condition<String, String> run = mock(CALLS_REAL_METHODS);
     private final IOException cause = new IOException("check interrupted");
 
     @AfterEach
     void clearInterruptFlag() { interrupted(); }
 
     @Test
-    void interruptedPreparationSkipsTheNestedProbe() throws Throwable {
-        when(condition.newRun(condition)).thenReturn(run);
-        doAnswer(ignored -> {
-            currentThread().interrupt();
-            return null;
-        }).when(run).beginAttempt();
-        doReturn(unsatisfied("pending")).when(run).probe("actual");
-
-        assertThrows(InterruptedException.class, () -> bind(condition).probe("actual"));
-        verify(run, never()).probe("actual");
-    }
-
-    @Test
-    void interruptedProbeSkipsCompletionAndKeepsItsCause() throws Throwable {
-        when(condition.newRun(condition)).thenReturn(run);
+    void anInterruptedProbeKeepsItsCause() throws Throwable {
+        when(condition.newRun()).thenReturn(run);
         doAnswer(ignored -> {
             currentThread().interrupt();
             return unsatisfied("stopped", cause);
         }).when(run).probe("actual");
-        when(run.complete()).thenReturn(true);
 
         assertSame(cause, assertThrows(Throwable.class, () -> bind(condition).probe("actual")));
         assertTrue(currentThread().isInterrupted());
-        verify(run, never()).complete();
-        verify(run, never()).result();
+        verify(run, never()).historyResult(any());
     }
 
     @Test
-    void interruptedCompletionSkipsResultAndKeepsTheProbeCause() throws Throwable {
-        when(condition.newRun(condition)).thenReturn(run);
-        doReturn(unsatisfied("observed", cause)).when(run).probe("actual");
-        when(run.complete()).thenAnswer(ignored -> {
+    void interruptedRunCreationSkipsEvaluatorCreation() throws Throwable {
+        when(condition.newRun()).thenAnswer(ignored -> {
             currentThread().interrupt();
-            return true;
+            return run;
         });
 
-        assertSame(cause, assertThrows(Throwable.class, () -> bind(condition).probe("actual")));
+        assertThrows(InterruptedException.class, () -> bind(condition).probe("actual"));
         assertTrue(currentThread().isInterrupted());
-        verify(run, never()).result();
+        verify(run, never()).newAttempt();
     }
 }

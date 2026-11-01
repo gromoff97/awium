@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.execution.CheckRun;
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DiagnosticText;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -14,13 +12,13 @@ public interface AwaitCondition {
     default String explanation() { return null; }
     default List<Reference<?>> references() { return List.of(); }
     AwaitCondition because(String explanation);
-    ConditionRun<?, ?> newRun(AwaitCondition definition);
+    Condition<?, ?> newRun();
 
     interface ApplicableCondition<INPUT, REFERENCE> extends AwaitCondition {
         AttemptResult<?> probe(INPUT actual) throws Throwable;
         default AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return this::probe; }
-        @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition) {
-            return new CheckRun<>(definition, this::newAttempt);
+        @Override default Condition<INPUT, ?> newRun() {
+            return new PreparedCondition<>(this, this::newAttempt);
         }
         @Override ApplicableCondition<INPUT, REFERENCE> because(String explanation);
     }
@@ -30,8 +28,8 @@ public interface AwaitCondition {
     }
 
     interface PreservesObservation<INPUT, REFERENCE> extends ApplicableCondition<INPUT, REFERENCE> {
-        @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition) {
-            return new CheckRun<INPUT, INPUT>(definition, () -> {
+        @Override default Condition<INPUT, ?> newRun() {
+            return new PreparedCondition<INPUT, INPUT>(this, () -> {
                 var evaluation = requireNonNull(newAttempt(), "evaluator must not be null");
                 return actual -> evaluation.probe(actual).mapValue(ignored -> actual);
             });
