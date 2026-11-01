@@ -156,7 +156,7 @@ map values have the same restriction.
 
 ## StringConditions
 
-These checks accept any `CharSequence`.
+Observations and text operands use `CharSequence`.
 
 | Condition | Meaning |
 | --- | --- |
@@ -169,8 +169,8 @@ These checks accept any `CharSequence`.
 | `matchesRegex(regex)`, `doesNotMatchRegex(regex)` | Full JDK regex match, supplied as text or `Pattern` |
 | `hasLength...` | Length in UTF-16 code units |
 
-Text operands accept `CharSequence`. Blankness uses `Character.isWhitespace` on
-Unicode code points. Unlike `contentEquals`, general `equalTo` may reject distinct
+Blankness uses `Character.isWhitespace` on Unicode code points.
+Unlike `contentEquals`, general `equalTo` may reject distinct
 `StringBuilder` objects with identical characters.
 [Signatures](../src/main/java/io/github/gromoff97/awium/conditions/StringConditions.java).
 
@@ -182,7 +182,8 @@ Element comparisons include array contents.
 
 | Condition | Meaning |
 | --- | --- |
-| `empty`, `nonEmpty`, `containsNull`, `doesNotContainNull`, `containsOnlyNulls`, `hasNoDuplicates` | Contents |
+| `empty`, `nonEmpty`, `containsNull`, `doesNotContainNull`, `hasNoDuplicates` | Contents |
+| `containsOnlyNulls` | Nonempty, all elements null |
 | `hasSize...` | Collection size |
 | `all(check)`, `any(check)`, `none(check)` | Every, some, or no element matches |
 | `contains(x)`, `doesNotContain(x)` | One element, including an array or collection |

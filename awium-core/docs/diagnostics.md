@@ -71,8 +71,9 @@ Each `ConditionHistory<OBSERVED>` exposes:
 | `condition()` | Original check |
 | `attempts()` | Immutable `NavigableMap<Long, Attempt<OBSERVED>>` |
 
-Consecutive outcomes share an entry when observations match under `Objects.deepEquals`
-and status, mismatch, and exception instance stay unchanged. Equal exception text is insufficient.
+Consecutive satisfied or unsatisfied attempts share an entry when observations match
+under `Objects.deepEquals` and status, mismatch, and exception instance stay unchanged.
+Equal exception text is insufficient. Execution failures remain separate.
 Entries retain the latest observation. Returning to an earlier value starts a new
 entry; phase changes alone do not.
 
@@ -90,10 +91,10 @@ key → observed
 For a single history, ranges start at 1 and then after the preceding key.
 `attempts().size()` counts retained states; `lastEntry().getValue()` gives the last state of a nonempty map.
 
-Grouping preserves chronological changes without trimming or skipping checks.
-Equality should be side-effect free. Grouping never calls `hashCode`, `toString`, or
-exception messages; failed equality keeps observations separate without changing the outcome.
-Memory is unbounded. Ordinary `await` neither retains nor compares attempts.
+Grouping neither trims history nor skips checks. It calls no `hashCode` or `toString`
+and reads no exception messages. Equality should be side-effect free; if it throws,
+observations stay separate. Memory is unbounded. Ordinary `await` neither retains
+nor compares attempts.
 
 Mutable observations can lose earlier contents; later mutations affect old entries.
 Fields read inside a check are not recorded separately. Statuses and mismatch strings

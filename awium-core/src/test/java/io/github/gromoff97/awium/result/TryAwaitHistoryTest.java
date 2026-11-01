@@ -128,7 +128,7 @@ class TryAwaitHistoryTest {
     }
 
     @Test
-    void retainsEveryNewErrorWithoutReadingItsMessageOrComparingIt() {
+    void keepsDistinctMismatchCausesWithoutReadingOrComparingThem() {
         var errors = range(0, 3).mapToObj(ignored -> new AssertionError("same message") {
             @Override public String getMessage() { throw new AssertionError("message must not be read"); }
             @Override public boolean equals(Object other) { throw new AssertionError("equals must not be called"); }
@@ -151,7 +151,7 @@ class TryAwaitHistoryTest {
     }
 
     @Test
-    void repetitionsOfTheSameErrorCanStillBeGrouped() {
+    void groupsRepeatedMismatchesWithTheSameCause() {
         var error = new AssertionError("same error");
         var observations = List.of(1, 1, 1, 4).iterator();
         var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("pending", error), unsatisfied("pending", error),
