@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
@@ -51,9 +51,10 @@ class BlankConditionTest {
     companion object {
         @JvmStatic
         fun examples() = listOf(
-            arguments("", true), arguments(" \t\n\u2000", true),
-            arguments("\u00a0", false), arguments("\u2007", false), arguments("\u202f", false),
-            arguments("\uD83D\uDE00", false), arguments("\uD800", false), arguments("ready", false)
+            argumentSet("empty text", "", true), argumentSet("whitespace", " \t\n\u2000", true),
+            argumentSet("non-breaking space", "\u00a0", false), argumentSet("figure space", "\u2007", false),
+            argumentSet("narrow non-breaking space", "\u202f", false), argumentSet("emoji", "\uD83D\uDE00", false),
+            argumentSet("lone surrogate", "\uD800", false), argumentSet("letters", "ready", false)
         )
     }
 }

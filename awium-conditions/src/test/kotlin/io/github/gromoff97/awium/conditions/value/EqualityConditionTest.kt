@@ -18,11 +18,10 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 
 class EqualityConditionTest {
@@ -31,22 +30,22 @@ class EqualityConditionTest {
         assertEquals(listOf(Reference("Expected", "expected")), equalTo("expected").references())
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("successfulComparisons")
     fun `returns the original observation`(condition: AwaitCondition, actual: Any?) {
         assertSame(actual, result(evaluate(condition, actual)))
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("failedComparisons")
     fun `rejects an observation that fails the comparison`(condition: AwaitCondition, actual: Any?) {
         rejection(condition, actual)
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest
     @MethodSource("arrayComparisons")
-    fun `compares array contents`(label: String, actual: Any, expected: Any, matches: Boolean) {
-        assertEquals(matches, equal(actual, expected), label)
+    fun `compares array contents`(actual: Any, expected: Any, matches: Boolean) {
+        assertEquals(matches, equal(actual, expected))
     }
 
     @Test
@@ -113,14 +112,14 @@ class EqualityConditionTest {
             val expected = String(charArrayOf('1'))
             val actual = String(charArrayOf('1'))
             return listOf(
-                arguments(named("equal values", equalTo(expected)), actual),
-                arguments(named("unequal values", notEqualTo(expected)), "2"),
-                arguments(named("same instance", sameAs(actual)), actual),
-                arguments(named("different instances", notSameAs(expected)), actual),
-                arguments(named("equal nulls", equalTo(null)), null),
-                arguments(named("same null", sameAs(null)), null),
-                arguments(named("value differs from null", notEqualTo(null)), actual),
-                arguments(named("null differs from value", notEqualTo(actual)), null)
+                argumentSet("equal values", equalTo(expected), actual),
+                argumentSet("unequal values", notEqualTo(expected), "2"),
+                argumentSet("same instance", sameAs(actual), actual),
+                argumentSet("different instances", notSameAs(expected), actual),
+                argumentSet("equal nulls", equalTo(null), null),
+                argumentSet("same null", sameAs(null), null),
+                argumentSet("value differs from null", notEqualTo(null), actual),
+                argumentSet("null differs from value", notEqualTo(actual), null)
             )
         }
 
@@ -129,24 +128,24 @@ class EqualityConditionTest {
             val expected = String(charArrayOf('1'))
             val actual = String(charArrayOf('1'))
             return listOf(
-                arguments(named("notEqualTo with equal values", notEqualTo(expected)), actual),
-                arguments(named("equalTo with different values", equalTo(expected)), "2"),
-                arguments(named("sameAs with equal distinct instances", sameAs(expected)), actual),
-                arguments(named("notSameAs with the same instance", notSameAs(actual)), actual),
-                arguments(named("null compared to a value", equalTo(actual)), null),
-                arguments(named("value compared to null", equalTo(null)), actual)
+                argumentSet("notEqualTo with equal values", notEqualTo(expected), actual),
+                argumentSet("equalTo with different values", equalTo(expected), "2"),
+                argumentSet("sameAs with equal distinct instances", sameAs(expected), actual),
+                argumentSet("notSameAs with the same instance", notSameAs(actual), actual),
+                argumentSet("null compared to a value", equalTo(actual), null),
+                argumentSet("value compared to null", equalTo(null), actual)
             )
         }
 
         @JvmStatic
         fun arrayComparisons() = listOf(
-            arguments("equal primitive arrays", intArrayOf(1, 2), intArrayOf(1, 2), true),
-            arguments("different primitive arrays", intArrayOf(1), intArrayOf(2), false),
-            arguments("different primitive types", intArrayOf(1, 2), longArrayOf(1, 2), false),
-            arguments("object and primitive arrays", arrayOf(1), intArrayOf(1), false),
-            arguments("array and scalar", arrayOf(1), 1, false),
-            arguments("nested array mismatch", arrayOf(intArrayOf(1, 2)), arrayOf(intArrayOf(1, 3)), false),
-            arguments("different array lengths", arrayOf(1), arrayOf(1, 2), false)
+            argumentSet("equal primitive arrays", intArrayOf(1, 2), intArrayOf(1, 2), true),
+            argumentSet("different primitive arrays", intArrayOf(1), intArrayOf(2), false),
+            argumentSet("different primitive types", intArrayOf(1, 2), longArrayOf(1, 2), false),
+            argumentSet("object and primitive arrays", arrayOf(1), intArrayOf(1), false),
+            argumentSet("array and scalar", arrayOf(1), 1, false),
+            argumentSet("nested array mismatch", arrayOf(intArrayOf(1, 2)), arrayOf(intArrayOf(1, 3)), false),
+            argumentSet("different array lengths", arrayOf(1), arrayOf(1, 2), false)
         )
     }
 }

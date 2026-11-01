@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 
 class RangeConditionTest {
@@ -75,15 +75,15 @@ class RangeConditionTest {
 
         @JvmStatic
         fun missingBounds() = listOf(
-            Executable { missingLowerBound() }, Executable { missingUpperBound() }
+            named("lower bound", Executable { missingLowerBound() }), named("upper bound", Executable { missingUpperBound() })
         )
 
         @JvmStatic
         fun reversedBounds() = listOf(
-            Executable { between<Int, Int>(2, 1) }, Executable { strictlyBetween<Int, Int>(2, 1) }
+            named("inclusive", Executable { between<Int, Int>(2, 1) }), named("exclusive", Executable { strictlyBetween<Int, Int>(2, 1) })
         )
 
         private fun boundary(condition: PreservingCondition<Int>, actual: Int, matches: Boolean) =
-            arguments(condition, actual, matches)
+            argumentSet("${condition.description()} ${condition.references()} / actual=$actual", condition, actual, matches)
     }
 }

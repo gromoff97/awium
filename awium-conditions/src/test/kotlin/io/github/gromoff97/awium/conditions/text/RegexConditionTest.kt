@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
@@ -63,18 +63,21 @@ class RegexConditionTest {
     companion object {
         @JvmStatic
         fun examples() = listOf(
-            arguments(matchesRegex("Ready \\d+"), true),
-            arguments(matchesRegex(compile("ready \\d+", CASE_INSENSITIVE)), true),
-            arguments(matchesRegex("Ready"), false), arguments(matchesRegex("failed.*"), false),
-            arguments(doesNotMatchRegex("failed.*"), true),
-            arguments(doesNotMatchRegex(compile("failed.*")), true),
-            arguments(doesNotMatchRegex("Ready \\d+"), false)
+            argumentSet("whole text matches", matchesRegex("Ready \\d+"), true),
+            argumentSet("pattern flags apply", matchesRegex(compile("ready \\d+", CASE_INSENSITIVE)), true),
+            argumentSet("matching prefix is insufficient", matchesRegex("Ready"), false),
+            argumentSet("text does not match", matchesRegex("failed.*"), false),
+            argumentSet("text avoids forbidden pattern", doesNotMatchRegex("failed.*"), true),
+            argumentSet("text avoids compiled pattern", doesNotMatchRegex(compile("failed.*")), true),
+            argumentSet("forbidden pattern matches", doesNotMatchRegex("Ready \\d+"), false)
         )
 
         @JvmStatic
         fun missingPatterns() = listOf(
-            Executable { matchesRegex(null as Pattern?) }, Executable { doesNotMatchRegex(null as Pattern?) },
-            Executable { matchesRegex(null as CharSequence?) }, Executable { doesNotMatchRegex(null as CharSequence?) }
+            argumentSet("required compiled pattern", Executable { matchesRegex(null as Pattern?) }),
+            argumentSet("forbidden compiled pattern", Executable { doesNotMatchRegex(null as Pattern?) }),
+            argumentSet("required text pattern", Executable { matchesRegex(null as CharSequence?) }),
+            argumentSet("forbidden text pattern", Executable { doesNotMatchRegex(null as CharSequence?) })
         )
     }
 }

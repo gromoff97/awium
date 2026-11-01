@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 
 class BoundConditionTest {
@@ -68,6 +68,6 @@ class BoundConditionTest {
         )
 
         private fun boundary(condition: PreservingCondition<Int>, actual: Int, matches: Boolean) =
-            arguments(condition, actual, matches)
+            argumentSet("${condition.description()} ${condition.references()} / actual=$actual", condition, actual, matches)
     }
 }

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
@@ -69,23 +69,27 @@ class TextSetConditionTest {
     companion object {
         @JvmStatic
         fun matchingInputs() = listOf(
-            arguments(containsAll(listOf("a", "b")), "abc"),
-            arguments(doesNotContainAny(listOf("x", "y")), "abc"),
-            arguments(containsAll(emptyList()), ""), arguments(containsAll(emptyList()), "ready"),
-            arguments(doesNotContainAny(emptyList()), ""), arguments(doesNotContainAny(emptyList()), "ready")
+            argumentSet("all fragments present", containsAll(listOf("a", "b")), "abc"),
+            argumentSet("all forbidden fragments absent", doesNotContainAny(listOf("x", "y")), "abc"),
+            argumentSet("no requirements / empty text", containsAll(emptyList()), ""),
+            argumentSet("no requirements / nonempty text", containsAll(emptyList()), "ready"),
+            argumentSet("no exclusions / empty text", doesNotContainAny(emptyList()), ""),
+            argumentSet("no exclusions / nonempty text", doesNotContainAny(emptyList()), "ready")
         )
 
         @JvmStatic
         fun mismatchingInputs() = listOf(
-            arguments(containsAll(listOf("a", "b")), "ac"),
-            arguments(doesNotContainAny(listOf("x", "y")), "ayc"),
-            arguments(doesNotContainAny(listOf("")), ""), arguments(doesNotContainAny(listOf("")), "ready")
+            argumentSet("required fragment missing", containsAll(listOf("a", "b")), "ac"),
+            argumentSet("forbidden fragment present", doesNotContainAny(listOf("x", "y")), "ayc"),
+            argumentSet("empty fragment forbidden / empty text", doesNotContainAny(listOf("")), ""),
+            argumentSet("empty fragment forbidden / nonempty text", doesNotContainAny(listOf("")), "ready")
         )
 
         @JvmStatic
         fun invalidExpectations() = listOf(
-            Executable { containsAll(null) }, Executable { doesNotContainAny(null) },
-            Executable { containsAll(listOf("ready", null)) }
+            argumentSet("missing required fragments", Executable { containsAll(null) }),
+            argumentSet("missing forbidden fragments", Executable { doesNotContainAny(null) }),
+            argumentSet("null fragment", Executable { containsAll(listOf("ready", null)) })
         )
     }
 }
