@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.doesNotContainAnyV
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
 import io.github.gromoff97.awium.conditions.support.smallLists
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

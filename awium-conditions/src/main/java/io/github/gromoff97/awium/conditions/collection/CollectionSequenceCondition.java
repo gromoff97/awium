@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,8 +9,8 @@ import java.util.SequencedCollection;
 
 import static io.github.gromoff97.awium.conditions.collection.ExpectedValues.snapshot;
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.prefixMatches;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 
 record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?> expected, Sequence sequence, boolean negated) implements PreservingCondition<INPUT> {
@@ -24,7 +24,7 @@ record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?>
     @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
 
     @Override
-    public ConditionResult<?> probe(INPUT actual) {
+    public AttemptResult<?> probe(INPUT actual) {
         if (actual == null) return unsatisfied("collection was null");
         boolean matched = switch (sequence) {
             case PREFIX -> expected.isEmpty() || actual.size() >= expected.size() && prefixMatches(actual.iterator(), expected);

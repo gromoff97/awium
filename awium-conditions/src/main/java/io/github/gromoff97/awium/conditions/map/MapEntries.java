@@ -2,20 +2,20 @@ package io.github.gromoff97.awium.conditions.map;
 
 import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
 final class MapEntries {
     private MapEntries() {}
 
-    static <KEY, VALUE> ConditionResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
+    static <KEY, VALUE> AttemptResult<Entry<KEY, VALUE>> findEntry(Map<KEY, VALUE> actual, Object key) {
         if (actual == null) return unsatisfied("map was null");
         for (Entry<KEY, VALUE> entry : actual.entrySet()) {
             if (deepEquals(entry.getKey(), key)) {

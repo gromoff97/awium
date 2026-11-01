@@ -23,7 +23,7 @@ class FailureSerializationTest {
         var assertion = new AssertionError("not ready");
         var timeout = assertThrows(AwaitAssertionError.class,
                 () -> timedAwait(() -> display, time).every(ofNanos(1)).upTo(ofNanos(2))
-                        .until(check("not ready", value -> io.github.gromoff97.awium.result.ConditionResult.unsatisfied("not ready", assertion))));
+                        .until(check("not ready", value -> io.github.gromoff97.awium.result.AttemptResult.unsatisfied("not ready", assertion))));
         Callable<BrokenDisplay> source = () -> { throw new IOException("source failed"); };
         var execution = assertThrows(AwaitExecutionException.class,
                 () -> await(source).until(expected(display)));

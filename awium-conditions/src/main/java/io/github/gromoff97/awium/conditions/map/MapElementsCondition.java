@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.conditions.map;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Iterator;
@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
-import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         PreservingCondition<? extends Collection<?>> nested) implements PreservingCondition<INPUT> {
@@ -43,7 +43,7 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         if (part != Part.ENTRY_CONTENTS) return nested.references();
         return nested.references().stream().<Reference<?>>map(ref -> new Reference<>(ref.label(), DeepEntry.reference(ref.value()))).toList();
     }
-    @Override public ConditionResult<?> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual); }
+    @Override public AttemptResult<?> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual); }
 
     @Override
     public AwaitAttempt<INPUT, INPUT> newAttempt() {

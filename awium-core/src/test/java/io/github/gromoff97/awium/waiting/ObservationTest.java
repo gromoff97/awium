@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +38,8 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAI
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
@@ -76,7 +76,7 @@ class ObservationTest {
     @ParameterizedTest
     @MethodSource("waitingInterruptions")
     void interruptionWhileWaitingRetainsItsOriginalCompletionTime(
-            long persistence, ConditionResult<?> state, Runnable beforePark, long secondTick, int expectedParks) {
+            long persistence, AttemptResult<?> state, Runnable beforePark, long secondTick, int expectedParks) {
         int[] sources = {0};
         int[] parks = {0};
         long[] now = {0};
@@ -126,12 +126,12 @@ class ObservationTest {
 
         var execution = start(check("test condition", (Object value) -> {
             time.advanceNanos(3);
-            return ConditionResult.satisfied(result);
+            return AttemptResult.satisfied(result);
         }));
         WaitCompletion terminal = new WaitEngine<>(withTime(config(1, 20, 0), time, time), () -> {
             time.advanceNanos(2);
             return actual;
-        }, execution).waitFor(ignored -> {});
+        }, execution).waitFor();
 
         var step = terminal.step();
         var observation = step.attempt();
@@ -153,7 +153,7 @@ class ObservationTest {
 
     @ParameterizedTest
     @MethodSource("mismatches")
-    void unsatisfiedAttemptsRetainTheirObservationAndDiagnosticDetails(ConditionResult.Unsatisfied<?> original) {
+    void unsatisfiedAttemptsRetainTheirObservationAndDiagnosticDetails(AttemptResult.Unsatisfied<?> original) {
         var actual = new Object();
         var attempt = attempt(() -> actual, value -> original);
         var status = assertInstanceOf(UnsatisfiedObservation.class, attempt);
@@ -163,7 +163,7 @@ class ObservationTest {
         assertSame(original.cause(), attempt.cause());
     }
 
-    private static Stream<Named<ConditionResult.Unsatisfied<?>>> mismatches() {
+    private static Stream<Named<AttemptResult.Unsatisfied<?>>> mismatches() {
         return Stream.of(
                 named("returned mismatch with cause", unsatisfied("not ready", new AssertionError("assertion"))),
                 named("plain mismatch", unsatisfied("not ready")),
@@ -229,7 +229,7 @@ class ObservationTest {
         var observation = uncontrolled(CONDITION, attempt);
         assertSame(actual, observation(attempt));
         assertEquals(NullPointerException.class, observation.cause().getClass());
-        assertEquals("condition returned null ConditionResult", observation.cause().getMessage());
+        assertEquals("condition returned null AttemptResult", observation.cause().getMessage());
         assertEquals(1, conditionCalls[0]);
     }
 
@@ -251,7 +251,7 @@ class ObservationTest {
     @MethodSource("completionInterruptions")
     void completionClockInterruptionStopsNormalResultsWithoutReplacingConditionFailure(
             boolean returnResult, long persistence, int interruptedAttempt,
-            ConditionResult<?> state, Consumer<Throwable> assertCause) {
+            AttemptResult<?> state, Consumer<Throwable> assertCause) {
         var actual = new Object();
         var time = new FakeTime(0);
         int[] evaluations = {0};
@@ -280,7 +280,7 @@ class ObservationTest {
         Consumer<Throwable> interruption = cause -> assertInstanceOf(InterruptedException.class, cause);
         Consumer<Throwable> missingResult = cause -> {
             assertInstanceOf(NullPointerException.class, cause);
-            assertEquals("condition returned null ConditionResult", cause.getMessage());
+            assertEquals("condition returned null AttemptResult", cause.getMessage());
         };
         return Stream.of(false, true).flatMap(returnResult -> Stream.of(Map.entry(0L, 1), Map.entry(2L, 2)).flatMap(timing -> {
             String label = (returnResult ? "tryAwait" : "await") + ", persistence=" + timing.getKey() + " / ";
@@ -355,17 +355,17 @@ class ObservationTest {
                 new InternalError("fatal"), new ThreadDeath());
     }
 
-    private static ConditionResult<Object> failIfCalled(Object ignored) {
+    private static AttemptResult<Object> failIfCalled(Object ignored) {
         throw new AssertionError("condition must not be called");
     }
 
     private static Attempt<?> attempt(Callable<Object> source, AwaitAttempt<Object, Object> condition) {
         var time = new FakeTime(0);
         return new WaitEngine<Object>(withTime(config(1, 2, 0), time, time), source, start(check("test condition", actual -> {
-            ConditionResult<?> evaluation = condition.probe(actual);
+            AttemptResult<?> evaluation = condition.probe(actual);
             time.advanceNanos(2);
             return evaluation;
-        }))).waitFor(ignored -> {}).step().attempt();
+        }))).waitFor().step().attempt();
     }
 
     @Test

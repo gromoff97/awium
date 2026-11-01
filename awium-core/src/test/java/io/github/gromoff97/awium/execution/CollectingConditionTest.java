@@ -3,13 +3,13 @@ package io.github.gromoff97.awium.execution;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
 import io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -74,11 +74,11 @@ class CollectingConditionTest {
 
         @Override
         public ConditionRun<?, ?> newRun(AwaitCondition definition) {
-            return new AbstractConditionRun<Object, List<Object>>(definition) {
+            return new ConditionRun<Object, List<Object>>(definition) {
                 private List<Object> values = List.of();
 
                 @Override
-                public ConditionResult<Object> probe(Object actual) {
+                public AttemptResult<Object> probe(Object actual) {
                     values = singletonList(actual);
                     return satisfied(actual);
                 }

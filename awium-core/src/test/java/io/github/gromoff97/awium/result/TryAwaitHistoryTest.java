@@ -13,8 +13,8 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedTryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
@@ -150,7 +150,7 @@ class TryAwaitHistoryTest {
     void groupsRepeatedMismatchesWithTheSameCause() {
         var error = new AssertionError("same error");
         var observations = List.of(1, 1, 1, 4).iterator();
-        var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("pending", error), unsatisfied("pending", error),
+        var outcomes = List.<AttemptResult<Integer>>of(unsatisfied("pending", error), unsatisfied("pending", error),
                 unsatisfied("pending", error), satisfied(4)).iterator();
         var result = withTime(tryAwait(observations::next), time, time).every(ofNanos(1))
                 .until(check("ready", value -> outcomes.next()));

@@ -22,8 +22,8 @@ import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AwaitResult
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
 import java.io.IOException
 import java.time.Duration.ofNanos
 import java.util.Optional
@@ -88,7 +88,7 @@ class CompositionFailureTest {
     @MethodSource("nullResults")
     fun `a missing nested result is rejected without clearing interruption`(check: AwaitCondition, actual: Any, interrupted: Boolean) {
         assertThat(thrown(check, actual)).isInstanceOf(NullPointerException::class.java)
-            .hasMessage("condition returned null ConditionResult")
+            .hasMessage("condition returned null AttemptResult")
         assertEquals(interrupted, Thread.currentThread().isInterrupted)
     }
 
@@ -101,7 +101,7 @@ class CompositionFailureTest {
         }
         val run = start<String, List<String>>(captured(broken, isNotNull))
         assertThat(assertThrows(NullPointerException::class.java) { probe(run, "actual") })
-            .hasMessage("condition returned null ConditionResult")
+            .hasMessage("condition returned null AttemptResult")
         assertTrue(run.result().isEmpty())
         assertFalse(run.complete())
         assertEquals(interrupted, Thread.currentThread().isInterrupted)

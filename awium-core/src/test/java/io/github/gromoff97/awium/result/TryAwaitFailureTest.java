@@ -27,8 +27,8 @@ import static io.github.gromoff97.awium.result.Attempt.Operation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.uncontrolled;
@@ -238,7 +238,7 @@ class TryAwaitFailureTest {
     }
 
     private static Condition<Object, Object> unstableCondition() {
-        var evaluations = List.<ConditionResult<Object>>of(satisfied("actual"), unsatisfied("not ready")).iterator();
+        var evaluations = List.<AttemptResult<Object>>of(satisfied("actual"), unsatisfied("not ready")).iterator();
         return check("value remains ready", actual -> evaluations.next());
     }
 

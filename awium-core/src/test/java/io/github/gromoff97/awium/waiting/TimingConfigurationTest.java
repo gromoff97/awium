@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.waiting;
 
 import io.github.gromoff97.awium.result.AwaitResult;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +24,8 @@ import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.TestConditions.accepted;
@@ -76,13 +76,13 @@ class TimingConfigurationTest {
     }
 
     private static AwaitResult<String, String> persistPastSignedNanoseconds(
-            long origin, long persistence, Callable<String> nextRead, Supplier<ConditionResult<String>> nextCheck) {
+            long origin, long persistence, Callable<String> nextRead, Supplier<AttemptResult<String>> nextCheck) {
         var time = new FakeTime(origin);
         var observations = List.<Callable<String>>of(() -> {
             time.advanceNanos(Long.MAX_VALUE - 1);
             return "ready";
         }, nextRead).iterator();
-        var checks = List.<Supplier<ConditionResult<String>>>of(() -> satisfied("ready"), nextCheck).iterator();
+        var checks = List.<Supplier<AttemptResult<String>>>of(() -> satisfied("ready"), nextCheck).iterator();
         var waiting = withTime(await(() -> observations.next().call()), time, time).every(ofNanos(Long.MAX_VALUE))
                 .upTo(ofNanos(Long.MAX_VALUE)).persisting(ofNanos(persistence));
         var result = diagnostic(waiting).until(check("ready", (String actual) -> checks.next().get()));
@@ -130,7 +130,7 @@ class TimingConfigurationTest {
         int[] factories = {0};
         var condition = checkPerWait("second observation", () -> {
             factories[0]++;
-            var outcomes = List.<ConditionResult<String>>of(unsatisfied("first observation"), satisfied("ready")).iterator();
+            var outcomes = List.<AttemptResult<String>>of(unsatisfied("first observation"), satisfied("ready")).iterator();
             return (String actual) -> outcomes.next();
         });
         var waiting = withTime(await(() -> "ready"), () -> {

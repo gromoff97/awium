@@ -11,13 +11,13 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
-import io.github.gromoff97.awium.execution.AbstractConditionRun
+import io.github.gromoff97.awium.execution.ConditionRun
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.result.ConditionResult
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -63,10 +63,10 @@ class CustomLifecycleTest {
     fun `a nested lifecycle can complete after an unsatisfied probe`() {
         val check = object : Condition<String, Int> {
             override fun description() = "measure text"
-            override fun probe(actual: String): ConditionResult<Int> = unsatisfied("observed")
-            override fun newRun(definition: AwaitCondition) = object : AbstractConditionRun<String, Int>(definition) {
+            override fun probe(actual: String): AttemptResult<Int> = unsatisfied("observed")
+            override fun newRun(definition: AwaitCondition) = object : ConditionRun<String, Int>(definition) {
                 private var length: Int? = null
-                override fun probe(actual: String): ConditionResult<*> { length = actual.length; return unsatisfied<Int>("observed") }
+                override fun probe(actual: String): AttemptResult<*> { length = actual.length; return unsatisfied<Int>("observed") }
                 override fun complete() = length != null
                 override fun result() = checkNotNull(length)
             }
@@ -79,7 +79,7 @@ class CustomLifecycleTest {
         var factories = 0
         val check = object : Condition<String, String> {
             override fun description() = "second observation"
-            override fun probe(actual: String): ConditionResult<String> = error("factory must supply the evaluator")
+            override fun probe(actual: String): AttemptResult<String> = error("factory must supply the evaluator")
             override fun newAttempt(): AwaitAttempt<String, String> {
                 factories++
                 var calls = 0

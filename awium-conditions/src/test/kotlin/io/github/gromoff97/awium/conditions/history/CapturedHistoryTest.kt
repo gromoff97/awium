@@ -21,9 +21,9 @@ import io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.execution.ExecutionStep
 import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION

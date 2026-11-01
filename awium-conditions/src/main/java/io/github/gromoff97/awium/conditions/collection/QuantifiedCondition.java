@@ -5,16 +5,16 @@ import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ProbeFailure;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.Collection;
 import java.util.List;
 
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
 record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>(Quantifier quantifier,
@@ -32,16 +32,16 @@ record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>
     @Override public String description() { return quantifier.description + " collection elements match: " + nested.description(); }
     @Override public List<Reference<?>> references() { return nested.references(); }
     @Override public String explanation() { return nested.explanation(); }
-    @Override public ConditionResult<?> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual); }
+    @Override public AttemptResult<?> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual); }
 
     @Override public AwaitAttempt<INPUT, INPUT> newAttempt() {
         ConditionExecution<ELEMENT, ?> evaluator = bind(nested);
         return actual -> evaluate(actual, evaluator);
     }
 
-    private ConditionResult<INPUT> evaluate(INPUT actual, ConditionExecution<ELEMENT, ?> evaluator) throws Throwable {
+    private AttemptResult<INPUT> evaluate(INPUT actual, ConditionExecution<ELEMENT, ?> evaluator) throws Throwable {
         if (actual == null) return unsatisfied("collection was null");
-        ConditionResult<?> last = null;
+        AttemptResult<?> last = null;
         long checked = 0;
         try {
             for (ELEMENT value : actual) {
@@ -59,7 +59,7 @@ record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>
         return result(actual, quantifier.satisfied(false), checked, last);
     }
 
-    private ConditionResult<INPUT> result(INPUT actual, boolean successful, long checked, ConditionResult<?> last) {
+    private AttemptResult<INPUT> result(INPUT actual, boolean successful, long checked, AttemptResult<?> last) {
         var diagnostic = last == null ? Diagnostic.EMPTY : last.diagnostic();
         if (successful) return satisfied(actual, diagnostic.withMismatch(null));
         String mismatch = quantifier.mismatch + " collection elements matched (checked " + checked + ")";

@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejectio
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.between
 import io.github.gromoff97.awium.conditions.common.CommonConditions.strictlyBetween
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

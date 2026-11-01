@@ -24,8 +24,7 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
 
     final <RESULT> AwaitResult<OBSERVED, RESULT> execute(AwaitCondition condition) {
         var execution = ConditionExecution.<OBSERVED, RESULT>start(condition);
-        var outcome = new WaitEngine<>(configuration, source, execution)
-                .waitFor(step -> execution.record(step.attempt()));
+        var outcome = new WaitEngine<>(configuration, source, execution).waitFor();
         return execution.finish(outcome, configuration);
     }
 }

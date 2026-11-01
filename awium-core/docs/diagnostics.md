@@ -49,7 +49,7 @@ final class ThreeItems implements Condition<List<String>, List<String>> {
     public String description() { return "collection has three items"; }
 
     @Override
-    public ConditionResult<List<String>> probe(List<String> actual) {
+    public AttemptResult<List<String>> probe(List<String> actual) {
         int size = actual.size();
         var details = new Diagnostic(null,
                 new Reference<>("Expected size", 3), new Reference<>("Actual size", size));

@@ -6,7 +6,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejectio
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.smallLists
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test

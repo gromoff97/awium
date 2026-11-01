@@ -5,7 +5,7 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-public sealed interface ConditionResult<RESULT> {
+public sealed interface AttemptResult<RESULT> {
 
     default Throwable cause() {
         return null;
@@ -37,7 +37,7 @@ public sealed interface ConditionResult<RESULT> {
         return new Unsatisfied<>(diagnostic, cause);
     }
 
-    default <NEXT> ConditionResult<NEXT> mapValue(Function<? super RESULT, ? extends NEXT> mapping) {
+    default <NEXT> AttemptResult<NEXT> mapValue(Function<? super RESULT, ? extends NEXT> mapping) {
         requireNonNull(mapping, "mapping must not be null");
         return switch (this) {
             case Satisfied<RESULT> success -> satisfied(mapping.apply(success.value()), success.diagnostic());
@@ -45,12 +45,12 @@ public sealed interface ConditionResult<RESULT> {
         };
     }
 
-    record Satisfied<RESULT>(RESULT value, Diagnostic diagnostic) implements ConditionResult<RESULT> {
+    record Satisfied<RESULT>(RESULT value, Diagnostic diagnostic) implements AttemptResult<RESULT> {
         public Satisfied { requireNonNull(diagnostic, "diagnostic must not be null"); }
         public Satisfied(RESULT value) { this(value, Diagnostic.EMPTY); }
     }
 
-    record Unsatisfied<RESULT>(Diagnostic diagnostic, Throwable cause) implements ConditionResult<RESULT> {
+    record Unsatisfied<RESULT>(Diagnostic diagnostic, Throwable cause) implements AttemptResult<RESULT> {
         public Unsatisfied {
             requireNonNull(diagnostic, "diagnostic must not be null").requireMismatch();
         }

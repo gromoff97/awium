@@ -3,13 +3,13 @@ package io.github.gromoff97.awium.execution;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +31,7 @@ public final class ConditionExecution<OBSERVED, RESULT> {
             return (INPUT actual) -> {
                 run.beginAttempt();
                 if (currentThread().isInterrupted()) throw interrupted(null);
-                var attempted = requireNonNull(run.probe(actual), "condition returned null ConditionResult");
+                var attempted = requireNonNull(run.probe(actual), "condition returned null AttemptResult");
                 if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
                 if (run.complete()) {
                     if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
@@ -61,16 +61,16 @@ public final class ConditionExecution<OBSERVED, RESULT> {
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 
-    public ConditionResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
+    public AttemptResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
         if (currentThread().isInterrupted()) throw interrupted(null);
         if (evaluator == null) evaluator = evaluatorFactory.call();
         if (currentThread().isInterrupted()) throw interrupted(null);
-        var result = requireNonNull(evaluator.probe(actual), "condition returned null ConditionResult");
+        var result = requireNonNull(evaluator.probe(actual), "condition returned null AttemptResult");
         if (currentThread().isInterrupted()) throw interrupted(result.cause());
         return result;
     }
 
-    public ConditionResult<? extends RESULT> probeAt(OBSERVED actual, String location) throws Throwable {
+    public AttemptResult<? extends RESULT> probeAt(OBSERVED actual, String location) throws Throwable {
         try {
             return probe(actual);
         } catch (Throwable failure) {

@@ -12,8 +12,8 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import io.github.gromoff97.awium.result.Diagnostic
 import java.util.Optional
 import org.junit.jupiter.api.Assertions.assertEquals

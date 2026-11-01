@@ -5,7 +5,7 @@ import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -32,8 +32,8 @@ import static io.github.gromoff97.awium.execution.WaitCompletion.*;
 import static io.github.gromoff97.awium.result.Attempt.Operation.*;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -65,14 +66,12 @@ class WaitEngineTest {
         ConditionRun<String, Integer> run = mock();
         doReturn(satisfied(5)).when(run).probe("ready");
         when(run.complete()).thenReturn(false, true);
-        var attempts = new ArrayList<ExecutionStep<String>>();
 
         var outcome = new WaitEngine<>(withTime(config(1, 10, 0), time, time), () -> "ready", run)
-                .waitFor(attempts::add);
+                .waitFor();
 
         assertInstanceOf(SatisfiedWait.class, outcome);
-        assertThat(attempts).hasSize(2).allSatisfy(step ->
-                assertInstanceOf(SatisfiedObservation.class, step.attempt()));
+        verify(run, times(2)).record(argThat(attempt -> attempt instanceof SatisfiedObservation<?>));
         verify(run, times(2)).probe("ready");
     }
 
@@ -85,7 +84,7 @@ class WaitEngineTest {
                 start(accepted));
         currentThread().interrupt();
 
-        var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor(ignored -> {}));
+        var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor());
 
         assertInstanceOf(InterruptedException.class, uncontrolled(WAITING, failure.step().attempt()).cause());
         assertEquals(7L, failure.step().completedAfterNanos());
@@ -114,7 +113,7 @@ class WaitEngineTest {
     @Test
     void measuresEveryFromObservationCompletion() {
         var starts = new ArrayList<Long>();
-        Supplier<ConditionResult<String>> evaluations = mock();
+        Supplier<AttemptResult<String>> evaluations = mock();
         when(evaluations.get()).thenAnswer(ignored -> {
             time.advanceNanos(3);
             return unsatisfied("not yet");
@@ -135,7 +134,7 @@ class WaitEngineTest {
     @CsvSource({"9, 0", "4, 5"})
     void acceptsALaterSuccessCompletingOneNanosecondBeforeTheDeadline(long interval, long evaluation) {
         var starts = new ArrayList<Long>();
-        Supplier<ConditionResult<String>> evaluations = mock();
+        Supplier<AttemptResult<String>> evaluations = mock();
         when(evaluations.get()).thenReturn(unsatisfied("not yet")).thenAnswer(ignored -> {
             time.advanceNanos(evaluation);
             return satisfied("ready");
@@ -158,7 +157,7 @@ class WaitEngineTest {
         var time = new FakeTime(100);
         var starts = new ArrayList<Long>();
         var assertion = new AssertionError("third mismatch");
-        var evaluations = List.<ConditionResult<Object>>of(unsatisfied("mismatch 1"), unsatisfied("mismatch 2"),
+        var evaluations = List.<AttemptResult<Object>>of(unsatisfied("mismatch 1"), unsatisfied("mismatch 2"),
                 unsatisfied("mismatch 3", assertion)).iterator();
 
         WaitCompletion outcome = wait(time, config(4, 10, 0), () -> {
@@ -187,7 +186,7 @@ class WaitEngineTest {
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, start(accepted)).waitFor(ignored -> {});
+                }, start(accepted)).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -240,7 +239,7 @@ class WaitEngineTest {
         time.wakeAfter(0);
         time.wakeAfter(1);
         var starts = new ArrayList<Long>();
-        var evaluations = List.<ConditionResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
+        var evaluations = List.<AttemptResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
 
         WaitCompletion outcome = wait(time, config(5, 20, 0), () -> {
             starts.add(time.getAsLong());
@@ -257,7 +256,7 @@ class WaitEngineTest {
         long started = Long.MAX_VALUE - 2;
         var time = new FakeTime(started);
         var starts = new ArrayList<Long>();
-        var evaluations = List.<ConditionResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
+        var evaluations = List.<AttemptResult<String>>of(unsatisfied("not ready"), satisfied("ready")).iterator();
 
         WaitCompletion outcome = wait(time, config(4, 10, 0), () -> {
             starts.add(time.getAsLong());
@@ -276,7 +275,7 @@ class WaitEngineTest {
         WaitCompletion outcome = wait(time, config(3, 10, 0), () -> {
             time.advanceNanos(11);
             throw failure;
-        }, ConditionResult::satisfied);
+        }, AttemptResult::satisfied);
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
@@ -286,7 +285,7 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @MethodSource("waitingResults")
-    void classifiesAParkingFailureForTheNextAttempt(long persistence, ConditionResult<String> evaluation) {
+    void classifiesAParkingFailureForTheNextAttempt(long persistence, AttemptResult<String> evaluation) {
         var time = new FakeTime(100);
         var failure = new IllegalStateException("park failed");
 
@@ -304,7 +303,7 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @MethodSource("waitingResults")
-    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt(long persistence, ConditionResult<String> evaluation) {
+    void detectsAnInterruptRaisedWhileParkedForTheNextAttempt(long persistence, AttemptResult<String> evaluation) {
         var parkCalls = new int[1];
 
         WaitCompletion outcome = wait(time, config(5, 20, persistence), nanos -> {
@@ -323,7 +322,7 @@ class WaitEngineTest {
     }
 
     private static List<Arguments> waitingResults() {
-        return List.of(argumentSet("acquisition", 0L, ConditionResult.<String>unsatisfied("not yet")),
+        return List.of(argumentSet("acquisition", 0L, AttemptResult.<String>unsatisfied("not yet")),
                 argumentSet("persistence", 10L, satisfied("ready")));
     }
 
@@ -352,7 +351,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine<String>(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
-                start(accepted)).waitFor(ignored -> {});
+                start(accepted)).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -373,7 +372,7 @@ class WaitEngineTest {
             doReturn(0L, 1L).doAnswer(ignored -> { currentThread().interrupt(); return 2L; })
                     .doReturn(2L).when(clock).getAsLong();
             return unsatisfied("not yet");
-        }))).waitFor(ignored -> {});
+        }))).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -384,7 +383,7 @@ class WaitEngineTest {
 
     @ParameterizedTest
     @MethodSource("intervalInterruptions")
-    void skipsParkingWhenIntervalClockSetsInterruptFlag(long persistence, ConditionResult<String> evaluation, Phase phase) {
+    void skipsParkingWhenIntervalClockSetsInterruptFlag(long persistence, AttemptResult<String> evaluation, Phase phase) {
         int[] sourceCalls = {0};
         int[] parkCalls = {0};
         LongSupplier clock = mock();
@@ -394,7 +393,7 @@ class WaitEngineTest {
                 start(check("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
-                }))).waitFor(ignored -> {});
+                }))).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().attempt());
@@ -406,8 +405,8 @@ class WaitEngineTest {
     }
 
     private static List<Arguments> intervalInterruptions() {
-        return List.of(argumentSet("acquisition", 0L, ConditionResult.unsatisfied("not yet"), ACQUISITION),
-                argumentSet("persistence", 10L, ConditionResult.satisfied("actual"), PERSISTENCE));
+        return List.of(argumentSet("acquisition", 0L, AttemptResult.unsatisfied("not yet"), ACQUISITION),
+                argumentSet("persistence", 10L, AttemptResult.satisfied("actual"), PERSISTENCE));
     }
 
     @Test
@@ -427,7 +426,7 @@ class WaitEngineTest {
 
         WaitCompletion outcome = wait(time, config(3, 10, 0), () -> {
             throw new AssertionError("source must not be called");
-        }, ConditionResult::satisfied);
+        }, AttemptResult::satisfied);
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
@@ -461,7 +460,7 @@ class WaitEngineTest {
         WaitCompletion outcome = wait(time, config(5, 20, 3), () -> {
                     starts.add(time.getAsLong());
                     return time.getAsLong();
-                }, ConditionResult::satisfied);
+                }, AttemptResult::satisfied);
 
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(0L, 3L), starts);
@@ -479,7 +478,7 @@ class WaitEngineTest {
         WaitCompletion outcome = wait(time, config(4, 20, 6), () -> {
             starts.add(time.getAsLong());
             return time.getAsLong();
-        }, ConditionResult::satisfied);
+        }, AttemptResult::satisfied);
 
         var success = assertInstanceOf(SatisfiedWait.class, outcome);
         assertEquals(List.of(
@@ -492,7 +491,7 @@ class WaitEngineTest {
     @Test
     void persistsBeyondUpToAfterAcquisitionAtTheLastValidNanosecond() {
         var starts = new ArrayList<Long>();
-        Supplier<ConditionResult<String>> evaluations = mock();
+        Supplier<AttemptResult<String>> evaluations = mock();
         when(evaluations.get()).thenReturn(unsatisfied("not yet")).thenAnswer(ignored -> {
             time.advanceNanos(5);
             return satisfied("acquired");
@@ -513,7 +512,7 @@ class WaitEngineTest {
     @Test
     void treatsARegularSatisfiedObservationCompletingAfterBoundaryAsFinal() {
         var starts = new ArrayList<Long>();
-        Supplier<ConditionResult<String>> evaluations = mock();
+        Supplier<AttemptResult<String>> evaluations = mock();
         when(evaluations.get()).thenReturn(satisfied("acquired")).thenAnswer(ignored -> {
             time.advanceNanos(5);
             return satisfied("late boundary");
@@ -554,7 +553,7 @@ class WaitEngineTest {
     @Test
     void uncontrolledPersistenceObservationWinsAfterBothDeadlines() {
         var failure = new IllegalStateException("condition failed");
-        Supplier<ConditionResult<Object>> evaluations = mock();
+        Supplier<AttemptResult<Object>> evaluations = mock();
         when(evaluations.get()).thenReturn(satisfied(new Object())).thenAnswer(ignored -> {
             time.advanceNanos(10);
             throw failure;
@@ -579,7 +578,7 @@ class WaitEngineTest {
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
         return new WaitEngine<S>(withTime(config, time, parker), source,
-                start(check("test condition", condition))).waitFor(ignored -> {});
+                start(check("test condition", condition))).waitFor();
     }
 
     private static Object successfulObservation(ExecutionStep<?> attempt) {

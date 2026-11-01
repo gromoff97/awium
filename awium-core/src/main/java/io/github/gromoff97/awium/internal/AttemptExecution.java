@@ -15,8 +15,8 @@ import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static java.lang.Thread.currentThread;
 
 record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,

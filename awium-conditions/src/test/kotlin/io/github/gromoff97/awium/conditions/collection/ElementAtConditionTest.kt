@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejectio
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.once
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import java.util.SequencedCollection
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CopyOnWriteArrayList

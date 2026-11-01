@@ -2,7 +2,7 @@ package consumer;
 
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +16,7 @@ import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.*;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.*;
 import static io.github.gromoff97.awium.conditions.string.StringConditions.*;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.time.Duration.ofMillis;
 
 public final class ArtifactConsumer {
@@ -57,7 +57,7 @@ public final class ArtifactConsumer {
         public String description() { return "text length"; }
 
         @Override
-        public ConditionResult<Integer> probe(CharSequence actual) { return satisfied(actual.length()); }
+        public AttemptResult<Integer> probe(CharSequence actual) { return satisfied(actual.length()); }
     }
 
     private static String observed(Attempt<Optional<String>> attempt) {

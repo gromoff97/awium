@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
 record RangeCondition<BOUND extends Comparable<? super BOUND>, INPUT extends Comparable<? super BOUND>>(
@@ -20,7 +20,7 @@ record RangeCondition<BOUND extends Comparable<? super BOUND>, INPUT extends Com
     @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", List.of(lower, upper))); }
 
     @Override
-    public ConditionResult<?> probe(INPUT actual) {
+    public AttemptResult<?> probe(INPUT actual) {
         return actual == null ? unsatisfied("value was null")
                 : (inclusive ? actual.compareTo(lower) >= 0 && actual.compareTo(upper) <= 0
                              : actual.compareTo(lower) > 0 && actual.compareTo(upper) < 0)

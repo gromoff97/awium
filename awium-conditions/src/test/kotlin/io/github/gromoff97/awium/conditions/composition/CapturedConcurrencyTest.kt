@@ -6,8 +6,8 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observat
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
 import java.util.concurrent.CyclicBarrier

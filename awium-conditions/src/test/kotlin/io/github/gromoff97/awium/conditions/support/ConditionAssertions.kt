@@ -11,21 +11,21 @@ import io.github.gromoff97.awium.result.Attempt
 import io.github.gromoff97.awium.result.AwaitFailure
 import io.github.gromoff97.awium.result.AwaitFailure.Reason
 import io.github.gromoff97.awium.result.AwaitResult
-import io.github.gromoff97.awium.result.ConditionResult
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.fail
 
 object ConditionAssertions {
-    fun <INPUT> probe(run: ConditionRun<INPUT, *>, actual: INPUT): ConditionResult<*> {
+    fun <INPUT> probe(run: ConditionRun<INPUT, *>, actual: INPUT): AttemptResult<*> {
         run.beginAttempt()
         return run.probe(actual)
     }
 
-    fun evaluate(condition: AwaitCondition, actual: Any?): ConditionResult<*> =
+    fun evaluate(condition: AwaitCondition, actual: Any?): AttemptResult<*> =
         ConditionExecution.bind<Any?, Any?>(condition).probe(actual)
 
     fun rejection(condition: AwaitCondition, actual: Any?): Unsatisfied<*> =
@@ -36,19 +36,19 @@ object ConditionAssertions {
         return if (failure is ProbeFailure) failure.cause!! else failure
     }
 
-    fun <SOURCE, RESULT> evaluate(condition: Condition<in SOURCE, out RESULT>, actual: SOURCE): ConditionResult<out RESULT> =
+    fun <SOURCE, RESULT> evaluate(condition: Condition<in SOURCE, out RESULT>, actual: SOURCE): AttemptResult<out RESULT> =
         ConditionExecution.bind(condition).probe(actual)
 
-    fun <SOURCE> evaluate(condition: PreservingCondition<in SOURCE>, actual: SOURCE): ConditionResult<out SOURCE> =
+    fun <SOURCE> evaluate(condition: PreservingCondition<in SOURCE>, actual: SOURCE): AttemptResult<out SOURCE> =
         ConditionExecution.bind<SOURCE, SOURCE>(condition).probe(actual)
 
-    fun <SOURCE> evaluate(condition: ComparisonCondition<out SOURCE>, actual: SOURCE): ConditionResult<out SOURCE> =
+    fun <SOURCE> evaluate(condition: ComparisonCondition<out SOURCE>, actual: SOURCE): AttemptResult<out SOURCE> =
         ConditionExecution.bind<SOURCE, SOURCE>(condition).probe(actual)
 
-    fun <RESULT> result(evaluation: ConditionResult<out RESULT>): RESULT =
+    fun <RESULT> result(evaluation: AttemptResult<out RESULT>): RESULT =
         if (evaluation is Satisfied<out RESULT>) evaluation.value() else fail("expected a satisfied condition, got $evaluation", evaluation.cause())
 
-    fun mismatch(evaluation: ConditionResult<*>): String? =
+    fun mismatch(evaluation: AttemptResult<*>): String? =
         assertInstanceOf(Unsatisfied::class.java, evaluation).mismatch()
 
     fun failure(result: AwaitResult<*, *>): AwaitFailure =

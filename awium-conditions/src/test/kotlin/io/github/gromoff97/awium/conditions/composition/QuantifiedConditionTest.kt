@@ -31,10 +31,10 @@ import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.function.checked.CheckedPredicate
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import java.io.IOException
 import java.util.AbstractMap.SimpleImmutableEntry
 import java.util.Optional

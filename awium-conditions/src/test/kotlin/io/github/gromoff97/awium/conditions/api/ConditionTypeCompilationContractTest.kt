@@ -37,17 +37,17 @@ class ConditionTypeCompilationContractTest {
 
     @TestFactory
     fun `custom checks reject incompatible input and result types`() = listOf(
-        """String wrong = await(numbers).until(condition("identity", value -> ConditionResult.satisfied(value)));""",
-        """AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition("identity", value -> ConditionResult.satisfied(value)));""",
-        """List<String> wrong = await(numbers).until(captured(condition("first", value -> ConditionResult.satisfied(value)), isNotNull));""",
-        """Condition<Number, String> wrong = condition("transform", value -> ConditionResult.satisfied(value));""",
+        """String wrong = await(numbers).until(condition("identity", value -> AttemptResult.satisfied(value)));""",
+        """AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition("identity", value -> AttemptResult.satisfied(value)));""",
+        """List<String> wrong = await(numbers).until(captured(condition("first", value -> AttemptResult.satisfied(value)), isNotNull));""",
+        """Condition<Number, String> wrong = condition("transform", value -> AttemptResult.satisfied(value));""",
         "await(() -> 123).until(new consumer.ArtifactConsumer.Length());",
         """String wrong = await(() -> "ready").until(new consumer.ArtifactConsumer.Length());""",
-        """String wrong = await(numbers).until(conditionPerWait("identity", () -> value -> ConditionResult.satisfied(value)));""",
-        """await(numbers).until(condition("length", (String value) -> ConditionResult.satisfied(value.length())));""",
-        """String wrong = await(numbers).until(condition("id", (Number value) -> ConditionResult.satisfied(value.intValue())).because("reason"));""",
+        """String wrong = await(numbers).until(conditionPerWait("identity", () -> value -> AttemptResult.satisfied(value)));""",
+        """await(numbers).until(condition("length", (String value) -> AttemptResult.satisfied(value.length())));""",
+        """String wrong = await(numbers).until(condition("id", (Number value) -> AttemptResult.satisfied(value.intValue())).because("reason"));""",
         """await(() -> Map.of("key", 1)).until(MapConditions.hasEntry(condition("wrong value", """
-                + "(Map.Entry<String, String> entry) -> ConditionResult.satisfied(entry.getValue()))));"
+                + "(Map.Entry<String, String> entry) -> AttemptResult.satisfied(entry.getValue()))));"
     ).map(::rejected)
 
     @TestFactory

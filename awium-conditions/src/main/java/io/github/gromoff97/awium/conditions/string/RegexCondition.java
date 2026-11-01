@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import static io.github.gromoff97.awium.conditions.string.ExpectedText.text;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 import static java.util.regex.Pattern.compile;
 
@@ -21,7 +21,7 @@ record RegexCondition(Pattern pattern, boolean negated) implements PreservingCon
     @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", pattern)); }
 
     @Override
-    public ConditionResult<?> probe(CharSequence actual) {
+    public AttemptResult<?> probe(CharSequence actual) {
         if (actual == null) return unsatisfied("string was null");
         return pattern.matcher(actual).matches() != negated ? satisfied(actual)
                 : unsatisfied(negated ? "string matched unexpected pattern" : "string did not match expected pattern");

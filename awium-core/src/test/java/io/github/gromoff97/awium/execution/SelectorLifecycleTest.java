@@ -4,15 +4,15 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SelectorLifecycleTest {
@@ -22,7 +22,7 @@ class SelectorLifecycleTest {
         var definition = afterTwoObservations((List<String> actual) -> actual.getFirst());
         var selector = new SelectedCondition<List<String>>() {
             @Override public String description() { return definition.description(); }
-            @Override public ConditionResult<?> probe(List<String> actual) throws Throwable { return definition.probe(actual); }
+            @Override public AttemptResult<?> probe(List<String> actual) throws Throwable { return definition.probe(actual); }
             @Override public ConditionRun<List<String>, ?> newRun(AwaitCondition original) {
                 return definition.newRun(original);
             }
@@ -37,7 +37,7 @@ class SelectorLifecycleTest {
         var definition = afterTwoObservations((Map<String, String> actual) -> actual.get("key"));
         var selector = new MapValueCondition<Map<String, String>>() {
             @Override public String description() { return definition.description(); }
-            @Override public ConditionResult<?> probe(Map<String, String> actual) throws Throwable { return definition.probe(actual); }
+            @Override public AttemptResult<?> probe(Map<String, String> actual) throws Throwable { return definition.probe(actual); }
             @Override public ConditionRun<Map<String, String>, ?> newRun(AwaitCondition original) {
                 return definition.newRun(original);
             }
@@ -59,15 +59,15 @@ class SelectorLifecycleTest {
     private static <INPUT> Condition<INPUT, String> afterTwoObservations(Function<INPUT, String> extract) {
         return new Condition<>() {
             @Override public String description() { return "two observations"; }
-            @Override public ConditionResult<String> probe(INPUT actual) {
+            @Override public AttemptResult<String> probe(INPUT actual) {
                 throw new AssertionError("the custom run must perform the check");
             }
             @Override public ConditionRun<INPUT, String> newRun(AwaitCondition definition) {
-                return new AbstractConditionRun<>(definition) {
+                return new ConditionRun<>(definition) {
                     private int observations;
                     private String value;
 
-                    @Override public ConditionResult<?> probe(INPUT actual) {
+                    @Override public AttemptResult<?> probe(INPUT actual) {
                         observations++;
                         value = extract.apply(actual);
                         return satisfied(value);

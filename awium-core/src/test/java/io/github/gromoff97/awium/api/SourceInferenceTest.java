@@ -18,7 +18,7 @@ import static io.github.gromoff97.awium.Await.CollectionViewSource;
 import static io.github.gromoff97.awium.Await.MapViewSource;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.support.TestConditions.accepted;
 import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.time.Duration.ZERO;

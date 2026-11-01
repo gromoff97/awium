@@ -42,7 +42,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.function.checked.CheckedPredicate
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
 import java.lang.Thread.currentThread
 import java.lang.Thread.interrupted
 import java.util.Objects.checkIndex

@@ -2,11 +2,10 @@ package io.github.gromoff97.awium.api;
 
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.AbstractConditionRun;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import org.junit.jupiter.api.Test;
 
@@ -14,8 +13,8 @@ import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -36,7 +35,7 @@ class ConditionContractTest {
         var expected = unsatisfied("not ready", new IllegalStateException("offline"));
         var condition = new Condition<String, Object>() {
             @Override public String description() { return "ready"; }
-            @Override public ConditionResult<Object> probe(String actual) { return expected; }
+            @Override public AttemptResult<Object> probe(String actual) { return expected; }
         }.because("a value is required");
 
         assertSame(expected, condition.probe("pending"));
@@ -47,7 +46,7 @@ class ConditionContractTest {
         AwaitAttempt<String, String> evaluator = actual -> satisfied(actual);
         var condition = new Condition<String, String>() {
             @Override public String description() { return "ready"; }
-            @Override public ConditionResult<String> probe(String actual) { throw new AssertionError("use evaluator"); }
+            @Override public AttemptResult<String> probe(String actual) { throw new AssertionError("use evaluator"); }
             @Override public AwaitAttempt<String, String> newAttempt() { return evaluator; }
         }.because("a value is required");
 
@@ -58,7 +57,7 @@ class ConditionContractTest {
     void reasonsLeaveTheOriginalUserConditionUnchanged() {
         var original = new Condition<String, Integer>() {
             @Override public String description() { return "text length"; }
-            @Override public ConditionResult<Integer> probe(String actual) { return satisfied(actual.length()); }
+            @Override public AttemptResult<Integer> probe(String actual) { return satisfied(actual.length()); }
         };
         var first = original.because("first");
         var second = first.because("second");
@@ -73,11 +72,11 @@ class ConditionContractTest {
     void aUserRunCanCompleteEvenWhenItsLastProbeWasUnsatisfied() {
         var condition = new Condition<String, Integer>() {
             @Override public String description() { return "measure text"; }
-            @Override public ConditionResult<Integer> probe(String actual) { return unsatisfied("observed"); }
+            @Override public AttemptResult<Integer> probe(String actual) { return unsatisfied("observed"); }
             @Override public ConditionRun<String, Integer> newRun(AwaitCondition definition) {
-                return new AbstractConditionRun<>(definition) {
+                return new ConditionRun<>(definition) {
                     private Integer length;
-                    @Override public ConditionResult<?> probe(String actual) {
+                    @Override public AttemptResult<?> probe(String actual) {
                         length = actual.length();
                         return unsatisfied("observed");
                     }
@@ -100,7 +99,7 @@ class ConditionContractTest {
         int[] factories = {0};
         var condition = new Condition<String, String>() {
             @Override public String description() { return "second observation"; }
-            @Override public ConditionResult<String> probe(String actual) { throw new AssertionError("factory must supply the evaluator"); }
+            @Override public AttemptResult<String> probe(String actual) { throw new AssertionError("factory must supply the evaluator"); }
             @Override public AwaitAttempt<String, String> newAttempt() {
                 factories[0]++;
                 int[] calls = {0};

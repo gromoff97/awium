@@ -15,10 +15,10 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf

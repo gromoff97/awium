@@ -6,14 +6,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class ConditionResultTest {
+class AttemptResultTest {
 
     @Test
     void mappingAValuePreservesItsDiagnosticObject() {
@@ -45,7 +45,7 @@ class ConditionResultTest {
     @Test
     void mappingSkipsMismatchesAndPreservesTheirDiagnostics() {
         var cause = new IllegalStateException("not ready");
-        var mismatch = ConditionResult.<String>unsatisfied("retry", cause).mapValue(value -> {
+        var mismatch = AttemptResult.<String>unsatisfied("retry", cause).mapValue(value -> {
             throw new AssertionError("mismatches must not be mapped");
         });
         assertEquals(new Unsatisfied<>(new Diagnostic("retry"), cause), mismatch);

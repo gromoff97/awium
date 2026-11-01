@@ -1,13 +1,13 @@
 package consumer;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.time.Duration.ofMillis;
 
 public final class CoreConsumer {
@@ -23,7 +23,7 @@ public final class CoreConsumer {
 
     private static final class Length implements Condition<CharSequence, Integer> {
         @Override public String description() { return "nonempty name"; }
-        @Override public ConditionResult<Integer> probe(CharSequence actual) {
+        @Override public AttemptResult<Integer> probe(CharSequence actual) {
             return actual.isEmpty() ? unsatisfied("name was empty") : satisfied(actual.length());
         }
     }

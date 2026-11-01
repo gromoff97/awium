@@ -3,11 +3,11 @@ package io.github.gromoff97.awium;
 import io.github.gromoff97.awium.execution.CheckRun;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 
 public interface Condition<INPUT, RESULT> extends AwaitCondition.InputCondition<INPUT> {
     @Override
-    ConditionResult<RESULT> probe(INPUT actual) throws Throwable;
+    AttemptResult<RESULT> probe(INPUT actual) throws Throwable;
 
     @Override
     default AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception { return this::probe; }

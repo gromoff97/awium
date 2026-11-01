@@ -26,7 +26,7 @@ final class FailureDiagnostics {
 
     private FailureDiagnostics() {}
 
-    static AwaitFailure failure(AbstractConditionRun<?, ?> condition, WaitCompletion outcome,
+    static AwaitFailure failure(ConditionRun<?, ?> condition, WaitCompletion outcome,
             WaitTiming configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
         requireNonNull(outcome, "outcome must not be null");
         requireNonNull(configuration, "configuration must not be null");

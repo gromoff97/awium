@@ -10,7 +10,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.sizeOnlyCollection
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.sizeOnlyMap
 import io.github.gromoff97.awium.conditions.string.StringConditions
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows

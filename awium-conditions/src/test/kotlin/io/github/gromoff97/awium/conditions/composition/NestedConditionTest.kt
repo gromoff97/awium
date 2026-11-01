@@ -21,10 +21,10 @@ import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
-import io.github.gromoff97.awium.result.ConditionResult
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import java.math.BigDecimal
 import java.io.IOException
 import java.util.Optional
@@ -59,7 +59,7 @@ class NestedConditionTest {
 
     @ParameterizedTest
     @MethodSource("directProbes")
-    fun `direct probes return the selected result`(probe: () -> ConditionResult<*>, expected: Any) {
+    fun `direct probes return the selected result`(probe: () -> AttemptResult<*>, expected: Any) {
         assertEquals(expected, result(probe()))
     }
 

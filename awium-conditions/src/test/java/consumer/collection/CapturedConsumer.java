@@ -28,7 +28,7 @@ import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.time.Duration.ofNanos;
 import static java.util.Arrays.fill;
 

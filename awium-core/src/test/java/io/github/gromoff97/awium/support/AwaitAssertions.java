@@ -5,12 +5,12 @@ import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AwaitResult;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import org.junit.jupiter.api.function.Executable;
 
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public final class AwaitAssertions {
     private AwaitAssertions() {}
 
-    public static <RESULT> RESULT result(ConditionResult<? extends RESULT> evaluation) {
+    public static <RESULT> RESULT result(AttemptResult<? extends RESULT> evaluation) {
         return evaluation instanceof Satisfied<? extends RESULT> success
                 ? success.value() : fail("expected a satisfied condition, got " + evaluation, evaluation.cause());
     }

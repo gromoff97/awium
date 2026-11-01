@@ -386,11 +386,11 @@ class CompilationContractTest {
             dynamicTest("$factory / $condition") { assertRejected("""
                     import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
                     import io.github.gromoff97.awium.function.AwaitAttempt;
-                    import io.github.gromoff97.awium.result.ConditionResult;
+                    import io.github.gromoff97.awium.result.AttemptResult;
 
                     final class Contract {
-                        static ConditionResult<String> status(String value) {
-                            return ConditionResult.satisfied(value);
+                        static AttemptResult<String> status(String value) {
+                            return AttemptResult.satisfied(value);
                         }
                         static AwaitAttempt<String, String> evaluator() {
                             return Contract::status;

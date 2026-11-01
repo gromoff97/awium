@@ -3,15 +3,15 @@ package io.github.gromoff97.awium.conditions.collection;
 import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 final class HasSizeCondition implements PreservingCondition<Collection<?>> {
     private final ApplicableCondition<? super Integer, ?> comparison;
@@ -30,7 +30,7 @@ final class HasSizeCondition implements PreservingCondition<Collection<?>> {
     @Override public List<Reference<?>> references() { return comparison.references(); }
 
     @Override
-    public ConditionResult<?> probe(Collection<?> actual) throws Throwable {
+    public AttemptResult<?> probe(Collection<?> actual) throws Throwable {
         if (actual == null) return unsatisfied("collection was null");
         int size = actual.size();
         var diagnostic = new Diagnostic(null, new Reference<>("Actual size", size));

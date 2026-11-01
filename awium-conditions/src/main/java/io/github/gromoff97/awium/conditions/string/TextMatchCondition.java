@@ -1,12 +1,12 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import java.util.function.BiPredicate;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.conditions.string.ExpectedText.text;
 
 record TextMatchCondition(String value, Match match) implements PreservingCondition<CharSequence> {
@@ -44,7 +44,7 @@ record TextMatchCondition(String value, Match match) implements PreservingCondit
     @Override public List<Reference<?>> references() { return List.of(new Reference<>(match.reference, value)); }
 
     @Override
-    public ConditionResult<?> probe(CharSequence actual) {
+    public AttemptResult<?> probe(CharSequence actual) {
         if (actual == null) return unsatisfied("string was null");
         return match.matches.test(actual, value) ? satisfied(actual)
                 : unsatisfied("string " + match.mismatch);

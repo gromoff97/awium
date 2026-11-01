@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -12,8 +12,8 @@ import static io.github.gromoff97.awium.conditions.collection.ValueMatching.matc
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.prefixMatches;
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.sameDistinctElements;
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.sameElementsInAnyOrder;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 
 record CollectionContentCondition<INPUT extends Collection<?>>(List<?> expected, Content content, boolean negated) implements PreservingCondition<INPUT> {
@@ -35,7 +35,7 @@ record CollectionContentCondition<INPUT extends Collection<?>>(List<?> expected,
     @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
 
     @Override
-    public ConditionResult<?> probe(INPUT actual) {
+    public AttemptResult<?> probe(INPUT actual) {
         if (actual == null) return unsatisfied("collection was null");
         boolean matched = switch (content) {
             case EXACT -> exactContent(actual, expected);

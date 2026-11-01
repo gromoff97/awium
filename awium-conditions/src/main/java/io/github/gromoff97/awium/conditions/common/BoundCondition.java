@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
 record BoundCondition<BOUND, INPUT extends Comparable<? super BOUND>>(
@@ -30,7 +30,7 @@ record BoundCondition<BOUND, INPUT extends Comparable<? super BOUND>>(
     @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", bound)); }
 
     @Override
-    public ConditionResult<?> probe(INPUT actual) {
+    public AttemptResult<?> probe(INPUT actual) {
         return actual == null ? unsatisfied("value was null") : relation.accepts(actual.compareTo(bound))
                 ? satisfied(actual) : unsatisfied("value was not " + relation.label + " the bound");
     }

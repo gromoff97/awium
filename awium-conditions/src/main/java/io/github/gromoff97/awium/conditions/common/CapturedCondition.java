@@ -1,17 +1,16 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition;
-import io.github.gromoff97.awium.execution.AbstractConditionRun;
-import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ConditionRun;
+import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.result.Attempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
 
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
 import static java.lang.Math.min;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -32,7 +31,7 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         return new Run<>(definition);
     }
 
-    private final class Run<OBSERVED> extends AbstractConditionRun<OBSERVED, List<OBSERVED>> {
+    private final class Run<OBSERVED> extends ConditionRun<OBSERVED, List<OBSERVED>> {
 
         private final List<ConditionExecution<OBSERVED, Object>> evaluations;
         private final List<OBSERVED> results = new ArrayList<>();
@@ -47,7 +46,7 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         public void beginAttempt() { attemptedStage = min(results.size() + 1, stages.size()); }
 
         @Override
-        public ConditionResult<?> probe(OBSERVED actual) throws Throwable {
+        public AttemptResult<?> probe(OBSERVED actual) throws Throwable {
             if (complete()) results.removeLast();
             var evaluated = evaluations.get(attemptedStage - 1).probe(actual);
             if (evaluated instanceof Satisfied<?>) results.add(actual);

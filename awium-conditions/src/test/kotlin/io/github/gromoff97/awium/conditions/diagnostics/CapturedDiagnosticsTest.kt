@@ -27,10 +27,10 @@ import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.Attempt.SatisfiedObservation
 import io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
-import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
-import io.github.gromoff97.awium.result.ConditionResult.satisfied
-import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
+import io.github.gromoff97.awium.result.AttemptResult.satisfied
+import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals

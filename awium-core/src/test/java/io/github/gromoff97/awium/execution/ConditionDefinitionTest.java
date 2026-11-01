@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.support.TestCondition;
 import java.util.Collection;
 import java.util.List;
@@ -23,8 +23,8 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static io.github.gromoff97.awium.support.TestConditions.matching;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -75,7 +75,7 @@ class ConditionDefinitionTest {
         int[] factories = {0};
         var condition = new PreservingCondition<String>() {
             @Override public String description() { return "second observation"; }
-            @Override public ConditionResult<?> probe(String actual) { throw new AssertionError("use the evaluator"); }
+            @Override public AttemptResult<?> probe(String actual) { throw new AssertionError("use the evaluator"); }
             @Override public AwaitAttempt<String, String> newAttempt() {
                 factories[0]++;
                 int[] calls = {0};
@@ -101,7 +101,7 @@ class ConditionDefinitionTest {
         AwaitAttempt<String, String> evaluation = actual -> satisfied(actual);
         var check = new PreservingCondition<String>() {
             @Override public String description() { return "ready"; }
-            @Override public ConditionResult<?> probe(String actual) { throw new AssertionError("use the evaluator"); }
+            @Override public AttemptResult<?> probe(String actual) { throw new AssertionError("use the evaluator"); }
             @Override public AwaitAttempt<String, String> newAttempt() { return evaluation; }
         };
         assertSame(evaluation, check.because("the value is needed").newAttempt());
@@ -154,21 +154,21 @@ class ConditionDefinitionTest {
         return List.of(
                 argumentSet("check", new PreservingCondition<CharSequence>() {
                     @Override public String description() { return "accepted"; }
-                    @Override public ConditionResult<?> probe(CharSequence actual) { return satisfied("different"); }
+                    @Override public AttemptResult<?> probe(CharSequence actual) { return satisfied("different"); }
                 }),
                 argumentSet("comparison", new ComparisonCondition<CharSequence>() {
                     @Override public String description() { return "accepted"; }
-                    @Override public ConditionResult<?> probe(Object actual) { return satisfied("different"); }
+                    @Override public AttemptResult<?> probe(Object actual) { return satisfied("different"); }
                 }));
     }
 
     private record First() implements SelectedCondition<Collection<?>> {
         @Override public String description() { return "first element"; }
-        @Override public ConditionResult<?> probe(Collection<?> actual) { return satisfied(actual.iterator().next()); }
+        @Override public AttemptResult<?> probe(Collection<?> actual) { return satisfied(actual.iterator().next()); }
     }
 
     private record Value() implements MapValueCondition<Map<?, ?>> {
         @Override public String description() { return "first value"; }
-        @Override public ConditionResult<?> probe(Map<?, ?> actual) { return satisfied(actual.values().iterator().next()); }
+        @Override public AttemptResult<?> probe(Map<?, ?> actual) { return satisfied(actual.values().iterator().next()); }
     }
 }

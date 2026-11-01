@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
@@ -24,7 +24,7 @@ record CallbackCondition<INPUT, RESULT>(String description,
         return requireNonNull(factory.call(), "evaluator must not be null");
     }
 
-    @Override public ConditionResult<RESULT> probe(INPUT actual) throws Throwable {
+    @Override public AttemptResult<RESULT> probe(INPUT actual) throws Throwable {
         return newAttempt().probe(actual).mapValue(value -> value);
     }
 }

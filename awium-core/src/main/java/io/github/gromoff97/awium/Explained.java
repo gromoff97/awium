@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -30,14 +30,14 @@ abstract class Explained<ORIGINAL extends AwaitCondition> implements AwaitCondit
 
     private abstract static class Check<INPUT, ORIGINAL extends ApplicableCondition<INPUT, ?>> extends Explained<ORIGINAL> {
         private Check(ORIGINAL original, String explanation) { super(original, explanation); }
-        public ConditionResult<?> probe(INPUT actual) throws Throwable { return original.probe(actual); }
+        public AttemptResult<?> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         public AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return original.newAttempt(); }
         public ConditionRun<INPUT, ?> newRun(AwaitCondition definition) { return original.newRun(definition); }
     }
 
     static final class Typed<INPUT, RESULT> extends Explained<Condition<INPUT, RESULT>> implements Condition<INPUT, RESULT> {
         Typed(Condition<INPUT, RESULT> original, String explanation) { super(original, explanation); }
-        @Override public ConditionResult<RESULT> probe(INPUT actual) throws Throwable { return original.probe(actual); }
+        @Override public AttemptResult<RESULT> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         @Override public AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception { return original.newAttempt(); }
         @Override public ConditionRun<INPUT, RESULT> newRun(AwaitCondition definition) { return original.newRun(definition); }
         @Override public Condition<INPUT, RESULT> because(String explanation) { return original.because(explanation); }

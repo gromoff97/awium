@@ -28,7 +28,7 @@ final class PaidPayment implements Condition<Payment, Payment> {
     public String description() { return "payment is paid"; }
 
     @Override
-    public ConditionResult<Payment> probe(Payment actual) {
+    public AttemptResult<Payment> probe(Payment actual) {
         return actual.paid() ? satisfied(actual) : unsatisfied("payment was unpaid");
     }
 }
@@ -42,7 +42,7 @@ Keep definitions immutable; [custom lifecycles](docs/development.md) support per
 
 ## Check outcomes
 
-`ConditionResult<RESULT>` has two variants, created with:
+`AttemptResult<RESULT>` has two variants, created with:
 
 | Factory | Meaning |
 | --- | --- |
@@ -51,7 +51,7 @@ Keep definitions immutable; [custom lifecycles](docs/development.md) support per
 | `unsatisfied(diagnostic)`, `unsatisfied(diagnostic, cause)` | Mismatch with structured fields |
 | `satisfied(value, diagnostic)` | Success with fields retained in history or if it arrives after the deadline |
 
-The declared result sets the terminal type: `ConditionResult<CharSequence>` yields
+The declared result sets the terminal type: `AttemptResult<CharSequence>` yields
 `CharSequence` even for a `String` source. `mapValue(function)` transforms success
 values and preserves diagnostic data. Every mismatch requires a message, including
 one supplied through `Diagnostic`. Null, empty, or whitespace-only messages are rejected.

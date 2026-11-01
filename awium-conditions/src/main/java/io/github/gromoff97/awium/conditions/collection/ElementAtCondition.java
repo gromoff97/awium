@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.SequencedCollection;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record ElementAtCondition(int index, Position position) implements SelectedCondition<SequencedCollection<?>> {
     enum Position { FIRST, LAST, INDEX }
@@ -29,11 +29,11 @@ record ElementAtCondition(int index, Position position) implements SelectedCondi
     }
 
     @Override
-    public ConditionResult<?> probe(SequencedCollection<?> actual) {
+    public AttemptResult<?> probe(SequencedCollection<?> actual) {
         return selectElement(position == Position.LAST && actual != null ? actual.reversed() : actual, index);
     }
 
-    private static <ELEMENT> ConditionResult<ELEMENT> selectElement(SequencedCollection<? extends ELEMENT> actual, int index) {
+    private static <ELEMENT> AttemptResult<ELEMENT> selectElement(SequencedCollection<? extends ELEMENT> actual, int index) {
         if (actual == null) return unsatisfied("collection was null");
         int position = 0;
         for (ELEMENT value : actual) {

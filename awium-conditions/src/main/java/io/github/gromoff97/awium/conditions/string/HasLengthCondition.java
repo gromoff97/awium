@@ -3,14 +3,14 @@ package io.github.gromoff97.awium.conditions.string;
 import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 final class HasLengthCondition implements PreservingCondition<CharSequence> {
     private final ApplicableCondition<? super Integer, ?> comparison;
@@ -29,7 +29,7 @@ final class HasLengthCondition implements PreservingCondition<CharSequence> {
     @Override public List<Reference<?>> references() { return comparison.references(); }
 
     @Override
-    public ConditionResult<?> probe(CharSequence actual) throws Throwable {
+    public AttemptResult<?> probe(CharSequence actual) throws Throwable {
         if (actual == null) return unsatisfied("string was null");
         int length = actual.length();
         var diagnostic = new Diagnostic(null, new Reference<>("Actual length", length));

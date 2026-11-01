@@ -16,7 +16,7 @@ import org.junit.jupiter.api.TestFactory;
 import static com.tngtech.archunit.base.DescribedPredicate.describe;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
-import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static java.lang.System.getProperty;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
@@ -28,14 +28,17 @@ class CoreArchitectureTest {
             return Stream.of(
                     noClasses().should().dependOnClassesThat().resideInAPackage("..awium.conditions..")
                             .as("core has no built-in condition dependencies"),
-                    independent(Set.of("ConditionRun", "AwaitAttempt", "ConditionExecution", "ProbeFailure",
+                    independent(Set.of("AwaitAttempt", "ConditionExecution", "ProbeFailure",
                                     "ExecutionStep", "AttemptExecution", "WaitEngine", "WaitCompletion", "WaitConfiguration"),
                             Set.of("Await", "AwaitSupport", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait",
                                     "DiagnosticSelectionAwait", "DiagnosticMapAwait", "DiagnosticText", "FailureDiagnostics"))
                             .as("polling and execution do not depend on facades or formatting"),
+                    independent(Set.of("ConditionRun"), Set.of("WaitEngine", "AttemptExecution", "WaitConfiguration",
+                            "Await", "AwaitSupport", "ValueAwait", "DiagnosticAwait"))
+                            .as("run lifecycle owns history and results without polling or facade dependencies"),
                     independent(Set.of("AwaitSupport"), Set.of("CheckRun", "AttemptHistory", "FailureDiagnostics"))
                             .as("waiting facades do not depend on run implementations"),
-                    independent(Set.of("ConditionResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"))
+                    independent(Set.of("AttemptResult"), Set.of("ConditionExecution", "Attempt", "AwaitResult"))
                             .as("check outcomes do not depend on execution"),
                     independent(Set.of("WaitCompletion"), Set.of("AwaitFailure", "Attempt"))
                             .as("wait completion does not depend on public result variants"),
@@ -46,7 +49,7 @@ class CoreArchitectureTest {
                             .as("the condition contract does not depend on polling or diagnostics"),
                     independent(Set.of("ConditionExecution"), Set.of("WaitEngine", "AttemptHistory", "Attempt", "WaitConfiguration"))
                             .as("nested execution does not depend on polling or history"),
-                    independent(Set.of("Reference", "ConditionResult.Unsatisfied"),
+                    independent(Set.of("Reference", "AttemptResult.Unsatisfied"),
                             Set.of("AwaitAttempt", "ConditionExecution", "AttemptExecution", "WaitEngine", "WaitCompletion"))
                             .as("condition metadata does not depend on execution"),
                     independent(Set.of("FailureDiagnostics"),
@@ -67,7 +70,7 @@ class CoreArchitectureTest {
 
     private static String owner(String className) {
         // Value records may format themselves without coupling condition execution to formatting.
-        return Map.of(Reference.class.getName(), "Reference", Unsatisfied.class.getName(), "ConditionResult.Unsatisfied")
+        return Map.of(Reference.class.getName(), "Reference", Unsatisfied.class.getName(), "AttemptResult.Unsatisfied")
                 .getOrDefault(className, className.substring(className.lastIndexOf('.') + 1).split("\\$", 2)[0]);
     }
 }

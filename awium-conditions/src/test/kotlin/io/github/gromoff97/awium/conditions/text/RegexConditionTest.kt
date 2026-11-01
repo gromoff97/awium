@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.string.StringConditions.doesNotMatchRegex
 import io.github.gromoff97.awium.conditions.string.StringConditions.matchesRegex
 import io.github.gromoff97.awium.conditions.support.Characters
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import java.util.regex.Pattern
 import java.util.regex.Pattern.CASE_INSENSITIVE
 import java.util.regex.Pattern.compile

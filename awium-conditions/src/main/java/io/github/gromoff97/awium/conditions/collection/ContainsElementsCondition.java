@@ -1,15 +1,15 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.Collection;
 import java.util.List;
 
 import static io.github.gromoff97.awium.conditions.collection.ExpectedValues.snapshot;
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.firstMissingExpectedIndex;
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.firstPresentExpectedIndex;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Locale.ROOT;
 
 record ContainsElementsCondition<ELEMENT>(List<? extends ELEMENT> expected, Membership membership)
@@ -34,7 +34,7 @@ record ContainsElementsCondition<ELEMENT>(List<? extends ELEMENT> expected, Memb
 
     @Override public List<Reference<?>> references() { return List.of(new Reference<>(membership.operand(), expected)); }
 
-    @Override public ConditionResult<?> probe(Collection<? super ELEMENT> actual) {
+    @Override public AttemptResult<?> probe(Collection<? super ELEMENT> actual) {
         if (actual == null) return unsatisfied("collection was null");
         int index = membership == Membership.ALL || membership == Membership.NOT_ALL
                 ? firstMissingExpectedIndex(actual, expected) : firstPresentExpectedIndex(actual, expected);

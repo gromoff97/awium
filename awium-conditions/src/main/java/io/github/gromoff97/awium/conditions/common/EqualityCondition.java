@@ -1,11 +1,11 @@
 package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 
 record EqualityCondition<EXPECTED>(EXPECTED expected, boolean sameInstance, boolean negated) implements ComparisonCondition<EXPECTED> {
@@ -18,7 +18,7 @@ record EqualityCondition<EXPECTED>(EXPECTED expected, boolean sameInstance, bool
     @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
 
     @Override
-    public ConditionResult<?> probe(Object actual) {
+    public AttemptResult<?> probe(Object actual) {
         return (sameInstance ? actual == expected : deepEquals(actual, expected)) != negated
                 ? satisfied(actual) : unsatisfied(sameInstance
                         ? negated ? "value was the same instance" : "value was a different instance"

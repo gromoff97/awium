@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.execution.CheckRun;
 import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.DiagnosticText;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -17,7 +17,7 @@ public interface AwaitCondition {
     ConditionRun<?, ?> newRun(AwaitCondition definition);
 
     interface ApplicableCondition<INPUT, REFERENCE> extends AwaitCondition {
-        ConditionResult<?> probe(INPUT actual) throws Throwable;
+        AttemptResult<?> probe(INPUT actual) throws Throwable;
         default AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return this::probe; }
         @Override default ConditionRun<INPUT, ?> newRun(AwaitCondition definition) {
             return new CheckRun<>(definition, this::newAttempt);

@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.waiting;
 
 import io.github.gromoff97.awium.result.AwaitExecutionException;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -23,8 +23,8 @@ import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.observation;
 import static io.github.gromoff97.awium.support.TestConditions.check;
@@ -71,7 +71,7 @@ class ThreadIntegrationTest {
         List<Thread> callbackThreads = new ArrayList<>();
         int[] observations = {0};
         int[] result = {0};
-        var outcomes = List.<ConditionResult<Integer>>of(unsatisfied("not the third observation"), unsatisfied("not the third observation"), satisfied(3)).iterator();
+        var outcomes = List.<AttemptResult<Integer>>of(unsatisfied("not the third observation"), unsatisfied("not the third observation"), satisfied(3)).iterator();
 
         Thread caller = callers.newThread(() -> result[0] = await(() -> {
             callbackThreads.add(currentThread());
@@ -104,7 +104,7 @@ class ThreadIntegrationTest {
                 .every(ofNanos(1)).upTo(ofNanos(3));
         var check = checkPerWait("two observations per caller", () -> {
             Thread owner = currentThread();
-            Callable<ConditionResult<Thread>> probe = mock();
+            Callable<AttemptResult<Thread>> probe = mock();
             when(probe.call()).thenAnswer(ignored -> {
                 rendezvous.await(3, SECONDS);
                 return unsatisfied("first observation");

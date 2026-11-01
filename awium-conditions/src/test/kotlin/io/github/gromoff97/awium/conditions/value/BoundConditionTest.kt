@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.atLeast
 import io.github.gromoff97.awium.conditions.common.CommonConditions.atMost
 import io.github.gromoff97.awium.conditions.common.CommonConditions.greaterThan
 import io.github.gromoff97.awium.conditions.common.CommonConditions.lessThan
-import io.github.gromoff97.awium.result.ConditionResult.Satisfied
+import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame

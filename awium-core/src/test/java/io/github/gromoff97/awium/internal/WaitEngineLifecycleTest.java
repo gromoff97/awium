@@ -20,8 +20,8 @@ import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -143,6 +143,6 @@ class WaitEngineLifecycleTest {
 
     private WaitCompletion execute(Callable<String> source) {
         return new WaitEngine<>(withTime(config(1, 10, 0), time, time), source, run)
-                .waitFor(ignored -> {});
+                .waitFor();
     }
 }

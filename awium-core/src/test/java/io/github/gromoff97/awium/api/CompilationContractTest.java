@@ -35,7 +35,7 @@ class CompilationContractTest {
     void executionFactoriesMustMatchTheirInputAndResultTypes(String factory) {
         assertRejected("""
                 import io.github.gromoff97.awium.execution.ConditionExecution;
-                import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+                import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
                 final class Contract {
                     void check() {
                         new ConditionExecution<String, Integer>(%s);

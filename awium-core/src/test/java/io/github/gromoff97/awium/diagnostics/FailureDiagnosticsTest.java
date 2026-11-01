@@ -1,14 +1,14 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.AbstractConditionRun;
+import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
@@ -47,7 +47,7 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.WAIT_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.values;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
@@ -101,7 +101,7 @@ class FailureDiagnosticsTest {
         var renderingFailure = new IllegalStateException("description failed");
         var condition = new Condition<String, String>() {
             @Override public String description() { throw renderingFailure; }
-            @Override public ConditionResult<String> probe(String actual) { throw probeFailure; }
+            @Override public AttemptResult<String> probe(String actual) { throw probeFailure; }
         };
         var result = tryAwait(() -> "ready").until(condition);
         assertSame(probeFailure, failure(result).cause());
@@ -208,9 +208,9 @@ class FailureDiagnosticsTest {
         assertEquals(0, original.getSuppressed().length);
     }
 
-    private static AbstractConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
-        return new AbstractConditionRun<>(diagnosticCondition("ready", new Reference<>("Expected", "ready"))) {
-            @Override public ConditionResult<?> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
+    private static ConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
+        return new ConditionRun<>(diagnosticCondition("ready", new Reference<>("Expected", "ready"))) {
+            @Override public AttemptResult<?> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
             @Override public boolean complete() { throw new AssertionError("diagnostics must not evaluate completion"); }
             @Override public Object result() { throw new AssertionError("diagnostics must not retrieve a result"); }
             @Override protected Diagnostic diagnostics(Attempt<?> attempt) { return diagnostic.get(); }

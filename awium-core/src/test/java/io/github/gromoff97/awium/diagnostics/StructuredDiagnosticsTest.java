@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import io.github.gromoff97.awium.support.TestCondition;
@@ -15,8 +15,8 @@ import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static java.time.Duration.ofNanos;
@@ -34,7 +34,7 @@ class StructuredDiagnosticsTest {
         var values = new ArrayList<>(List.of("first", "second"));
         var condition = new Condition<List<String>, List<String>>() {
             @Override public String description() { return "three elements"; }
-            @Override public ConditionResult<List<String>> probe(List<String> actual) {
+            @Override public AttemptResult<List<String>> probe(List<String> actual) {
                 calls.incrementAndGet();
                 var measured = new Diagnostic("collection size did not match",
                         new Reference<>("Expected size", 3), new Reference<>("Actual size", actual.size()));

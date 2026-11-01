@@ -12,7 +12,7 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
 import java.util.List;
@@ -39,8 +39,8 @@ import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
 import static io.github.gromoff97.awium.support.TestConditions.diagnosticCondition;
@@ -634,11 +634,11 @@ class DiagnosticsSnapshotTest {
         return assertFailure(reason, () -> run.finish(outcome, configuration).orThrow());
     }
 
-    private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(OBSERVED observed, ConditionResult<?> result, long completedNanos) {
+    private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(OBSERVED observed, AttemptResult<?> result, long completedNanos) {
         return new ExecutionStep<>(false, ACQUISITION, completedNanos,
                 switch (result) {
-                    case ConditionResult.Satisfied<?> success -> new Attempt.SatisfiedObservation<>(observed, success.diagnostic());
-                    case ConditionResult.Unsatisfied<?> mismatch -> new Attempt.UnsatisfiedObservation<>(observed, mismatch.diagnostic(), mismatch.cause());
+                    case AttemptResult.Satisfied<?> success -> new Attempt.SatisfiedObservation<>(observed, success.diagnostic());
+                    case AttemptResult.Unsatisfied<?> mismatch -> new Attempt.UnsatisfiedObservation<>(observed, mismatch.diagnostic(), mismatch.cause());
                 });
     }
 
@@ -733,7 +733,7 @@ class DiagnosticsSnapshotTest {
         var check = new AwaitCondition.PreservingCondition<Object>() {
             @Override public String description() { return "ready"; }
             @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", expected)); }
-            @Override public ConditionResult<?> probe(Object actual) { return unsatisfied("not ready", original); }
+            @Override public AttemptResult<?> probe(Object actual) { return unsatisfied("not ready", original); }
         };
         var waiting = timedAwait(() -> clearing, config(1, 2, 0), time, time);
         AwaitFailure failure = returnResult

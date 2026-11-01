@@ -28,7 +28,7 @@ fluent builders contain no clock-injection methods. Clock and parker use the sam
 nanosecond time base: the clock is monotonic, and parking may return early.
 Test clocks must not clear the interrupt flag. Clock failures propagate directly;
 parker failures stop the wait. Production uses `System.nanoTime` and `LockSupport.parkNanos`.
-Mockito uses JDK proxies and reflection without a Java agent.
+Mockito uses subclasses without a Java agent.
 Integration tests cover platform and virtual callers, cancellation, and concurrent
 execution of custom conditions. Core tests have no dependency on built-in conditions.
 
@@ -38,11 +38,10 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | --- | --- |
 | `Condition`, `AwaitCondition` families | Immutable definitions, type constraints, and creation of independent runs |
 | `CheckRun` | One check's evaluation and final value |
-| `AbstractConditionRun` | History recording and terminal result assembly |
+| `ConditionRun` | Lifecycle contract, history recording, and terminal result assembly |
 | `AttemptHistory` | Invocation numbering and grouping within each history |
 | `Await`; fluent await classes | Source entry points and configuration |
 | `AwaitSupport` | Starting a run, passing it to the engine, and returning its result |
-| `ConditionRun` | Lifecycle contract without sequence or stage concepts |
 | `ConditionExecution` | Lazy evaluator initialization and nested check invocation |
 | `WaitEngine` | Polling, deadlines, and persistence from immutable step snapshots |
 | `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
@@ -52,9 +51,9 @@ Implement `description()` and `probe(actual)` directly; no base constructor is r
 The default `because` returns a separate definition and preserves custom lifecycle methods.
 Override `newAttempt()` for a stateful evaluator, created lazily for each use.
 For a custom lifecycle, override `newRun(definition)` and return a fresh
-`AbstractConditionRun`. Its `probe` checks observations, `complete` decides completion,
+`ConditionRun`. Its `probe` checks observations, `complete` decides completion,
 and `result` supplies the final value, including when nested. The supplied definition
-carries the `because` reason. Checks return `Diagnostic` data in their `ConditionResult`;
+carries the `because` reason. Checks return `Diagnostic` data in their `AttemptResult`;
 they do not format terminal messages. A lifecycle can add final context through
 `diagnostics(attempt)`. Core renders both sets of fields and adds the stop reason,
 timing, and cause, retaining diagnostic failures separately. History scopes have

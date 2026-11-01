@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.execution;
 
 import io.github.gromoff97.awium.support.TestCondition;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,7 @@ class AttemptHistoryTest {
             @Override public boolean equals(Object other) { throw new AssertionError("cannot compare"); }
         }
         var history = new AttemptHistory<String>();
-        var condition = new TestCondition<>("ready", null, ConditionResult::satisfied);
+        var condition = new TestCondition<>("ready", null, AttemptResult::satisfied);
         for (int i = 0; i < 2; i++) {
             history.add(1, new SatisfiedObservation<>("same observation",
                     new Diagnostic(null, new Reference<>("Detail", new Uncomparable()))));
@@ -34,7 +34,7 @@ class AttemptHistoryTest {
     @Test
     void snapshotsRemainUnchangedAsTheLastNumberMovesAndAnotherStateBegins() {
         var history = new AttemptHistory<String>();
-        var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
+        var condition = new TestCondition<>("ready", null, AttemptResult::satisfied).because("ready");
         var empty = history.conditions(List.of(condition)).getFirst().attempts();
         var first = new UnsatisfiedObservation<>(new String("pending"), "pending", null);
         var second = new UnsatisfiedObservation<>(new String("pending"), "pending", null);
@@ -70,7 +70,7 @@ class AttemptHistoryTest {
         var cause = new AssertionError("unreadable") {
             @Override public String getMessage() { throw new AssertionError("must not be read"); }
         };
-        var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
+        var condition = new TestCondition<>("ready", null, AttemptResult::satisfied).because("ready");
         var attempt = new UnsatisfiedObservation<>("pending", "waiting", cause);
         assertEquals(0, history.count());
         for (int i = 0; i < 300; i++) history.add(1, attempt);
@@ -81,7 +81,7 @@ class AttemptHistoryTest {
     @Test
     void diagnosticChangesRemainInOrderEvenWhenAnEarlierMessageReturns() {
         var history = new AttemptHistory<String>();
-        var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
+        var condition = new TestCondition<>("ready", null, AttemptResult::satisfied).because("ready");
         for (String mismatch : List.of("queued", "queued", "running", "queued", "queued")) {
             history.add(1, new UnsatisfiedObservation<>("observation", mismatch, null));
         }
@@ -95,7 +95,7 @@ class AttemptHistoryTest {
     @Test
     void observationEqualityHandlesNullArraysAndReturningToAnEarlierValue() {
         var history = new AttemptHistory<Object>();
-        var condition = new TestCondition<>("ready", null, ConditionResult::satisfied).because("ready");
+        var condition = new TestCondition<>("ready", null, AttemptResult::satisfied).because("ready");
         var observations = asList(null, null,
                 new int[]{1}, new int[]{1}, new int[]{2}, new int[]{2}, new int[]{1});
         for (Object observation : observations) history.add(1, new UnsatisfiedObservation<>(observation, "not ready", null));

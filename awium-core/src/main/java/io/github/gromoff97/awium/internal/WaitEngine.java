@@ -4,7 +4,6 @@ import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import java.util.concurrent.Callable;
-import java.util.function.Consumer;
 
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.PERSISTENCE;
@@ -31,16 +30,16 @@ public final class WaitEngine<OBSERVED> {
         runner = new AttemptExecution<>(source, execution, configuration.clock(), started);
     }
 
-    public WaitCompletion waitFor(Consumer<ExecutionStep<OBSERVED>> recorder) {
-        WaitCompletion acquisition = acquire(recorder);
+    public WaitCompletion waitFor() {
+        WaitCompletion acquisition = acquire();
         if (!(acquisition instanceof SatisfiedWait acquired)
                 || configuration.persistenceNanos() == 0) {
             return acquisition;
         }
-        return persist(recorder, acquired);
+        return persist(acquired);
     }
 
-    private WaitCompletion acquire(Consumer<ExecutionStep<OBSERVED>> recorder) {
+    private WaitCompletion acquire() {
         long deadline = started + configuration.upToNanos();
         ExecutionStep<OBSERVED> lastStep = null;
         long completed = started;
@@ -51,7 +50,7 @@ public final class WaitEngine<OBSERVED> {
                     : waitBeforeAttempt(min(configuration.everyNanos(), remaining(completed, deadline)),
                             ACQUISITION, completed);
             if (preparationFailure != null) {
-                recorder.accept(preparationFailure);
+                runner.execution().record(preparationFailure.attempt());
                 return new Uncontrolled(preparationFailure);
             }
 
@@ -62,7 +61,7 @@ public final class WaitEngine<OBSERVED> {
 
             ExecutionStep<OBSERVED> step = runner.call(ACQUISITION);
             completed = started + step.completedAfterNanos();
-            recorder.accept(step);
+            runner.execution().record(step.attempt());
             if (step.attempt() instanceof Failure<?>) {
                 return new Uncontrolled(step);
             }
@@ -76,8 +75,7 @@ public final class WaitEngine<OBSERVED> {
         }
     }
 
-    private WaitCompletion persist(Consumer<ExecutionStep<OBSERVED>> recorder,
-            SatisfiedWait acquired) {
+    private WaitCompletion persist(SatisfiedWait acquired) {
         long acquiredAt = started + acquired.step().completedAfterNanos();
         long deadline = acquiredAt + configuration.persistenceNanos();
         long completed = acquiredAt;
@@ -86,13 +84,13 @@ public final class WaitEngine<OBSERVED> {
             ExecutionStep<OBSERVED> preparationFailure = waitBeforeAttempt(
                     min(configuration.everyNanos(), remaining(completed, deadline)), PERSISTENCE, completed);
             if (preparationFailure != null) {
-                recorder.accept(preparationFailure);
+                runner.execution().record(preparationFailure.attempt());
                 return new Uncontrolled(preparationFailure);
             }
 
             ExecutionStep<OBSERVED> step = runner.call(PERSISTENCE);
             completed = started + step.completedAfterNanos();
-            recorder.accept(step);
+            runner.execution().record(step.attempt());
             if (step.attempt() instanceof Failure<?>) {
                 return new Uncontrolled(step);
             }

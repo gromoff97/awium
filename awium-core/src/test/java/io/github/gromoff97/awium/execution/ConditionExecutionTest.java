@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.execution;
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,8 +17,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
-import static io.github.gromoff97.awium.result.ConditionResult.Unsatisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -100,14 +100,14 @@ class ConditionExecutionTest {
 
         assertSame(failure, assertThrows(Throwable.class, () -> execution.probe("ready")));
         var invalid = assertThrows(NullPointerException.class, () -> execution.probe("ready"));
-        assertEquals("condition returned null ConditionResult", invalid.getMessage());
+        assertEquals("condition returned null AttemptResult", invalid.getMessage());
         assertEquals(5, result(execution.probe("ready")));
     }
 
     @Test
     void nullIsAValidObservation() throws Throwable {
         Condition<String, String> condition = new TestCondition<>("preserve null", null,
-                () -> ConditionResult::satisfied);
+                () -> AttemptResult::satisfied);
         assertNull(result(bind(condition).probe(null)));
     }
 
@@ -116,7 +116,7 @@ class ConditionExecutionTest {
         int[] factories = {0};
         Condition<String, String> condition = new TestCondition<>("preserve", null, () -> {
             factories[0]++;
-            return ConditionResult::satisfied;
+            return AttemptResult::satisfied;
         });
         var execution = bind(condition);
 
