@@ -1,6 +1,6 @@
 # Conditions
 
-[README](../README.md) · [Core usage](../../awium-core/docs/usage.md) · [Core diagnostics](../../awium-core/docs/diagnostics.md)
+[README](../README.md)
 
 Checks return the observed instance unless **→** indicates otherwise.
 Constants such as `present` need no parentheses. Qualify colliding names:
@@ -81,7 +81,11 @@ String receipt = await(paymentRepository::load).until(condition("payment has a r
         actual.receipt() == null ? unsatisfied("receipt was absent") : satisfied(actual.receipt())));
 ```
 
-The [core contract](../../awium-core/README.md) defines callback outcomes and custom implementations.
+Return `satisfied(value)` to finish with that value, including null, or
+`unsatisfied()` to retry. A mismatch may include a message and cause:
+`unsatisfied("receipt was absent", cause)`. Any throwable escaping the callback
+stops the wait. For a reusable class, implement `Condition<INPUT, RESULT>` with
+`description()` and `probe(actual)`; its result type determines what `until` returns.
 
 `condition` reuses its callback. `conditionPerWait` accepts a `Callable` that creates
 one callback per wait and captured position, on first evaluation. Nested factories
@@ -303,8 +307,14 @@ conditions[1]: 3 → UnsatisfiedObservation("pending", ...)
 Attempt numbers span the whole wait. A stage's first range starts after the previous
 stage's last attempt. A successful stage may precede later sequence failure.
 Terminal diagnostics add the stage number and sequence reason; timeout after an
-intermediate success identifies the next stage. [Core diagnostics](../../awium-core/docs/diagnostics.md)
-describes observation retention.
+intermediate success identifies the next stage.
+
+Each entry key is the last attempt number in a group. Adjacent checks share an
+entry when their observations are deeply equal and their status, mismatch text,
+and exception instance stay unchanged. Execution failures remain separate;
+history is never trimmed. Stored observations are references, so later mutations
+can change what old entries show. `result.conditions()` and each history's
+`attempts()` map are immutable.
 
 ## Container views
 

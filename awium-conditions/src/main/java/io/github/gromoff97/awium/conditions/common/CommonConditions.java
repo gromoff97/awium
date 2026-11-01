@@ -1,12 +1,11 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
+import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.function.checked.CheckedConsumer;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
@@ -14,10 +13,10 @@ import java.util.concurrent.Callable;
 
 import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.support.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.support.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.support.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.support.SizeRelation.LESS;
+import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.AT_LEAST;
+import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.AT_MOST;
+import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.GREATER_THAN;
+import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.LESS_THAN;
 
 public final class CommonConditions {
 
@@ -49,12 +48,12 @@ public final class CommonConditions {
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> condition(String description,
             AwaitAttempt<? super INPUT, ? extends RESULT> evaluation) {
-        return new DefinedCondition<>(description, null, evaluation);
+        return new CallbackCondition<>(description, evaluation);
     }
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> conditionPerWait(String description,
             Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> evaluatorFactory) {
-        return new DefinedCondition<>(description, null, evaluatorFactory);
+        return new CallbackCondition<>(description, evaluatorFactory);
     }
 
     public static <INPUT> PreservingCondition<INPUT> asserted(CheckedConsumer<? super INPUT> assertion) {
@@ -99,22 +98,22 @@ public final class CommonConditions {
 
     public static <BOUND, INPUT extends Comparable<? super BOUND>>
             PreservingCondition<INPUT> greaterThan(BOUND bound) {
-        return new BoundCondition<>("greater than", bound, GREATER);
+        return new BoundCondition<>(GREATER_THAN, bound);
     }
 
     public static <BOUND, INPUT extends Comparable<? super BOUND>>
             PreservingCondition<INPUT> atLeast(BOUND bound) {
-        return new BoundCondition<>("at least", bound, AT_LEAST);
+        return new BoundCondition<>(AT_LEAST, bound);
     }
 
     public static <BOUND, INPUT extends Comparable<? super BOUND>>
             PreservingCondition<INPUT> lessThan(BOUND bound) {
-        return new BoundCondition<>("less than", bound, LESS);
+        return new BoundCondition<>(LESS_THAN, bound);
     }
 
     public static <BOUND, INPUT extends Comparable<? super BOUND>>
             PreservingCondition<INPUT> atMost(BOUND bound) {
-        return new BoundCondition<>("at most", bound, AT_MOST);
+        return new BoundCondition<>(AT_MOST, bound);
     }
 
     public static <BOUND extends Comparable<? super BOUND>, INPUT extends Comparable<? super BOUND>>
@@ -126,5 +125,4 @@ public final class CommonConditions {
             PreservingCondition<INPUT> strictlyBetween(BOUND lowerBound, BOUND upperBound) {
         return new RangeCondition<>(lowerBound, upperBound, false);
     }
-
 }

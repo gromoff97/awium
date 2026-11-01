@@ -37,7 +37,6 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | Component | Owns |
 | --- | --- |
 | `Condition`, `AwaitCondition` families | Immutable definitions, type constraints, and creation of independent runs |
-| `CheckDefinition` | Evaluator storage and run creation |
 | `CheckRun` | One check's evaluation and final value |
 | `AbstractConditionRun` | History recording and terminal result assembly |
 | `AttemptHistory` | Invocation numbering and grouping within each history |
@@ -49,7 +48,9 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
 | `FailureDiagnostics`; `DiagnosticText` | Terminal formatting and guarded value rendering |
 
-Override `Condition.newAttempt()` for a stateful evaluator, created lazily for each use.
+Implement `description()` and `probe(actual)` directly; no base constructor is required.
+The default `because` returns a separate definition and preserves custom lifecycle methods.
+Override `newAttempt()` for a stateful evaluator, created lazily for each use.
 For a custom lifecycle, override `newRun(definition, recording)` and return a fresh
 `AbstractConditionRun`. Its `probe` checks observations, `complete` decides completion,
 and `result` supplies the final value, including when nested. The supplied definition
@@ -65,6 +66,7 @@ source-observation list result; its default `stages()` returns the condition its
 as the only stage. `PreservesObservation` shares a terminal overload
 across preserving checks and comparisons. Selector implementations must return the
 corresponding source element, entry, or value; typed `Condition` declares its output.
+These families preserve result inference through `because`; all use the same run contract.
 
 The Java module `io.github.gromoff97.awium.core` exports `io.github.gromoff97.awium`,
 `.result`, `.function`, and `.execution`.

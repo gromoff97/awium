@@ -1,13 +1,20 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.Collection;
 
-import static io.github.gromoff97.awium.support.ContainerChecks.single;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
-final class SingleElementCondition extends SelectedCondition<Collection<?>> {
-    SingleElementCondition() {
-        super("collection has a single element", null, actual -> single("collection", actual));
+record SingleElementCondition() implements SelectedCondition<Collection<?>> {
+    @Override public String description() { return "collection has a single element"; }
+    @Override
+    public ConditionResult<?> probe(Collection<?> actual) {
+        if (actual == null) return unsatisfied("collection was null");
+        var iterator = actual.iterator();
+        if (!iterator.hasNext()) return unsatisfied("collection size was 0");
+        var value = iterator.next();
+        return iterator.hasNext() ? unsatisfied("collection size was greater than 1") : satisfied(value);
     }
-
 }

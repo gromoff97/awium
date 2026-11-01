@@ -17,31 +17,21 @@ import static java.lang.Math.min;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
-final class CapturedCondition<CHECK extends AwaitCondition> extends AwaitCondition.CollectingCondition<CHECK> {
+final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCondition.CollectingCondition<CHECK> {
 
     private final List<AwaitCondition> stages;
 
     CapturedCondition(AwaitCondition[] conditions) {
-        super("conditions are satisfied in order", List.of(), null);
         stages = stream(requireNonNull(conditions, "conditions must not be null"))
                 .map(condition -> requireNonNull(condition, "condition must not be null")).toList();
         if (stages.isEmpty()) throw new IllegalArgumentException("conditions must not be empty");
     }
 
-    private CapturedCondition(CapturedCondition<CHECK> original, String explanation) {
-        super(original, explanation);
-        stages = original.stages;
+    @Override public String description() { return "conditions are satisfied in order"; }
+    @Override public List<AwaitCondition> stages() { return stages; }
+    @Override public ConditionRun<?, ?> newRun(AwaitCondition definition, boolean recording) {
+        return new Run<>(definition, recording);
     }
-
-    @Override
-    public List<AwaitCondition> stages() { return stages; }
-
-    @Override
-    public CapturedCondition<CHECK> because(String explanation) { return new CapturedCondition<>(this, explanation); }
-
-    @Override
-    protected <OBSERVED> ConditionRun<OBSERVED, List<OBSERVED>> collectingRun(
-            AwaitCondition definition, boolean recording) { return new Run<>(definition, recording); }
 
     private final class Run<OBSERVED> extends AbstractConditionRun<OBSERVED, List<OBSERVED>> {
 
@@ -81,7 +71,7 @@ final class CapturedCondition<CHECK extends AwaitCondition> extends AwaitConditi
         protected void describeAttempt(DiagnosticText text, StringBuilder out) {
             field(out, "", "Sequence", "captured " + results.size() + "/" + stages.size()
                     + "; stage " + attemptedStage + "/" + stages.size());
-            if (explanation() != null) field(out, "Because", explanation());
+            if (condition.explanation() != null) field(out, "Because", condition.explanation());
             out.append('\n');
             text.condition(out, "Condition", stages.get(attemptedStage - 1), "");
         }

@@ -37,8 +37,7 @@ Payment payment = await(paymentRepository::load)
         .until(new PaidPayment().because("Checkout must complete"));
 ```
 
-Choose another `RESULT` to extract a value. `description()` labels diagnostics
-and prevents ambiguity with predicate lambdas.
+Choose another `RESULT` to extract a value. `description()` labels diagnostics.
 Keep definitions immutable; [custom lifecycles](docs/development.md) support per-use state.
 
 ## Check outcomes
@@ -68,6 +67,6 @@ lacks the constraints required by `until`.
 
 Entry points and contracts are in `io.github.gromoff97.awium`, results in `.result`,
 `AwaitAttempt` in `.function`, and lifecycle support in `.execution`.
-Ready-made checks belong to the separate [Awium Conditions](../awium-conditions/README.md) project.
+Ready-made checks belong to the separate Awium Conditions project.
 
 Licensed under [Apache License 2.0](LICENSE).

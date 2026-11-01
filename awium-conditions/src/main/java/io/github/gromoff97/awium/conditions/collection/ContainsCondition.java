@@ -1,17 +1,21 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
-import java.util.function.Function;
+import io.github.gromoff97.awium.result.ConditionResult;
+import java.util.Collection;
+import java.util.List;
 
-import static io.github.gromoff97.awium.support.ValueMatching.contains;
+import static io.github.gromoff97.awium.conditions.collection.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static java.util.Objects.deepEquals;
 
-final class ContainsCondition<INPUT, ACTUAL, EXPECTED> extends PreservingCondition<INPUT> {
-    ContainsCondition(String subject, String element, EXPECTED expected, boolean negated,
-            Function<? super INPUT, ? extends Iterable<? extends ACTUAL>> elements,
-            CheckedBiPredicate<? super ACTUAL, ? super EXPECTED> matches) {
-        super(subject + (negated ? " does not contain unexpected " : " contains expected ") + element,
-                new Reference<>(negated ? "Unexpected" : "Expected", expected),
-                actual -> contains(actual, subject, element, expected, negated, elements, matches));
+record ContainsCondition<ELEMENT>(ELEMENT expected, boolean negated) implements PreservingCondition<Collection<? super ELEMENT>> {
+    @Override public String description() { return negated ? "collection does not contain unexpected element" : "collection contains expected element"; }
+    @Override public List<Reference<?>> references() { return List.of(new Reference<>(negated ? "Unexpected" : "Expected", expected)); }
+    @Override public ConditionResult<?> probe(Collection<? super ELEMENT> actual) {
+        return actual == null ? unsatisfied("collection was null")
+                : matchesAny(actual, value -> deepEquals(value, expected)) != negated ? satisfied(actual)
+                : unsatisfied(negated ? "collection contained unexpected element" : "collection did not contain expected element");
     }
 }

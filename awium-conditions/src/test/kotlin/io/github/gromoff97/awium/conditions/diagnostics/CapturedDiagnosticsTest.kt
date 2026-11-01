@@ -11,7 +11,6 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
 import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.execution.ConditionExecution.start
 import io.github.gromoff97.awium.execution.ConditionRun
-import io.github.gromoff97.awium.execution.DefinedCondition
 import io.github.gromoff97.awium.execution.ExecutionStep
 import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION
 import io.github.gromoff97.awium.execution.WaitCompletion
@@ -119,7 +118,7 @@ class CapturedDiagnosticsTest {
         val actual = RenderingValue { "observed value" }
         val cause = IllegalStateException("expected toString failed")
         val expected = RenderingValue { throw cause }
-        val second = DefinedCondition<Any, Any>("second stage", Reference("Expected", expected), AwaitAttempt { unsatisfied("not ready") })
+        val second = withOperand("second stage", Reference("Expected", expected), AwaitAttempt { unsatisfied("not ready") })
         val run = secondStage(second)
         val failure = diagnose(run, Timeout(step(run, actual)))
 
@@ -141,8 +140,8 @@ class CapturedDiagnosticsTest {
         val original = object : AssertionError("not ready") {
             override val message: String get() { messages++; throw diagnostic }
         }
-        val first = DefinedCondition<Any, Any>("first stage", Reference("Expected", root), AwaitAttempt { satisfied(it) })
-        val second = DefinedCondition<Any, Any>("second stage", Reference("Expected", operand),
+        val first = withOperand("first stage", Reference("Expected", root), AwaitAttempt { satisfied(it) })
+        val second = withOperand("second stage", Reference("Expected", operand),
             AwaitAttempt { unsatisfied("not ready", original) })
         val run = start<Any, List<Any>>(captured(first, second), false)
         step(run, actual)
@@ -168,7 +167,7 @@ class CapturedDiagnosticsTest {
         val original = object : AssertionError() {
             override val message: String get() { messages++; throw causeFailure }
         }
-        val second = DefinedCondition<Any, Any>("second stage", Reference("Expected", expected),
+        val second = withOperand("second stage", Reference("Expected", expected),
             AwaitAttempt { unsatisfied("not ready", original) })
         val run = start<Any, List<Any>>(captured(condition<Any, Any>("condition") { satisfied(it) }, second), false)
         step(run, actual)
@@ -208,6 +207,12 @@ class CapturedDiagnosticsTest {
         step(run, "ready")
         val failure = diagnose(run, Timeout(step(run, "done")))
         assertThat(failure.message()).contains("Sequence: captured 2/2; stage 2/2", "Expected: \"done\"")
+    }
+
+    private fun withOperand(name: String, operand: Reference<*>, check: AwaitAttempt<Any, Any>) = object : Condition<Any, Any> {
+        override fun description() = name
+        override fun references() = listOf(operand)
+        override fun probe(actual: Any) = check.probe(actual).mapValue { it }
     }
 
     private fun lifecycle(pending: Condition<String, String> = status("pending")) =

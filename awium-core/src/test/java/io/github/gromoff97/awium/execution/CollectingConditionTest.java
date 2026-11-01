@@ -24,6 +24,12 @@ class CollectingConditionTest {
     }
 
     @Test
+    void explainedCopiesKeepTheDeclaredStages() {
+        var original = new RecordOnce();
+        assertEquals(original.stages(), original.because("record the observation").stages());
+    }
+
+    @Test
     void untilInfersCollectedObservationTypesFromTheSource() {
         var actual = "ready";
         var values = await(() -> actual).until(new RecordOnce());
@@ -42,7 +48,7 @@ class CollectingConditionTest {
     @Test
     void explainedCopiesPassTheirDefinitionToTheRun() {
         var original = new RecordOnce();
-        var explained = original.because("record the observation");
+        var explained = original.because("old reason").because("record the observation");
         var result = tryAwait(() -> "ready").until(explained);
 
         assertNull(original.explanation());
@@ -63,26 +69,22 @@ class CollectingConditionTest {
         assertEquals(List.of("second"), second.result());
     }
 
-    private static final class RecordOnce extends CollectingCondition<InputCondition<Object>> {
-        private RecordOnce() { super("record one observation", List.of(), null); }
-        private RecordOnce(RecordOnce original, String reason) { super(original, reason); }
+    private static final class RecordOnce implements CollectingCondition<InputCondition<Object>> {
+        @Override public String description() { return "record one observation"; }
 
         @Override
-        public RecordOnce because(String reason) { return new RecordOnce(this, reason); }
-
-        @Override
-        protected <OBSERVED> ConditionRun<OBSERVED, List<OBSERVED>> collectingRun(AwaitCondition definition, boolean recording) {
-            return new AbstractConditionRun<>(definition, recording) {
-                private List<OBSERVED> values = List.of();
+        public ConditionRun<?, ?> newRun(AwaitCondition definition, boolean recording) {
+            return new AbstractConditionRun<Object, List<Object>>(definition, recording) {
+                private List<Object> values = List.of();
 
                 @Override
-                public ConditionResult<OBSERVED> probe(OBSERVED actual) {
+                public ConditionResult<Object> probe(Object actual) {
                     values = singletonList(actual);
                     return satisfied(actual);
                 }
 
                 @Override public boolean complete() { return !values.isEmpty(); }
-                @Override public List<OBSERVED> result() { return values; }
+                @Override public List<Object> result() { return values; }
             };
         }
     }

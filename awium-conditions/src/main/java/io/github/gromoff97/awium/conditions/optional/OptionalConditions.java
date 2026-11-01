@@ -27,12 +27,11 @@ public final class OptionalConditions {
 
     public static <CHECKED> SelectedCondition<Optional<? extends CHECKED>> hasValue(
             PreservingCondition<? super CHECKED> nested) {
-        return new SelectedCondition<>(compose("optional value", nested, present)) {};
+        return new SelectedNestedCondition<>(compose("optional value", nested, present));
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(
             ComparisonCondition<EXPECTED> nested) {
-        return new SelectedCondition<>(compose("optional value", nested, present)) {};
+        return new SelectedNestedCondition<>(compose("optional value", nested, present));
     }
-
 }

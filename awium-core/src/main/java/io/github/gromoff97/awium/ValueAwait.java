@@ -27,8 +27,7 @@ public sealed class ValueAwait<OBSERVED> extends AwaitSupport<OBSERVED> permits 
         return new ValueAwait<>(source, configuration.withPersistence(persistence));
     }
 
-    public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>
-            OBSERVED until(CHECK condition) {
+    public OBSERVED until(PreservesObservation<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
         return complete(condition);
     }
 

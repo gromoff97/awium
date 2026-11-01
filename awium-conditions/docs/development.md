@@ -38,15 +38,15 @@ It is separate from `build`, `check`, and `test`.
 
 | Component | Owns |
 | --- | --- |
-| Each `*Conditions` factory | The only public class in its package |
-| Package-private neighbors | Condition definitions and lifecycle |
-| `io.github.gromoff97.awium.support` | Shared checking algorithms and expected-value snapshots |
+| `*Conditions` | Public factories |
+| Package-private neighbors | Checks, metadata, and lifecycle |
 | `CapturedCondition.Run` | Stage transitions, collected observations, and stage diagnostics |
 
 Mutable state belongs to each run; reusable definitions stay immutable.
 Factories live in `conditions.common`, `conditions.collection`, `conditions.map`,
 `conditions.optional`, and `conditions.string`. The Java module exports these
 packages and `io.github.gromoff97.awium.function.checked` for checked callbacks,
-requiring core transitively. Factories return core contracts, keeping implementations
-private to their package. Shared helpers stay in this module's unexported `support`
-package and contain no condition definitions.
+requiring core transitively. Each family exposes only its factory, which returns core contracts. Implementations provide their own `description`, `references`,
+and `probe` methods. Cross-family reuse goes through public factories: size checks use
+numeric conditions, and map checks use collection conditions on map views. Helpers
+remain package-private alongside their callers.

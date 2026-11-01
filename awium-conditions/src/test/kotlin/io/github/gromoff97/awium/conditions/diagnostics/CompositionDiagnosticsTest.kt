@@ -4,6 +4,7 @@ import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.Await.MapSource
 import io.github.gromoff97.awium.Await.OptionalSource
 import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.AwaitCondition.Reference
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any
@@ -65,6 +66,20 @@ class CompositionDiagnosticsTest {
         val check = valueFor(key, equalTo("ready"))
         rejection(check, mapOf("billing" to "pending", "shipping" to "pending"))
         assertEquals(listOf(Reference("Key", key), Reference("Expected", "ready")), check.references())
+    }
+
+    @Test
+    fun `map quantifiers keep nested operands without traversing them`() {
+        val operand = object : AbstractList<String>() {
+            override val size: Int get() = error("operand must not be inspected")
+            override fun get(index: Int): String = error("operand must not be inspected")
+        }
+        val nested = object : Condition<String, String> {
+            override fun description() = "custom expectation"
+            override fun references() = listOf(Reference("Expected", operand))
+            override fun probe(actual: String) = unsatisfied<String>()
+        }
+        assertSame(operand, allValues(nested).references().single().value())
     }
 
     @Test
@@ -170,7 +185,7 @@ class CompositionDiagnosticsTest {
         val attempt = uncontrolled(CONDITION, attempts(result).single())
 
         assertSame(cause, failure(result).cause())
-        assertEquals("map entries (checked 0)", attempt.location())
+        assertEquals("map entries → collection elements (checked 0)", attempt.location())
         assertThat(failure(result).message()).contains("Within: ${attempt.location()}")
     }
 
@@ -299,15 +314,15 @@ class CompositionDiagnosticsTest {
                 argumentSet("all elements", all(rejected), collection, "all collection elements match", "not all collection elements matched (checked 1)"),
                 argumentSet("any element", any(rejected), collection, "some collection elements match", "no collection elements matched (checked 1)"),
                 argumentSet("no element", none(matched), collection, "no collection elements match", "some collection elements matched (checked 1)"),
-                argumentSet("all entries", allEntries<Any, Any>(rejected), map, "all map entries match", "not all map entries matched (checked 1)"),
-                argumentSet("any entry", hasEntry<Any, Any>(rejected), map, "some map entries match", "no map entries matched (checked 1)"),
-                argumentSet("no entry", hasNoEntry<Any, Any>(matched), map, "no map entries match", "some map entries matched (checked 1)"),
-                argumentSet("all keys", allKeys(rejected), map, "all map keys match", "not all map keys matched (checked 1)"),
-                argumentSet("any key", anyKey(rejected), map, "some map keys match", "no map keys matched (checked 1)"),
-                argumentSet("no key", noKey(matched), map, "no map keys match", "some map keys matched (checked 1)"),
-                argumentSet("all values", allValues(rejected), map, "all map values match", "not all map values matched (checked 1)"),
-                argumentSet("any value", anyValue(rejected), map, "some map values match", "no map values matched (checked 1)"),
-                argumentSet("no value", noValue(matched), map, "no map values match", "some map values matched (checked 1)"),
+                argumentSet("all entries", allEntries<Any, Any>(rejected), map, "map entries: all collection elements match", "map entries: not all collection elements matched (checked 1)"),
+                argumentSet("any entry", hasEntry<Any, Any>(rejected), map, "map entries: some collection elements match", "map entries: no collection elements matched (checked 1)"),
+                argumentSet("no entry", hasNoEntry<Any, Any>(matched), map, "map entries: no collection elements match", "map entries: some collection elements matched (checked 1)"),
+                argumentSet("all keys", allKeys(rejected), map, "map keys: all collection elements match", "map keys: not all collection elements matched (checked 1)"),
+                argumentSet("any key", anyKey(rejected), map, "map keys: some collection elements match", "map keys: no collection elements matched (checked 1)"),
+                argumentSet("no key", noKey(matched), map, "map keys: no collection elements match", "map keys: some collection elements matched (checked 1)"),
+                argumentSet("all values", allValues(rejected), map, "map values: all collection elements match", "map values: not all collection elements matched (checked 1)"),
+                argumentSet("any value", anyValue(rejected), map, "map values: some collection elements match", "map values: no collection elements matched (checked 1)"),
+                argumentSet("no value", noValue(matched), map, "map values: no collection elements match", "map values: some collection elements matched (checked 1)"),
                 argumentSet("nested quantifiers", all(any(rejected)), listOf(collection),
                     "all collection elements match: some collection elements match",
                     "not all collection elements matched (checked 1): no collection elements matched (checked 1)")

@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.api;
 
+import static io.github.gromoff97.awium.support.TestConditions.selecting;
+import static io.github.gromoff97.awium.support.TestConditions.selectingValue;
 import io.github.gromoff97.awium.Await.CollectionSource;
 import io.github.gromoff97.awium.Await.CollectionViewSource;
 import io.github.gromoff97.awium.Await.MapSource;
@@ -29,14 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class SelectionContractTest {
     private static final BigDecimal VALUE = new BigDecimal("42.00");
     private static final Map.Entry<String, BigDecimal> ENTRY = Map.entry("key", VALUE);
-    private static final SelectedCondition<Collection<?>> ELEMENT = new SelectedCondition<>(
-            "known element", null, actual -> satisfied(VALUE)) {};
-    private static final SelectedCondition<Optional<?>> OPTIONAL = new SelectedCondition<>(
-            "known optional value", null, actual -> satisfied(VALUE)) {};
-    private static final SelectedCondition<Map<?, ?>> MAP_ENTRY = new SelectedCondition<>(
-            "known entry", null, actual -> satisfied(ENTRY)) {};
-    private static final MapValueCondition<Map<?, ?>> MAP_VALUE = new MapValueCondition<>(
-            "known map value", null, actual -> satisfied(VALUE)) {};
+    private static final SelectedCondition<Collection<?>> ELEMENT = selecting(actual -> satisfied(VALUE));
+    private static final SelectedCondition<Optional<?>> OPTIONAL = selecting(actual -> satisfied(VALUE));
+    private static final SelectedCondition<Map<?, ?>> MAP_ENTRY = selecting(actual -> satisfied(ENTRY));
+    private static final MapValueCondition<Map<?, ?>> MAP_VALUE = selectingValue(actual -> satisfied(VALUE));
 
     @Test
     void collectionSourcesKeepTheSelectedTypeAfterEverySetting() {

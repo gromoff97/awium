@@ -1,12 +1,37 @@
 package io.github.gromoff97.awium.conditions.collection;
 
+import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.support.SizeRelation;
+import io.github.gromoff97.awium.conditions.common.CommonConditions;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.Collection;
+import java.util.List;
+import java.util.function.Function;
 
-final class HasSizeCondition extends PreservingCondition<Collection<?>> {
-    HasSizeCondition(SizeRelation relation, int lower, int upper) {
-        super("collection size " + relation.description(lower, upper), null,
-                relation.check("collection", "size", Collection::size, lower, upper));
+import static io.github.gromoff97.awium.result.ConditionResult.Satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+
+final class HasSizeCondition implements PreservingCondition<Collection<?>> {
+    private final ApplicableCondition<? super Integer, ?> comparison;
+
+    HasSizeCondition(int bound, Function<Integer, ? extends ApplicableCondition<? super Integer, ?>> factory) {
+        if (bound < 0) throw new IllegalArgumentException("size must be non-negative");
+        comparison = factory.apply(bound);
+    }
+
+    HasSizeCondition(int lower, int upper) {
+        if (lower < 0 || upper < lower) throw new IllegalArgumentException("size range must be non-negative and ordered");
+        comparison = CommonConditions.between(lower, upper);
+    }
+
+    @Override public String description() { return "collection size: " + comparison.description(); }
+    @Override public List<Reference<?>> references() { return comparison.references(); }
+
+    @Override
+    public ConditionResult<?> probe(Collection<?> actual) throws Throwable {
+        if (actual == null) return unsatisfied("collection was null");
+        int size = actual.size();
+        return comparison.probe(size) instanceof Satisfied<?> ? satisfied(actual) : unsatisfied("collection size was " + size);
     }
 }

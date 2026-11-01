@@ -1,15 +1,18 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.result.ConditionResult;
 
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
-final class BlankCondition extends PreservingCondition<CharSequence> {
-    BlankCondition(boolean expectBlank) {
-        super(expectBlank ? "string is blank" : "string is not blank", null, actual -> actual == null
-                ? unsatisfied("string was null") : actual.codePoints().sequential().allMatch(Character::isWhitespace) == expectBlank
-                        ? satisfied(actual) : unsatisfied(expectBlank ? "string was not blank" : "string was blank"));
-    }
+record BlankCondition(boolean expectBlank) implements PreservingCondition<CharSequence> {
+    @Override public String description() { return expectBlank ? "string is blank" : "string is not blank"; }
 
+    @Override
+    public ConditionResult<?> probe(CharSequence actual) throws Throwable {
+        if (actual == null) return unsatisfied("string was null");
+        return actual.codePoints().sequential().allMatch(Character::isWhitespace) == expectBlank ? satisfied(actual)
+                : unsatisfied(expectBlank ? "string was not blank" : "string was blank");
+    }
 }

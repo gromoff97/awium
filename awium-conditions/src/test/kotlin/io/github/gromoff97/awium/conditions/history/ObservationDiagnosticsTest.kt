@@ -98,7 +98,7 @@ class ObservationDiagnosticsTest {
 
         assertSame(values, result.orThrow())
         assertEquals(9, calls)
-        assertEquals((1..3).map { "some map values matched (checked $it)" }, mismatches(result))
+        assertEquals((1..3).map { "map values: some collection elements matched (checked $it)" }, mismatches(result))
     }
 
     @Test
@@ -126,7 +126,7 @@ class ObservationDiagnosticsTest {
         val result = tryAwait(Callable { source.next()() }).every(ofNanos(1)).until(check)
 
         assertSame(values, result.orThrow())
-        assertEquals((0..1).map { "map did not contain all expected $elements; first missing at expected index $it" }, mismatches(result))
+        assertEquals((0..1).map { "map $elements: collection did not contain all expected elements; first missing at expected index $it" }, mismatches(result))
     }
 
     @Test
@@ -155,7 +155,7 @@ class ObservationDiagnosticsTest {
         val result = tryAwait(Callable { source.next()() }).every(ofNanos(1)).until(check)
 
         assertSame(values, result.orThrow())
-        assertEquals((0..1).map { "map contained unexpected $elements; first at unexpected index $it" }, mismatches(result))
+        assertEquals((0..1).map { "map $elements: collection contained unexpected elements; first at unexpected index $it" }, mismatches(result))
     }
 
     private fun <ACTUAL> change(actual: ACTUAL, mutate: () -> Unit): () -> ACTUAL = { mutate(); actual }

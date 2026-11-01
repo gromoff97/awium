@@ -10,16 +10,13 @@ import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
-final class SortedCondition<ELEMENT> extends PreservingCondition<SequencedCollection<? extends ELEMENT>> {
-    SortedCondition(Comparator<? super ELEMENT> comparator) {
-        super("collection is sorted", null, actual -> checkOrder(actual, comparator));
-        requireNonNull(comparator, "comparator must not be null");
-    }
+record SortedCondition<ELEMENT>(Comparator<? super ELEMENT> comparator) implements PreservingCondition<SequencedCollection<? extends ELEMENT>> {
+    SortedCondition { requireNonNull(comparator, "comparator must not be null"); }
+    @Override public String description() { return "collection is sorted"; }
 
-    private static <ELEMENT> ConditionResult<SequencedCollection<ELEMENT>> checkOrder(SequencedCollection<ELEMENT> actual,
-            Comparator<? super ELEMENT> comparator) {
+    @Override public ConditionResult<?> probe(SequencedCollection<? extends ELEMENT> actual) {
         if (actual == null) return unsatisfied("collection was null");
-        Iterator<ELEMENT> values = actual.iterator();
+        Iterator<? extends ELEMENT> values = actual.iterator();
         if (!values.hasNext()) {
             return satisfied(actual);
         }
@@ -35,5 +32,4 @@ final class SortedCondition<ELEMENT> extends PreservingCondition<SequencedCollec
         }
         return satisfied(actual);
     }
-
 }

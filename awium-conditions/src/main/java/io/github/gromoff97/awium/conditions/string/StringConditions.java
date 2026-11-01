@@ -1,16 +1,11 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.conditions.common.CommonConditions;
 import io.github.gromoff97.awium.conditions.string.TextMatchCondition.Match;
 import java.util.regex.Pattern;
 
-import static io.github.gromoff97.awium.support.SizeRelation.AT_LEAST;
-import static io.github.gromoff97.awium.support.SizeRelation.AT_MOST;
-import static io.github.gromoff97.awium.support.SizeRelation.BETWEEN;
-import static io.github.gromoff97.awium.support.SizeRelation.EQUAL;
-import static io.github.gromoff97.awium.support.SizeRelation.GREATER;
-import static io.github.gromoff97.awium.support.SizeRelation.LESS;
-import static io.github.gromoff97.awium.support.SizeRelation.NOT_EQUAL;
+
 
 public final class StringConditions {
 
@@ -86,31 +81,30 @@ public final class StringConditions {
     }
 
     public static PreservingCondition<CharSequence> hasLength(int expected) {
-        return new HasLengthCondition(EQUAL, expected, expected);
+        return new HasLengthCondition(expected, CommonConditions::equalTo);
     }
 
     public static PreservingCondition<CharSequence> hasLengthNotEqualTo(int unexpected) {
-        return new HasLengthCondition(NOT_EQUAL, unexpected, unexpected);
+        return new HasLengthCondition(unexpected, CommonConditions::notEqualTo);
     }
 
     public static PreservingCondition<CharSequence> hasLengthGreaterThan(int lowerBound) {
-        return new HasLengthCondition(GREATER, lowerBound, lowerBound);
+        return new HasLengthCondition(lowerBound, CommonConditions::greaterThan);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtLeast(int lowerBound) {
-        return new HasLengthCondition(AT_LEAST, lowerBound, lowerBound);
+        return new HasLengthCondition(lowerBound, CommonConditions::atLeast);
     }
 
     public static PreservingCondition<CharSequence> hasLengthLessThan(int upperBound) {
-        return new HasLengthCondition(LESS, upperBound, upperBound);
+        return new HasLengthCondition(upperBound, CommonConditions::lessThan);
     }
 
     public static PreservingCondition<CharSequence> hasLengthAtMost(int upperBound) {
-        return new HasLengthCondition(AT_MOST, upperBound, upperBound);
+        return new HasLengthCondition(upperBound, CommonConditions::atMost);
     }
 
     public static PreservingCondition<CharSequence> hasLengthBetween(int lowerBound, int upperBound) {
-        return new HasLengthCondition(BETWEEN, lowerBound, upperBound);
+        return new HasLengthCondition(lowerBound, upperBound);
     }
-
 }

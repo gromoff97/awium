@@ -47,7 +47,7 @@ All extend `Callable`.
 | Wildcard method reference selects the general overload | Use `await(() -> repository.findAllView())` or a typed view. |
 
 `CollectionViewSource<ELEMENT, VALUES>` and `MapViewSource<KEY, VALUE, ENTRIES>`
-declare container types and selected bounds. See [selector examples](../../awium-conditions/docs/conditions.md).
+declare container types and selected bounds separately.
 
 ## Timing
 

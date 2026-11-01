@@ -3,8 +3,7 @@ package io.github.gromoff97.awium.conditions.map;
 import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import io.github.gromoff97.awium.result.ConditionResult;
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Map;
 
@@ -32,12 +31,17 @@ final class MapEntries {
         return entry -> predicate.test(entry.getKey(), entry.getValue());
     }
 
-    static List<? extends Entry<?, ?>> snapshotEntries(Map<?, ?> values, String name) {
-        return requireNonNull(values, name + " must not be null")
-                .entrySet().stream().map(SimpleImmutableEntry::new).toList();
+    static Iterable<DeepEntry> expectedEntries(Map<?, ?> values, String name) {
+        var entries = requireNonNull(values, name + " must not be null").entrySet();
+        return () -> entries.stream().map(entry -> new DeepEntry(entry.getKey(), entry.getValue())).iterator();
     }
 
-    static boolean entryMatches(Entry<?, ?> actual, Entry<?, ?> expected) {
-        return deepEquals(actual.getKey(), expected.getKey()) && deepEquals(actual.getValue(), expected.getValue());
+    static Iterable<DeepEntry> view(Map<?, ?> actual) {
+        var entries = actual.entrySet();
+        return () -> new Iterator<>() {
+            private final Iterator<? extends Entry<?, ?>> iterator = entries.iterator();
+            @Override public boolean hasNext() { return iterator.hasNext(); }
+            @Override public DeepEntry next() { return new DeepEntry(iterator.next()); }
+        };
     }
 }

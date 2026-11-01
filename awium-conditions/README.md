@@ -1,6 +1,6 @@
 # Awium Conditions
 
-Ready-made conditions for [Awium Core](../awium-core/README.md): values, text,
+Ready-made conditions for Awium Core: values, text,
 optionals, collections, maps, and ordered states. Requires **Java 21**; its only
 product dependency is `awium-core`.
 
@@ -11,7 +11,13 @@ Payment payment = await(paymentRepository::find)
 ```
 
 `find()` returns `Optional<Payment>`; `until(present)` returns its `Payment`.
-Use `tryAwait` for an outcome with attempt history.
+`upTo` limits the wait; `every` sets the polling interval. Callbacks run on the
+calling thread, so a blocked callback cannot be forcibly stopped.
+
+Use `tryAwait(source).until(condition)` to get an outcome with attempt history.
+`result.orThrow()` returns the selected value or throws the wait failure;
+`out.println(result)` shows the outcome and histories. Reading a result never
+repeats the checks.
 
 ## Installation
 
@@ -31,11 +37,9 @@ dependencies {
 
 ## Documentation
 
-- [Core usage](../awium-core/docs/usage.md): sources and timing.
 - [Conditions](docs/conditions.md): checks, `because`, nested conditions, and `captured`.
-- [Core diagnostics](../awium-core/docs/diagnostics.md): results, histories, and failures.
 - [Development](docs/development.md): build, tests, and internal responsibilities.
 
-Factories are in `io.github.gromoff97.awium.conditions`.
+Factories are grouped by family under `io.github.gromoff97.awium.conditions`.
 
 Licensed under [Apache License 2.0](LICENSE).

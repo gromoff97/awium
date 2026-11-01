@@ -95,6 +95,16 @@ class EntryMembershipTest {
         assertSame(cause, thrown(hasNoEntry("key", "value"), actual))
     }
 
+    @Test
+    fun `a different key skips reading the entry value`() {
+        val entry = object : Map.Entry<String, String> {
+            override val key = "other"
+            override val value: String get() = error("unmatched entry value must not be read")
+        }
+        val actual = EntryMap(listOf(entry))
+        rejection(hasEntry("wanted", "ready"), actual)
+    }
+
     companion object {
         @JvmStatic
         fun entries() = listOf(

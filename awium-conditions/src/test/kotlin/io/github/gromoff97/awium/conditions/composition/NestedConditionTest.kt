@@ -12,6 +12,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
 import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
+import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
 import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
@@ -20,6 +21,7 @@ import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.execution.ConditionExecution.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
+import io.github.gromoff97.awium.result.ConditionResult
 import io.github.gromoff97.awium.result.ConditionResult.Unsatisfied
 import io.github.gromoff97.awium.result.ConditionResult.satisfied
 import io.github.gromoff97.awium.result.ConditionResult.unsatisfied
@@ -38,6 +40,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.Arguments.argumentSet
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
@@ -53,6 +56,12 @@ class NestedConditionTest {
         val wrap: (Number) -> Any,
         val compose: (Condition<Number, Number>) -> AwaitCondition
     )
+
+    @ParameterizedTest
+    @MethodSource("directProbes")
+    fun `direct probes return the selected result`(probe: () -> ConditionResult<*>, expected: Any) {
+        assertEquals(expected, result(probe()))
+    }
 
     @ParameterizedTest
     @MethodSource("selections")
@@ -260,6 +269,23 @@ class NestedConditionTest {
     }
 
     companion object {
+        @JvmStatic
+        fun directProbes(): List<Arguments> {
+            val length = condition("length") { value: String -> satisfied(value.length) }
+            val entry = SimpleImmutableEntry("key", "ready")
+            return listOf(
+                argumentSet("selected element", { singleElement(equalTo("ready")).probe(mutableListOf("ready")) }, "ready"),
+                argumentSet("projected element", { singleElement(length).probe(listOf("ready")) }, 5),
+                argumentSet("selected optional", { hasValue(equalTo("ready")).probe(Optional.of("ready")) }, "ready"),
+                argumentSet("projected optional", { hasValue(length).probe(Optional.of("ready")) }, 5),
+                argumentSet("selected map value", { valueFor("key", equalTo("ready")).probe(mutableMapOf("key" to "ready")) }, "ready"),
+                argumentSet("projected map value", { valueFor("key", length).probe(mapOf("key" to "ready")) }, 5),
+                argumentSet("selected entry", { singleEntry(equalTo(entry)).probe(mutableMapOf("key" to "ready")) }, entry),
+                argumentSet("projected entry", {
+                    singleEntry(condition("value") { value: Map.Entry<String, String> -> satisfied(value.value) }).probe(mapOf("key" to "ready"))
+                }, "ready"))
+        }
+
         @JvmStatic
         fun nullableCollections() = listOf(
             argumentSet("last", lastElement { value: String -> value.isBlank() }),

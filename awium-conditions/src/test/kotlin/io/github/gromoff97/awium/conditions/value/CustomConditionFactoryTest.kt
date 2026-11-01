@@ -40,6 +40,21 @@ class CustomConditionFactoryTest {
     }
 
     @Test
+    fun `a direct probe returns the selected value`() {
+        val check = condition("length") { value: String -> satisfied(value.length) }
+        assertEquals(5, result(check.probe("ready")))
+    }
+
+    @Test
+    fun `direct probes create fresh evaluator state`() {
+        val check = conditionPerWait<String, Int>("call count") {
+            var calls = 0
+            AwaitAttempt { satisfied(++calls) }
+        }
+        assertEquals(listOf(1, 1), List(2) { result(check.probe("ready")) })
+    }
+
+    @Test
     fun `keeps the supplied description`() {
         val condition = condition("text length") { value: String -> satisfied(value.length) }
         assertEquals("text length", condition.description())

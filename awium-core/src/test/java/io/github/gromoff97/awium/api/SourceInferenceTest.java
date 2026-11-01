@@ -1,5 +1,7 @@
 package io.github.gromoff97.awium.api;
 
+import static io.github.gromoff97.awium.support.TestConditions.selecting;
+import static io.github.gromoff97.awium.support.TestConditions.selectingValue;
 import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -26,14 +28,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class SourceInferenceTest {
-    private static final SelectedCondition<Collection<?>> ELEMENT = new SelectedCondition<>(
-            "first element", null, actual -> satisfied(actual.iterator().next())) {};
-    private static final SelectedCondition<Optional<?>> OPTIONAL = new SelectedCondition<>(
-            "optional value", null, actual -> satisfied(actual.orElseThrow())) {};
-    private static final SelectedCondition<Map<?, ?>> ENTRY = new SelectedCondition<>(
-            "first entry", null, actual -> satisfied(actual.entrySet().iterator().next())) {};
-    private static final MapValueCondition<Map<?, ?>> VALUE = new MapValueCondition<>(
-            "first value", null, actual -> satisfied(actual.values().iterator().next())) {};
+    private static final SelectedCondition<Collection<?>> ELEMENT = selecting(actual -> satisfied(actual.iterator().next()));
+    private static final SelectedCondition<Optional<?>> OPTIONAL = selecting(actual -> satisfied(actual.orElseThrow()));
+    private static final SelectedCondition<Map<?, ?>> ENTRY = selecting(actual -> satisfied(actual.entrySet().iterator().next()));
+    private static final MapValueCondition<Map<?, ?>> VALUE = selectingValue(actual -> satisfied(actual.values().iterator().next()));
 
     @Test
     void callableReferencesAndLambdasKeepOptionalSelectionTypes() {

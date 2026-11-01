@@ -1,13 +1,19 @@
 package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.Collection;
 
-import static io.github.gromoff97.awium.support.ContainerChecks.empty;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
-final class EmptyCondition extends PreservingCondition<Collection<?>> {
-    EmptyCondition(boolean expectEmpty) {
-        super("collection" + (expectEmpty ? " is empty" : " is not empty"), null,
-                empty("collection", Collection::isEmpty, expectEmpty));
+record EmptyCondition(boolean expectEmpty) implements PreservingCondition<Collection<?>> {
+    @Override public String description() { return "collection" + (expectEmpty ? " is empty" : " is not empty"); }
+
+    @Override
+    public ConditionResult<?> probe(Collection<?> actual) {
+        return actual == null ? unsatisfied("collection was null")
+                : actual.isEmpty() == expectEmpty ? satisfied(actual)
+                        : unsatisfied("collection" + (expectEmpty ? " was not empty" : " was empty"));
     }
 }

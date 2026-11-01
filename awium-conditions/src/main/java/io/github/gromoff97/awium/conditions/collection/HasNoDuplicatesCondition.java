@@ -6,17 +6,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static io.github.gromoff97.awium.support.ValueMatching.matchesAny;
+import static io.github.gromoff97.awium.conditions.collection.ValueMatching.matchesAny;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.deepEquals;
 
-final class HasNoDuplicatesCondition extends PreservingCondition<Collection<?>> {
-    HasNoDuplicatesCondition() {
-        super("collection has no duplicates", null, HasNoDuplicatesCondition::checkUniqueness);
-    }
+record HasNoDuplicatesCondition() implements PreservingCondition<Collection<?>> {
+    @Override public String description() { return "collection has no duplicates"; }
 
-    private static ConditionResult<Collection<?>> checkUniqueness(Collection<?> actual) throws Throwable {
+    @Override public ConditionResult<?> probe(Collection<?> actual) {
         if (actual == null) return unsatisfied("collection was null");
         List<Object> seen = new ArrayList<>();
         for (Object value : actual) {
@@ -27,5 +25,4 @@ final class HasNoDuplicatesCondition extends PreservingCondition<Collection<?>> 
         }
         return satisfied(actual);
     }
-
 }

@@ -1,15 +1,17 @@
 package io.github.gromoff97.awium.support;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.DefinedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.ConditionResult;
 import java.util.function.Predicate;
 import java.util.concurrent.Callable;
+import java.util.List;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
+import static io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
+import static io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static java.util.Objects.deepEquals;
@@ -17,30 +19,51 @@ import static java.util.Objects.deepEquals;
 public final class TestConditions {
     private TestConditions() {}
 
-    public static final PreservingCondition<Object> accepted = new PreservingCondition<>(
-            "accepted", null, actual -> satisfied(actual)) {};
+    public static final PreservingCondition<Object> accepted = new PreservingCondition<>() {
+        @Override public String description() { return "accepted"; }
+        @Override public ConditionResult<?> probe(Object actual) { return satisfied(actual); }
+    };
 
     public static Condition<Object, Object> diagnosticCondition(String description, Reference<?> reference) {
-        return new DefinedCondition<>(description, reference, ConditionResult::satisfied);
+        return new TestCondition<>(description, reference, ConditionResult::satisfied);
     }
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> check(
             String description, AwaitAttempt<? super INPUT, ? extends RESULT> attempt) {
-        return new DefinedCondition<>(description, null, attempt);
+        return new TestCondition<>(description, null, attempt);
     }
 
     public static <INPUT, RESULT> Condition<INPUT, RESULT> checkPerWait(
             String description, Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> factory) {
-        return new DefinedCondition<>(description, null, factory);
+        return new TestCondition<>(description, null, factory);
     }
 
     public static <INPUT> PreservingCondition<INPUT> matching(Predicate<? super INPUT> predicate) {
-        return new PreservingCondition<>("test predicate", null,
-                (INPUT actual) -> predicate.test(actual) ? satisfied(actual) : unsatisfied()) {};
+        return new PreservingCondition<>() {
+            @Override public String description() { return "test predicate"; }
+            @Override public ConditionResult<?> probe(INPUT actual) { return predicate.test(actual) ? satisfied(actual) : unsatisfied(); }
+        };
     }
 
     public static <EXPECTED> ComparisonCondition<EXPECTED> expected(EXPECTED expected) {
-        return new ComparisonCondition<>("expected value", new Reference<>("Expected", expected),
-                actual -> deepEquals(actual, expected) ? satisfied(actual) : unsatisfied("unexpected value")) {};
+        return new ComparisonCondition<>() {
+            @Override public String description() { return "expected value"; }
+            @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", expected)); }
+            @Override public ConditionResult<?> probe(Object actual) { return deepEquals(actual, expected) ? satisfied(actual) : unsatisfied("unexpected value"); }
+        };
+    }
+
+    public static <INPUT> SelectedCondition<INPUT> selecting(AwaitAttempt<? super INPUT, ?> evaluation) {
+        return new SelectedCondition<>() {
+            @Override public String description() { return "test selection"; }
+            @Override public ConditionResult<?> probe(INPUT actual) throws Throwable { return evaluation.probe(actual); }
+        };
+    }
+
+    public static <INPUT> MapValueCondition<INPUT> selectingValue(AwaitAttempt<? super INPUT, ?> evaluation) {
+        return new MapValueCondition<>() {
+            @Override public String description() { return "test map value"; }
+            @Override public ConditionResult<?> probe(INPUT actual) throws Throwable { return evaluation.probe(actual); }
+        };
     }
 }

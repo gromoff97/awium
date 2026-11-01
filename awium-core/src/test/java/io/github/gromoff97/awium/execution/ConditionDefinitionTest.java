@@ -8,21 +8,23 @@ import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import java.util.ArrayList;
+import io.github.gromoff97.awium.result.ConditionResult;
+import io.github.gromoff97.awium.support.TestCondition;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
-import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
+import static io.github.gromoff97.awium.support.TestConditions.expected;
+import static io.github.gromoff97.awium.support.TestConditions.matching;
+import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -60,74 +62,26 @@ class ConditionDefinitionTest {
         assertThrows(IllegalArgumentException.class, () -> condition.because(" \n\t"));
     }
 
-    @Test
-    void nestedDefinitionsInheritTheReasonAndSnapshotReferences() {
-        var reference = new Reference<>("Expected", "ready");
-        var nested = new DefinedCondition<String, String>("ready", reference, actual -> satisfied(actual))
-                .because("receipt is required");
-        var references = new ArrayList<Reference<?>>(List.of(reference));
-        var outer = new DefinedCondition<String, Integer>(nested, "receipt", references,
-                () -> actual -> satisfied(actual.length()));
-        references.clear();
-
-        assertEquals("receipt: ready", outer.description());
-        assertEquals("receipt is required", outer.explanation());
-        assertEquals(List.of(reference), outer.references());
-        assertThrows(UnsupportedOperationException.class, outer.references()::clear);
-    }
-
-    @Test
-    void aDirectProbeReturnsTheDeclaredValue() throws Throwable {
-        AwaitAttempt<CharSequence, Integer> length = actual -> satisfied(actual.length());
-        var condition = new DefinedCondition<String, Number>("length", null, length);
-
-        assertEquals(satisfied(5), condition.probe("ready"));
-    }
-
-    @Test
-    void missingEvaluatorsAreRejectedWhenTheFactoryRuns() {
-        var condition = new DefinedCondition<String, String>("ready", null, () -> null);
-
-        var failure = assertThrows(NullPointerException.class, () -> condition.probe("ready"));
-        assertEquals("evaluator must not be null", failure.getMessage());
-    }
-
-    @Test
-    void nestedPreservingFactoriesRejectMissingEvaluators() {
-        var nested = new DefinedCondition<String, String>("ready", null, value -> satisfied(value));
-        var condition = new PreservingCondition<String>(nested, "outer", () -> null) {};
-
-        var failure = assertThrows(NullPointerException.class, condition::newAttempt);
-        assertEquals("evaluator must not be null", failure.getMessage());
-    }
-
-    @Test
-    void preservingConditionsReturnTheObservationEvenIfTheEvaluatorReturnsAnotherValue() throws Throwable {
+    @ParameterizedTest
+    @MethodSource("preservingDefinitions")
+    void preservingRunsReturnTheObservationRegardlessOfTheProbeValue(AwaitCondition condition) throws Throwable {
         var actual = new StringBuilder("observed");
-        var condition = new PreservingCondition<CharSequence>("accepted", null, ignored -> satisfied("different")) {};
-
-        assertSame(actual, result(condition.newAttempt().probe(actual)));
+        var execution = ConditionExecution.<StringBuilder, StringBuilder>bind(condition);
+        assertSame(actual, result(execution.probe(actual)));
     }
 
     @Test
-    void comparisonsReturnTheObservationEvenIfTheEvaluatorReturnsAnotherValue() throws Throwable {
-        var actual = new StringBuilder("observed");
-        var condition = new ComparisonCondition<CharSequence>("comparison", new Reference<>("Expected", "value"),
-                ignored -> satisfied("different")) {};
-
-        assertSame(actual, result(condition.newAttempt().probe(actual)));
-    }
-
-    @Test
-    void nestedPreservingFactoriesInitializeOncePerExecution() throws Throwable {
-        var definition = new DefinedCondition<String, String>("nested", new Reference<>("Expected", "ready"), value -> satisfied(value))
-                .because("nested reason");
+    void preservingFactoriesInitializeOncePerExecution() throws Throwable {
         int[] factories = {0};
-        var condition = new PreservingCondition<String>(definition, "outer", () -> {
-            factories[0]++;
-            int[] calls = {0};
-            return actual -> ++calls[0] == 1 ? unsatisfied("retry") : satisfied("different");
-        }) {};
+        var condition = new PreservingCondition<String>() {
+            @Override public String description() { return "second observation"; }
+            @Override public ConditionResult<?> probe(String actual) { throw new AssertionError("use the evaluator"); }
+            @Override public AwaitAttempt<String, String> newAttempt() {
+                factories[0]++;
+                int[] calls = {0};
+                return actual -> ++calls[0] == 1 ? unsatisfied("retry") : satisfied("different");
+            }
+        }.because("two probes");
         var execution = ConditionExecution.<String, String>bind(condition);
 
         assertEquals(0, factories[0]);
@@ -137,70 +91,84 @@ class ConditionDefinitionTest {
     }
 
     @Test
-    void selectedDefinitionsRetainNestedMetadataAndTheDeclaredValue() {
-        var definition = new DefinedCondition<Collection<String>, String>("known element", new Reference<>("Index", 0),
-                actual -> satisfied(actual.iterator().next())).because("element is needed");
-        var selector = new SelectedCondition<>(definition) {};
-
-        assertEquals("ready", await(() -> List.of("ready")).until(selector));
-        assertEquals(definition.description(), selector.description());
-        assertEquals(definition.explanation(), selector.explanation());
-        assertEquals(definition.references(), selector.references());
+    void explainedChecksKeepTheirDirectProbe() throws Throwable {
+        var check = expected("ready").because("the value is needed");
+        assertEquals(satisfied("ready"), check.probe("ready"));
     }
 
     @Test
-    void mapValueDefinitionsRetainNestedMetadataAndTheDeclaredValue() {
-        var definition = new DefinedCondition<Map<String, String>, String>("known value", new Reference<>("Key", "key"),
-                actual -> satisfied(actual.get("key"))).because("value is needed");
-        var selector = new MapValueCondition<>(definition) {};
+    void explainedChecksReturnTheOriginalEvaluator() throws Exception {
+        AwaitAttempt<String, String> evaluation = actual -> satisfied(actual);
+        var check = new PreservingCondition<String>() {
+            @Override public String description() { return "ready"; }
+            @Override public ConditionResult<?> probe(String actual) { throw new AssertionError("use the evaluator"); }
+            @Override public AwaitAttempt<String, String> newAttempt() { return evaluation; }
+        };
+        assertSame(evaluation, check.because("the value is needed").newAttempt());
+    }
 
-        assertEquals("ready", await(() -> Map.of("key", "ready")).until(selector));
-        assertEquals(definition.description(), selector.description());
-        assertEquals(definition.explanation(), selector.explanation());
-        assertEquals(definition.references(), selector.references());
+    @Test
+    void referenceDescriptionsGuardUserRendering() {
+        var value = new Object() {
+            @Override public String toString() { throw new IllegalStateException("cannot print"); }
+        };
+        assertEquals("Expected=<unprintable>", new Reference<>("Expected", value).toString());
+    }
+
+    @Test
+    void referenceLabelsCannotBeNull() {
+        assertThrows(NullPointerException.class, () -> new Reference<>(null, "ready"));
     }
 
     @ParameterizedTest
-    @MethodSource("invalidDefinitions")
-    void rejectsInvalidDefinitionsImmediately(Executable create, Class<? extends Throwable> type, String message) {
-        assertEquals(message, assertThrows(type, create).getMessage());
+    @ValueSource(strings = {"", " ", "\n\t"})
+    void referenceLabelsCannotBeBlank(String label) {
+        assertThrows(IllegalArgumentException.class, () -> new Reference<>(label, "ready"));
+    }
+
+    @Test
+    void selectedCopiesKeepTheirResultAndOriginalDefinition() {
+        var selector = new First().because("element is needed");
+        assertEquals("ready", await(() -> List.of("ready")).until(selector));
+        assertEquals("element is needed", selector.explanation());
+    }
+
+    @Test
+    void mapValueCopiesKeepTheirResultAndOriginalDefinition() {
+        var selector = new Value().because("value is needed");
+        assertEquals("ready", await(() -> Map.of("key", "ready")).until(selector));
+        assertEquals("value is needed", selector.explanation());
     }
 
     private static List<Arguments> definitions() {
-        var reference = new Reference<>("Expected", "ready");
         return List.of(
-                argumentSet("typed", new DefinedCondition<String, Integer>("length", reference,
+                argumentSet("typed", new TestCondition<String, Integer>("length", new Reference<>("Expected", "ready"),
                         actual -> satisfied(actual.length())), Condition.class),
-                argumentSet("preserving", new PreservingCondition<String>("accepted", reference,
-                        actual -> satisfied(actual)) {}, PreservingCondition.class),
-                argumentSet("comparison", new ComparisonCondition<String>("comparison", reference,
-                        actual -> satisfied(actual)) {}, ComparisonCondition.class),
-                argumentSet("element selector", new SelectedCondition<Collection<?>>("element", reference,
-                        actual -> satisfied(actual.iterator().next())) {}, SelectedCondition.class),
-                argumentSet("value selector", new MapValueCondition<Map<?, ?>>("value", reference,
-                        actual -> satisfied(actual.values().iterator().next())) {}, MapValueCondition.class));
+                argumentSet("preserving", matching(actual -> true), PreservingCondition.class),
+                argumentSet("comparison", expected("ready"), ComparisonCondition.class),
+                argumentSet("element selector", new First(), SelectedCondition.class),
+                argumentSet("value selector", new Value(), MapValueCondition.class));
     }
 
-    private static List<Arguments> invalidDefinitions() {
-        AwaitAttempt<String, String> evaluation = actual -> satisfied(actual);
-        Callable<AwaitAttempt<String, String>> factory = () -> evaluation;
+    private static List<Arguments> preservingDefinitions() {
         return List.of(
-                argumentSet("null description", (Executable) () -> new DefinedCondition<>(null, null, evaluation),
-                        NullPointerException.class, "description must not be null"),
-                argumentSet("blank description", (Executable) () -> new DefinedCondition<>(" \n\t", null, evaluation),
-                        IllegalArgumentException.class, "description must not be blank"),
-                argumentSet("null evaluation", (Executable) () -> new DefinedCondition<String, String>("ready", null, (AwaitAttempt<String, String>) null),
-                        NullPointerException.class, "evaluation must not be null"),
-                argumentSet("null factory", (Executable) () -> new DefinedCondition<String, String>("ready", null, (Callable<AwaitAttempt<String, String>>) null),
-                        NullPointerException.class, "evaluator factory must not be null"),
-                argumentSet("null nested preserving factory", (Executable) () -> new PreservingCondition<String>(
-                        new DefinedCondition<>("ready", null, evaluation), "outer", null) {},
-                        NullPointerException.class, "evaluator factory must not be null"),
-                argumentSet("null nested condition", (Executable) () -> new DefinedCondition<>(null, "nested", List.of(), factory),
-                        NullPointerException.class, "condition must not be null"),
-                argumentSet("null reference label", (Executable) () -> new Reference<>(null, "ready"),
-                        NullPointerException.class, "reference label must not be null"),
-                argumentSet("blank reference label", (Executable) () -> new Reference<>(" \n\t", "ready"),
-                        IllegalArgumentException.class, "reference label must not be blank"));
+                argumentSet("check", new PreservingCondition<CharSequence>() {
+                    @Override public String description() { return "accepted"; }
+                    @Override public ConditionResult<?> probe(CharSequence actual) { return satisfied("different"); }
+                }),
+                argumentSet("comparison", new ComparisonCondition<CharSequence>() {
+                    @Override public String description() { return "accepted"; }
+                    @Override public ConditionResult<?> probe(Object actual) { return satisfied("different"); }
+                }));
+    }
+
+    private record First() implements SelectedCondition<Collection<?>> {
+        @Override public String description() { return "first element"; }
+        @Override public ConditionResult<?> probe(Collection<?> actual) { return satisfied(actual.iterator().next()); }
+    }
+
+    private record Value() implements MapValueCondition<Map<?, ?>> {
+        @Override public String description() { return "first value"; }
+        @Override public ConditionResult<?> probe(Map<?, ?> actual) { return satisfied(actual.values().iterator().next()); }
     }
 }

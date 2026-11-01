@@ -20,7 +20,13 @@ class SelectorLifecycleTest {
     @ValueSource(booleans = {false, true})
     void elementSelectorsUseCustomRuns(boolean explained) throws Throwable {
         var definition = afterTwoObservations((List<String> actual) -> actual.getFirst());
-        var selector = new SelectedCondition<>(definition) {};
+        var selector = new SelectedCondition<List<String>>() {
+            @Override public String description() { return definition.description(); }
+            @Override public ConditionResult<?> probe(List<String> actual) throws Throwable { return definition.probe(actual); }
+            @Override public ConditionRun<List<String>, ?> newRun(AwaitCondition original, boolean recording) {
+                return definition.newRun(original, recording);
+            }
+        };
 
         assertIndependentRuns(explained ? selector.because("first value") : selector, List.of("ready"));
     }
@@ -29,7 +35,13 @@ class SelectorLifecycleTest {
     @ValueSource(booleans = {false, true})
     void mapValueSelectorsUseCustomRuns(boolean explained) throws Throwable {
         var definition = afterTwoObservations((Map<String, String> actual) -> actual.get("key"));
-        var selector = new MapValueCondition<>(definition) {};
+        var selector = new MapValueCondition<Map<String, String>>() {
+            @Override public String description() { return definition.description(); }
+            @Override public ConditionResult<?> probe(Map<String, String> actual) throws Throwable { return definition.probe(actual); }
+            @Override public ConditionRun<Map<String, String>, ?> newRun(AwaitCondition original, boolean recording) {
+                return definition.newRun(original, recording);
+            }
+        };
 
         assertIndependentRuns(explained ? selector.because("key value") : selector, Map.of("key", "ready"));
     }

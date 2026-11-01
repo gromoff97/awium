@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.execution.ConditionExecution;
-import io.github.gromoff97.awium.execution.DefinedCondition;
+import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
@@ -526,7 +526,7 @@ class DiagnosticsSnapshotTest {
         var value = new ThrowingValue(diagnostic);
         var waiting = withTime(await(() -> value), time, time)
                 .every(ofNanos(1)).upTo(ofNanos(2));
-        var check = new DefinedCondition<>("not ready", new Reference<>("Expected", value),
+        var check = new TestCondition<>("not ready", new Reference<>("Expected", value),
                 (Object actual) -> unsatisfied());
 
         var returned = failure(diagnostic(waiting).until(check));
@@ -730,9 +730,11 @@ class DiagnosticsSnapshotTest {
             case "entry" -> java.util.Map.entry(signalling, clearing);
             default -> signalling;
         };
-        var check = new AwaitCondition.PreservingCondition<>("ready",
-                new Reference<>("Expected", expected),
-                value -> unsatisfied("not ready", original)) {};
+        var check = new AwaitCondition.PreservingCondition<Object>() {
+            @Override public String description() { return "ready"; }
+            @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", expected)); }
+            @Override public ConditionResult<?> probe(Object actual) { return unsatisfied("not ready", original); }
+        };
         var waiting = timedAwait(() -> clearing, config(1, 2, 0), time, time);
         AwaitFailure failure = recording
                 ? failure(diagnostic(waiting).until(check))

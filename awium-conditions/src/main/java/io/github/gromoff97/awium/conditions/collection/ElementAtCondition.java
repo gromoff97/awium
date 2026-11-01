@@ -7,18 +7,30 @@ import java.util.SequencedCollection;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 
-final class ElementAtCondition extends SelectedCondition<SequencedCollection<?>> {
+record ElementAtCondition(int index, Position position) implements SelectedCondition<SequencedCollection<?>> {
+    enum Position { FIRST, LAST, INDEX }
+
+    ElementAtCondition { if (index < 0) throw new IllegalArgumentException("index must be non-negative"); }
     ElementAtCondition(int index) {
-        this("collection has an element at index " + index, index, false);
+        this(index, Position.INDEX);
     }
 
     ElementAtCondition(boolean last) {
-        this(last ? "collection has a last element" : "collection has a first element", 0, last);
+        this(0, last ? Position.LAST : Position.FIRST);
     }
 
-    private ElementAtCondition(String description, int index, boolean last) {
-        super(description, null, actual -> selectElement(last && actual != null ? actual.reversed() : actual, index));
-        if (index < 0) throw new IllegalArgumentException("index must be non-negative");
+    @Override
+    public String description() {
+        return switch (position) {
+            case FIRST -> "collection has a first element";
+            case LAST -> "collection has a last element";
+            case INDEX -> "collection has an element at index " + index;
+        };
+    }
+
+    @Override
+    public ConditionResult<?> probe(SequencedCollection<?> actual) {
+        return selectElement(position == Position.LAST && actual != null ? actual.reversed() : actual, index);
     }
 
     private static <ELEMENT> ConditionResult<ELEMENT> selectElement(SequencedCollection<? extends ELEMENT> actual, int index) {
@@ -31,5 +43,4 @@ final class ElementAtCondition extends SelectedCondition<SequencedCollection<?>>
         }
         return unsatisfied("collection size was " + position);
     }
-
 }

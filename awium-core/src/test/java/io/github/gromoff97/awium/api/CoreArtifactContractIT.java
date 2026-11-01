@@ -57,6 +57,17 @@ class CoreArtifactContractIT {
     }
 
     @Test
+    void reasonDecoratorsAreHiddenFromClasspathConsumers() {
+        var consumer = forSourceString("consumer.Contract", """
+                package consumer;
+                import io.github.gromoff97.awium.Explained;
+                final class Contract {}
+                """);
+        var compilation = javac().withOptions("--release", "21", "-proc:none", "-classpath", JAR.toString()).compile(consumer);
+        assertThat(compilation.errors()).extracting(Diagnostic::getCode).contains("compiler.err.not.def.public.cant.access");
+    }
+
+    @Test
     void engineInternalsAreHiddenFromModuleConsumers() {
         for (var type : List.of(io.github.gromoff97.awium.internal.WaitConfiguration.class, WaitEngine.class)) {
             var consumer = forSourceString("consumer.Contract", """

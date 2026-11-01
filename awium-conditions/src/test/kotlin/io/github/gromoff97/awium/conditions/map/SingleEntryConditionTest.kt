@@ -47,8 +47,8 @@ class SingleEntryConditionTest {
         @JvmStatic
         fun invalidMaps() = listOf(
             arguments(null, "map was null"),
-            arguments(emptyMap<Any, Any>(), "map size was 0"),
-            arguments(mapOf("first" to 1, "second" to 2), "map size was greater than 1")
+            arguments(emptyMap<Any, Any>(), "map entries: collection size was 0"),
+            arguments(mapOf("first" to 1, "second" to 2), "map entries: collection size was greater than 1")
         )
     }
 }

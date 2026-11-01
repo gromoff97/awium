@@ -37,7 +37,9 @@ class HasSizeConditionTest {
 
     @Test
     fun `describes the length unit and bound`() {
-        assertEquals("string length is 5", StringConditions.hasLength(5).description())
+        val check = StringConditions.hasLength(5)
+        assertEquals("string length: value equals expected", check.description())
+        assertEquals(listOf(5), check.references().map { it.value() })
     }
 
     @ParameterizedTest

@@ -28,8 +28,7 @@ public sealed class DiagnosticAwait<OBSERVED> extends AwaitSupport<OBSERVED> per
         return new DiagnosticAwait<>(source, configuration.withPersistence(persistence));
     }
 
-    public <CHECK extends ApplicableCondition<? super OBSERVED, ? super Reference<? super OBSERVED>> & PreservesObservation>
-            AwaitResult<OBSERVED, OBSERVED> until(CHECK condition) {
+    public AwaitResult<OBSERVED, OBSERVED> until(PreservesObservation<? super OBSERVED, ? super Reference<? super OBSERVED>> condition) {
         return capture(condition);
     }
 

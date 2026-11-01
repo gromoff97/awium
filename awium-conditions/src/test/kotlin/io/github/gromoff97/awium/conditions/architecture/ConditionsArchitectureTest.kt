@@ -5,7 +5,7 @@ import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaModifier.PUBLIC
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import io.github.gromoff97.awium.AwaitCondition
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices
 import io.github.gromoff97.awium.conditions.support.conditionsJar
 import io.github.gromoff97.awium.conditions.support.coreJar
 import java.lang.module.ModuleFinder
@@ -20,10 +20,9 @@ class ConditionsArchitectureTest {
     }
 
     @Test
-    fun `condition implementations do not call factories or waiting facades`() {
+    fun `condition implementations do not call waiting facades`() {
         noClasses().that(inFamilies(catalogs).negate()).should().dependOnClassesThat(
-            inFamilies(setOf("Await", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait", "DiagnosticSelectionAwait", "DiagnosticMapAwait",
-                "CommonConditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions"))
+            inFamilies(setOf("Await", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait", "DiagnosticSelectionAwait", "DiagnosticMapAwait"))
         ).check(productClasses)
     }
 
@@ -32,6 +31,12 @@ class ConditionsArchitectureTest {
         noClasses().that(inFamilies(catalogs))
             .should().dependOnClassesThat(inFamilies(setOf("ConditionRun", "ConditionExecution", "WaitCompletion"))).check(productClasses)
         noClasses().that(inFamilies(catalogs)).should().accessClassesThat(inFamilies(setOf("AwaitAttempt"))).check(productClasses)
+    }
+
+    @Test
+    fun `condition families do not depend on each other in a cycle`() {
+        slices().matching("io.github.gromoff97.awium.conditions.(*)..")
+            .should().beFreeOfCycles().check(productClasses)
     }
 
     @Test
@@ -47,23 +52,16 @@ class ConditionsArchitectureTest {
     }
 
     @Test
-    fun `helpers contain no condition definitions`() {
-        noClasses().that().resideInAPackage("..awium.support..")
-            .should().beAssignableTo(AwaitCondition::class.java).check(productClasses)
-    }
-
-    @Test
-    fun `helpers do not depend on condition implementations`() {
-        noClasses().that().resideInAPackage("..awium.support..")
-            .should().dependOnClassesThat().resideInAnyPackage("..awium.conditions.common..", "..awium.conditions.collection..",
-                "..awium.conditions.map..", "..awium.conditions.optional..", "..awium.conditions.string..")
-            .check(productClasses)
+    fun `product packages contain only condition families and checked callbacks`() {
+        val packages = productClasses.map { it.packageName }.toSet()
+        assertThat(packages).containsExactlyInAnyOrderElementsOf(
+            factories.map { it.substringBeforeLast('.') }.toSet() + "io.github.gromoff97.awium.function.checked")
     }
 
     @Test
     fun `tests use only exported core packages`() {
         val classes = ClassFileImporter().importPackages("io.github.gromoff97.awium.conditions",
-            "io.github.gromoff97.awium.support", "io.github.gromoff97.awium.function.checked", "consumer")
+            "io.github.gromoff97.awium.function.checked", "consumer")
         noClasses().should().dependOnClassesThat(coreInternals).check(classes)
     }
 

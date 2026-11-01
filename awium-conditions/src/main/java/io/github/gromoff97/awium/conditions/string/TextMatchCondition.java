@@ -1,13 +1,15 @@
 package io.github.gromoff97.awium.conditions.string;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.result.ConditionResult;
+import java.util.List;
 import java.util.function.BiPredicate;
 
-import static io.github.gromoff97.awium.support.ExpectedValues.text;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
+import static io.github.gromoff97.awium.conditions.string.ExpectedText.text;
 
-final class TextMatchCondition extends PreservingCondition<CharSequence> {
+record TextMatchCondition(String value, Match match) implements PreservingCondition<CharSequence> {
     enum Match {
         CONTAINS("contains expected string", "did not contain expected string", "expected string", "Expected", (actual, value) -> actual.toString().contains(value)),
         DOES_NOT_CONTAIN("does not contain unexpected string", "contained unexpected string", "unexpected string", "Unexpected", (actual, value) -> !actual.toString().contains(value)),
@@ -38,9 +40,14 @@ final class TextMatchCondition extends PreservingCondition<CharSequence> {
         this(text(expected, match.operand), match);
     }
 
-    private TextMatchCondition(String value, Match match) {
-        super("string " + match.description, new Reference<>(match.reference, value), actual -> actual == null
-                ? unsatisfied("string was null") : match.matches.test(actual, value) ? satisfied(actual) : unsatisfied("string " + match.mismatch));
+    @Override public String description() { return "string " + match.description; }
+    @Override public List<Reference<?>> references() { return List.of(new Reference<>(match.reference, value)); }
+
+    @Override
+    public ConditionResult<?> probe(CharSequence actual) {
+        if (actual == null) return unsatisfied("string was null");
+        return match.matches.test(actual, value) ? satisfied(actual)
+                : unsatisfied("string " + match.mismatch);
     }
 
 }
