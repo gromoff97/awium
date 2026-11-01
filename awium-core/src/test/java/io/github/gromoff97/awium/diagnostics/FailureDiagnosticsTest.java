@@ -90,6 +90,17 @@ class FailureDiagnosticsTest {
     }
 
     @Test
+    void aLocatedFailureWithoutACauseIsRejectedInsideTheCondition() {
+        var result = tryAwait(() -> "actual").until(check("receipt", actual -> {
+            throw locatedFailure("receipt", null);
+        }));
+
+        var cause = failure(CONDITION_FAILED, result).cause();
+        assertInstanceOf(NullPointerException.class, cause);
+        assertEquals("cause must not be null", cause.getMessage());
+    }
+
+    @Test
     void diagnosticFailureRetainsBothOriginalCausesWithoutMutatingThem() {
         var time = new FakeTime(0);
         var original = new AssertionError("not ready");
