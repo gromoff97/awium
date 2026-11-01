@@ -25,6 +25,10 @@ record AttemptExecution<OBSERVED>(Callable<? extends OBSERVED> source,
         var interrupted = interruptedBefore(phase);
         if (interrupted != null) return interrupted;
         execution.beginAttempt();
+        if (currentThread().isInterrupted()) {
+            return failed(phase, new FailedBeforeObservation<>(Operation.CONDITION,
+                    new InterruptedException("caller thread interrupt flag was set")), clock.getAsLong());
+        }
         OBSERVED actual;
         try {
             actual = source.call();

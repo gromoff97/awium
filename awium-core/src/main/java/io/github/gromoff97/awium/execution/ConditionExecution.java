@@ -30,6 +30,7 @@ public final class ConditionExecution<OBSERVED, RESULT> {
             ConditionRun<INPUT, RESULT> run = start(condition, false);
             return (INPUT actual) -> {
                 run.beginAttempt();
+                if (currentThread().isInterrupted()) throw interrupted(null);
                 var attempted = requireNonNull(run.probe(actual), "condition returned null ConditionResult");
                 if (currentThread().isInterrupted()) throw interrupted(attempted.cause());
                 if (run.complete()) {

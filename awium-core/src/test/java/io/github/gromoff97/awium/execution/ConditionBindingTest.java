@@ -28,6 +28,19 @@ class ConditionBindingTest {
     void clearInterruptFlag() { interrupted(); }
 
     @Test
+    void interruptedPreparationSkipsTheNestedProbe() throws Throwable {
+        when(condition.newRun(condition, false)).thenReturn(run);
+        doAnswer(ignored -> {
+            currentThread().interrupt();
+            return null;
+        }).when(run).beginAttempt();
+        doReturn(unsatisfied("pending")).when(run).probe("actual");
+
+        assertThrows(InterruptedException.class, () -> bind(condition).probe("actual"));
+        verify(run, never()).probe("actual");
+    }
+
+    @Test
     void interruptedProbeSkipsCompletionAndKeepsItsCause() throws Throwable {
         when(condition.newRun(condition, false)).thenReturn(run);
         doAnswer(ignored -> {

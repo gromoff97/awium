@@ -16,6 +16,7 @@ import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
+import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.ConditionResult.satisfied;
 import static java.lang.Thread.currentThread;
@@ -39,6 +40,21 @@ class WaitEngineLifecycleTest {
 
     @AfterEach
     void clearInterruptFlag() { interrupted(); }
+
+    @Test
+    void interruptedPreparationSkipsSourceRetrieval() throws Exception {
+        Callable<String> source = mock();
+        doAnswer(ignored -> {
+            currentThread().interrupt();
+            return null;
+        }).when(run).beginAttempt();
+
+        var outcome = assertInstanceOf(Uncontrolled.class, execute(source));
+        var attempt = assertInstanceOf(FailedBeforeObservation.class, outcome.step().attempt());
+        assertEquals(CONDITION, attempt.operation());
+        verify(source, never()).call();
+        verify(run).beginAttempt();
+    }
 
     @Test
     void completionFailuresRetainTheObservation() throws Throwable {
