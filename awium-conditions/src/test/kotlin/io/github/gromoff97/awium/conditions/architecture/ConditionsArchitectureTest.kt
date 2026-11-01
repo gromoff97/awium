@@ -28,8 +28,6 @@ class ConditionsArchitectureTest {
 
     @Test
     fun `catalogs leave execution to condition implementations`() {
-        noClasses().that(inFamilies(catalogs))
-            .should().dependOnClassesThat(inFamilies(setOf("ConditionRun", "ConditionExecution", "WaitCompletion"))).check(productClasses)
         noClasses().that(inFamilies(catalogs)).should().accessClassesThat(inFamilies(setOf("AwaitAttempt"))).check(productClasses)
     }
 
@@ -75,8 +73,9 @@ class ConditionsArchitectureTest {
             "io.github.gromoff97.awium.conditions.collection.CollectionConditions",
             "io.github.gromoff97.awium.conditions.map.MapConditions",
             "io.github.gromoff97.awium.conditions.optional.OptionalConditions",
-            "io.github.gromoff97.awium.conditions.string.StringConditions")
-        private val catalogs = setOf("CommonConditions", "CollectionConditions", "MapConditions", "OptionalConditions", "StringConditions")
+            "io.github.gromoff97.awium.conditions.string.StringConditions",
+            "io.github.gromoff97.awium.conditions.composition.CompositionConditions")
+        private val catalogs = factories.map { it.substringAfterLast('.') }.toSet()
         private val productClasses by lazy { JarFile(conditionsJar.toFile()).use { ClassFileImporter().importJars(it) } }
         private val coreModule = ModuleFinder.of(coreJar).find("io.github.gromoff97.awium.core").orElseThrow().descriptor()
         private val unexportedCorePackages = coreModule.packages() - coreModule.exports().filterNot { it.isQualified }.map { it.source() }.toSet()

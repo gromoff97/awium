@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.conditions.map;
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.AbstractCollection;
@@ -10,7 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
+import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
@@ -47,7 +46,7 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
 
     @Override
     public AwaitAttempt<INPUT, INPUT> newAttempt() {
-        ConditionExecution<Collection<?>, ?> evaluator = bind(nested);
+        AwaitAttempt<Collection<?>, ?> evaluator = bind(nested);
         return actual -> {
             if (actual == null) return unsatisfied("map was null");
             var result = evaluator.probeAt(view(actual), "map " + part.label());

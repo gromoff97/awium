@@ -20,7 +20,8 @@ import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.ENTRY_CONTENTS;
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.KEYS;
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.VALUES;
-import static io.github.gromoff97.awium.conditions.map.NestedCondition.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
 
 public final class MapConditions {
 
@@ -65,12 +66,12 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? extends KEY, ? extends VALUE>> singleEntry(
             CheckedBiPredicate<? super KEY, ? super VALUE> predicate) {
-        return new SelectedNestedCondition<>(compose("single entry", matches(entryPredicate(predicate)), singleEntry));
+        return selected(compose("single entry", matches(entryPredicate(predicate)), singleEntry));
     }
 
     public static <KEY, VALUE> SelectedCondition<Map<KEY, VALUE>> singleEntry(
             PreservingCondition<? super Entry<KEY, VALUE>> nested) {
-        return new SelectedNestedCondition<>(compose("single entry", nested, singleEntry));
+        return selected(compose("single entry", nested, singleEntry));
     }
 
     public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
@@ -80,7 +81,7 @@ public final class MapConditions {
 
     public static <KEY, VALUE> SelectedCondition<Map<? super KEY, ? super VALUE>> singleEntry(
             ComparisonCondition<? extends Entry<KEY, VALUE>> nested) {
-        return new SelectedNestedCondition<>(compose("single entry", nested, singleEntry));
+        return selected(compose("single entry", nested, singleEntry));
     }
 
     public static <KEY, VALUE> PreservingCondition<Map<KEY, VALUE>> allEntries(CheckedPredicate<? super Entry<KEY, VALUE>> predicate) {

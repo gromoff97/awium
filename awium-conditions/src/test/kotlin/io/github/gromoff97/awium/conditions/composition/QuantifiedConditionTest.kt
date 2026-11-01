@@ -28,7 +28,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.present
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied

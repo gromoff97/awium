@@ -1,5 +1,6 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
+import io.github.gromoff97.awium.execution.ProbeFailure;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

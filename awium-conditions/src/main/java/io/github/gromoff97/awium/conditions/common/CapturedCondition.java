@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.conditions.common;
 
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.ConditionExecution;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
@@ -38,13 +38,13 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
 
     private final class Run<OBSERVED> implements Condition<OBSERVED, List<OBSERVED>> {
 
-        private final List<ConditionExecution<OBSERVED, Object>> evaluations;
+        private final List<AwaitAttempt<OBSERVED, Object>> evaluations;
         private final List<OBSERVED> results = new ArrayList<>();
         private int attemptedStage = 1;
         private AttemptResult<?> stageResult;
 
         private Run() {
-            evaluations = stages.stream().map(ConditionExecution::<OBSERVED, Object>bind).toList();
+            evaluations = stages.stream().map(AwaitAttempt::<OBSERVED, Object>bind).toList();
         }
 
         @Override

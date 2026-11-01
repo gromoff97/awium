@@ -2,15 +2,14 @@ package io.github.gromoff97.awium.conditions.collection;
 
 import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.execution.ConditionExecution;
-import io.github.gromoff97.awium.execution.ProbeFailure;
 import io.github.gromoff97.awium.function.AwaitAttempt;
+import io.github.gromoff97.awium.execution.ProbeFailure;
 import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.Collection;
 import java.util.List;
 
-import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
+import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
 import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
@@ -35,11 +34,11 @@ record QuantifiedCondition<ELEMENT, INPUT extends Collection<? extends ELEMENT>>
     @Override public AttemptResult<?> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual); }
 
     @Override public AwaitAttempt<INPUT, INPUT> newAttempt() {
-        ConditionExecution<ELEMENT, ?> evaluator = bind(nested);
+        AwaitAttempt<ELEMENT, ?> evaluator = bind(nested);
         return actual -> evaluate(actual, evaluator);
     }
 
-    private AttemptResult<INPUT> evaluate(INPUT actual, ConditionExecution<ELEMENT, ?> evaluator) throws Throwable {
+    private AttemptResult<INPUT> evaluate(INPUT actual, AwaitAttempt<ELEMENT, ?> evaluator) throws Throwable {
         if (actual == null) return unsatisfied("collection was null");
         AttemptResult<?> last = null;
         long checked = 0;

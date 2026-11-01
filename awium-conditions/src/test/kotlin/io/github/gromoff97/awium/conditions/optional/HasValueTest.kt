@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
 import io.github.gromoff97.awium.conditions.common.CommonConditions.notEqualTo
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.Directional
-import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import java.util.Optional
 import org.assertj.core.api.Assertions.assertThatNullPointerException
 import org.junit.jupiter.api.Assertions.assertEquals

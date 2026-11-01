@@ -1,9 +1,7 @@
-package io.github.gromoff97.awium.conditions.collection;
+package io.github.gromoff97.awium.conditions.composition;
 
-import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.ConditionExecution;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
@@ -17,16 +15,6 @@ import static java.util.stream.Stream.concat;
 record NestedCondition<INPUT, VALUE, RESULT>(String selection, AwaitCondition nested, AwaitCondition extraction) implements Condition<INPUT, RESULT> {
     NestedCondition { requireNonNull(nested, "condition must not be null"); }
 
-    static <INPUT, VALUE> Condition<INPUT, VALUE> compose(
-            String selection, ApplicableCondition<?, ?> nested, AwaitCondition extraction) {
-        return new NestedCondition<INPUT, VALUE, VALUE>(selection, nested, extraction);
-    }
-
-    static <INPUT, VALUE, RESULT> Condition<INPUT, RESULT> compose(
-            String selection, Condition<? super VALUE, RESULT> nested, AwaitCondition extraction) {
-        return new NestedCondition<INPUT, VALUE, RESULT>(selection, nested, extraction);
-    }
-
     @Override public String description() { return selection + ": " + nested.description(); }
     @Override public String explanation() { return nested.explanation(); }
     @Override public List<Reference<?>> references() {
@@ -34,8 +22,8 @@ record NestedCondition<INPUT, VALUE, RESULT>(String selection, AwaitCondition ne
     }
     @Override public AttemptResult<RESULT> probe(INPUT actual) throws Throwable { return newAttempt().probe(actual).mapValue(value -> value); }
     @Override public AwaitAttempt<INPUT, RESULT> newAttempt() {
-        var extractionRun = ConditionExecution.<INPUT, VALUE>bind(extraction);
-        var evaluator = ConditionExecution.<VALUE, RESULT>bind(nested);
+        var extractionRun = AwaitAttempt.<INPUT, VALUE>bind(extraction);
+        var evaluator = AwaitAttempt.<VALUE, RESULT>bind(nested);
         return actual -> switch (extractionRun.probe(actual)) {
             case Satisfied<? extends VALUE> success -> {
                 var result = evaluator.probeAt(success.value(), selection);

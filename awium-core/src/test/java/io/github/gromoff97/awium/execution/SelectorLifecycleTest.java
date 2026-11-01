@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.execution;
 
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
@@ -47,8 +48,8 @@ class SelectorLifecycleTest {
     }
 
     private static <INPUT> void assertIndependentRuns(AwaitCondition selector, INPUT actual) throws Throwable {
-        var first = ConditionExecution.<INPUT, String>bind(selector);
-        var second = ConditionExecution.<INPUT, String>bind(selector);
+        var first = AwaitAttempt.<INPUT, String>bind(selector);
+        var second = AwaitAttempt.<INPUT, String>bind(selector);
 
         assertEquals(unsatisfied("condition is not yet complete"), first.probe(actual));
         assertEquals(unsatisfied("condition is not yet complete"), second.probe(actual));

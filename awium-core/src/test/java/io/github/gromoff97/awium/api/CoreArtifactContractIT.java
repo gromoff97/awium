@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.api;
 
-import io.github.gromoff97.awium.internal.WaitEngine;
 import java.lang.module.ModuleFinder;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -9,6 +8,8 @@ import java.util.List;
 import java.util.Set;
 import javax.tools.Diagnostic;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static com.google.testing.compile.Compiler.javac;
 import static com.google.testing.compile.JavaFileObjects.forSourceString;
@@ -53,28 +54,31 @@ class CoreArtifactContractIT {
 
     private static void assertConsumer(ClassLoader loader) throws Exception {
         var consumer = loader.loadClass("consumer.CoreConsumer");
-        assertArrayEquals(new Object[]{5, 5, 1, 1, false}, (Object[]) consumer.getMethod("run").invoke(null));
+        assertArrayEquals(new Object[]{5, 5, 1, 1, false, 5}, (Object[]) consumer.getMethod("run").invoke(null));
     }
 
-    @Test
-    void reasonDecoratorsAreHiddenFromClasspathConsumers() {
+    @ParameterizedTest
+    @ValueSource(strings = {"io.github.gromoff97.awium.Explained", "io.github.gromoff97.awium.internal.ConditionRun",
+            "io.github.gromoff97.awium.internal.ExecutionStep", "io.github.gromoff97.awium.internal.WaitCompletion"})
+    void implementationTypesAreHiddenFromClasspathConsumers(String type) {
         var consumer = forSourceString("consumer.Contract", """
                 package consumer;
-                import io.github.gromoff97.awium.Explained;
+                import %s;
                 final class Contract {}
-                """);
+                """.formatted(type));
         var compilation = javac().withOptions("--release", "21", "-proc:none", "-classpath", JAR.toString()).compile(consumer);
         assertThat(compilation.errors()).extracting(Diagnostic::getCode).contains("compiler.err.not.def.public.cant.access");
     }
 
     @Test
     void engineInternalsAreHiddenFromModuleConsumers() {
-        for (var type : List.of(io.github.gromoff97.awium.internal.WaitConfiguration.class, WaitEngine.class)) {
+        for (var type : List.of("WaitConfiguration", "WaitEngine", "ConditionRun", "ConditionExecution",
+                "ExecutionStep", "WaitCompletion", "DiagnosticText")) {
             var consumer = forSourceString("consumer.Contract", """
                     package consumer;
                     import %s;
                     final class Contract {}
-                    """.formatted(type.getName()));
+                    """.formatted("io.github.gromoff97.awium.internal." + type));
             var module = forSourceString("module-info", "module consumer { requires io.github.gromoff97.awium.core; }");
             var compilation = javac().withOptions("--release", "21", "-proc:none", "--module-path", JAR.toString())
                     .compile(consumer, module);

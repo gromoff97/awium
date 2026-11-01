@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.Condition;
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
-import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
+import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.lang.Thread.currentThread;

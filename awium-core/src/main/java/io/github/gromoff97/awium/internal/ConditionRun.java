@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
@@ -7,14 +7,14 @@ import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 
-import static io.github.gromoff97.awium.execution.FailureDiagnostics.failure;
-import static io.github.gromoff97.awium.execution.WaitCompletion.SatisfiedWait;
+import static io.github.gromoff97.awium.internal.FailureDiagnostics.failure;
+import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
 import static java.util.Objects.requireNonNull;
 
-public final class ConditionRun<OBSERVED, RESULT> {
+final class ConditionRun<OBSERVED, RESULT> {
 
     final AwaitCondition condition;
     private final Condition<OBSERVED, RESULT> check;
@@ -22,32 +22,30 @@ public final class ConditionRun<OBSERVED, RESULT> {
     private final AttemptHistory<OBSERVED> history = new AttemptHistory<>();
     private AttemptResult<? extends RESULT> latestResult;
 
-    public ConditionRun(AwaitCondition condition) {
+    ConditionRun(AwaitCondition condition) {
         this.condition = condition;
         check = ConditionExecution.prepare(condition);
         evaluation = new ConditionExecution<>(check::newAttempt);
     }
 
-    public AttemptResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
+    AttemptResult<? extends RESULT> probe(OBSERVED actual) throws Throwable {
         latestResult = null;
         latestResult = evaluation.probe(actual);
         return latestResult;
     }
 
-    public AttemptResult<?> historyResult() throws Throwable {
+    AttemptResult<?> historyResult() throws Throwable {
         return requireNonNull(check.historyResult(latestResult), "condition returned null history result");
     }
 
-    public RESULT result() { return ((Satisfied<? extends RESULT>) latestResult).value(); }
-
-    public void record(Attempt<OBSERVED> attempt) {
+    void record(Attempt<OBSERVED> attempt) {
         history.add(check.historySlot(attempt), attempt);
     }
 
-    public AwaitResult<OBSERVED, RESULT> finish(WaitCompletion outcome, WaitTiming configuration) {
+    AwaitResult<OBSERVED, RESULT> finish(WaitCompletion outcome, WaitConfiguration configuration) {
         var conditions = history.conditions(check.historyConditions(condition));
         return outcome instanceof SatisfiedWait
-                ? new Succeeded<>(conditions, result())
+                ? new Succeeded<>(conditions, ((Satisfied<? extends RESULT>) latestResult).value())
                 : new Failed<>(conditions, failure(this, outcome, configuration, history.count(), conditions));
     }
 

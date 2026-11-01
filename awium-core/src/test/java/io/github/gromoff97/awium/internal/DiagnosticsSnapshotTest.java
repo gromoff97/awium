@@ -1,13 +1,9 @@
-package io.github.gromoff97.awium.diagnostics;
+package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.support.TestCondition;
-import io.github.gromoff97.awium.execution.ExecutionStep;
-import io.github.gromoff97.awium.execution.WaitCompletion;
-import io.github.gromoff97.awium.internal.WaitConfiguration;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
@@ -32,9 +28,9 @@ import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.PERSISTENCE;
-import static io.github.gromoff97.awium.execution.WaitCompletion.*;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.internal.WaitCompletion.*;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
@@ -263,7 +259,7 @@ class DiagnosticsSnapshotTest {
                     Mismatch: business mismatch
 
                 Timing: elapsed 3 s; timeout 2 s; interval 1 s
-                Cause: io.github.gromoff97.awium.diagnostics.DiagnosticsSnapshotTest$CountingAssertion: assertion failed""", failure.getMessage());
+                Cause: io.github.gromoff97.awium.internal.DiagnosticsSnapshotTest$CountingAssertion: assertion failed""", failure.getMessage());
         assertEquals(1, assertion.calls);
     }
 

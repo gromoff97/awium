@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.result;
 
-import static io.github.gromoff97.awium.execution.DiagnosticText.attempt;
+import static io.github.gromoff97.awium.internal.DiagnosticText.attempt;
 import static java.util.Objects.requireNonNull;
 
 public sealed interface Attempt<OBSERVED> {

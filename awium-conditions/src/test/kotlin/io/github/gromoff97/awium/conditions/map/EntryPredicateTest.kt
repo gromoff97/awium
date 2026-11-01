@@ -8,7 +8,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.allEntries
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
-import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.function.checked.CheckedBiPredicate
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import java.io.IOException

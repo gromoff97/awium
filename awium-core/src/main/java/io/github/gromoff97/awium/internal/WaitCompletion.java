@@ -1,8 +1,8 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
 import static java.lang.Thread.currentThread;
 
-public sealed interface WaitCompletion {
+sealed interface WaitCompletion {
 
     ExecutionStep<?> step();
 

@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.conditions.composition
 
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.Condition
@@ -14,8 +15,8 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPer
 import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
-import io.github.gromoff97.awium.execution.ConditionExecution.bind
-import io.github.gromoff97.awium.execution.ConditionRun
+import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
@@ -102,15 +103,14 @@ class CompositionFailureTest {
                 null
             } else satisfied(it)
         }
-        val run = ConditionRun<String, List<String>>(captured(broken, isNotNull))
+        val run = newRun<String, List<String>>(captured(broken, isNotNull))
         assertThat(assertThrows(NullPointerException::class.java) { run.probe("actual") })
             .hasMessage("condition returned null AttemptResult")
         assertEquals(interrupted, Thread.currentThread().isInterrupted)
         Thread.interrupted()
         brokenResult = false
         assertInstanceOf(Unsatisfied::class.java, run.probe("first"))
-        run.probe("second")
-        assertEquals(listOf("first", "second"), run.result())
+        assertEquals(listOf("first", "second"), result(run.probe("second")))
     }
 
     companion object {

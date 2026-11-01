@@ -16,7 +16,8 @@ import java.util.SequencedCollection;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
-import static io.github.gromoff97.awium.conditions.collection.NestedCondition.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 
 public final class CollectionConditions {
@@ -65,12 +66,12 @@ public final class CollectionConditions {
 
     public static <CHECKED> SelectedCondition<Collection<? extends CHECKED>> singleElement(
             PreservingCondition<? super CHECKED> nested) {
-        return new SelectedNestedCondition<>(compose("single element", nested, singleElement));
+        return selected(compose("single element", nested, singleElement));
     }
 
     public static <EXPECTED> SelectedCondition<Collection<? super EXPECTED>> singleElement(
             ComparisonCondition<EXPECTED> nested) {
-        return new SelectedNestedCondition<>(compose("single element", nested, singleElement));
+        return selected(compose("single element", nested, singleElement));
     }
 
     public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> singleElement(Condition<? super ELEMENT, RESULT> nested) {
@@ -194,12 +195,12 @@ public final class CollectionConditions {
 
     public static <CHECKED> SelectedCondition<SequencedCollection<? extends CHECKED>> firstElement(
             PreservingCondition<? super CHECKED> nested) {
-        return new SelectedNestedCondition<>(compose("first element", nested, firstElement));
+        return selected(compose("first element", nested, firstElement));
     }
 
     public static <EXPECTED> SelectedCondition<SequencedCollection<? super EXPECTED>> firstElement(
             ComparisonCondition<EXPECTED> nested) {
-        return new SelectedNestedCondition<>(compose("first element", nested, firstElement));
+        return selected(compose("first element", nested, firstElement));
     }
 
     public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> firstElement(
@@ -216,12 +217,12 @@ public final class CollectionConditions {
 
     public static <CHECKED> SelectedCondition<SequencedCollection<? extends CHECKED>> lastElement(
             PreservingCondition<? super CHECKED> nested) {
-        return new SelectedNestedCondition<>(compose("last element", nested, lastElement));
+        return selected(compose("last element", nested, lastElement));
     }
 
     public static <EXPECTED> SelectedCondition<SequencedCollection<? super EXPECTED>> lastElement(
             ComparisonCondition<EXPECTED> nested) {
-        return new SelectedNestedCondition<>(compose("last element", nested, lastElement));
+        return selected(compose("last element", nested, lastElement));
     }
 
     public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> lastElement(
@@ -240,12 +241,12 @@ public final class CollectionConditions {
 
     public static <CHECKED> SelectedCondition<SequencedCollection<? extends CHECKED>> elementAt(
             int index, PreservingCondition<? super CHECKED> nested) {
-        return new SelectedNestedCondition<>(compose("element at index " + index, nested, elementAt(index)));
+        return selected(compose("element at index " + index, nested, elementAt(index)));
     }
 
     public static <EXPECTED> SelectedCondition<SequencedCollection<? super EXPECTED>> elementAt(
             int index, ComparisonCondition<EXPECTED> nested) {
-        return new SelectedNestedCondition<>(compose("element at index " + index, nested, elementAt(index)));
+        return selected(compose("element at index " + index, nested, elementAt(index)));
     }
 
     public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> elementAt(int index,

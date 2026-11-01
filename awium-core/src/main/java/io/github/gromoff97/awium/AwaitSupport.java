@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.internal.WaitConfiguration;
 import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -23,8 +22,6 @@ abstract sealed class AwaitSupport<OBSERVED> permits ValueAwait, DiagnosticAwait
     }
 
     final <RESULT> AwaitResult<OBSERVED, RESULT> execute(AwaitCondition condition) {
-        var execution = new ConditionRun<OBSERVED, RESULT>(condition);
-        var outcome = new WaitEngine<>(configuration, source, execution).waitFor();
-        return execution.finish(outcome, configuration);
+        return WaitEngine.execute(configuration, source, condition);
     }
 }

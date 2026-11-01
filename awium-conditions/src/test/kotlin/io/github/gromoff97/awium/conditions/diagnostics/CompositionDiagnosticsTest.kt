@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.conditions.diagnostics
 
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.Await.tryAwait
 import io.github.gromoff97.awium.Await.MapSource
 import io.github.gromoff97.awium.Await.OptionalSource
@@ -33,7 +34,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.execution.ConditionRun
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
@@ -197,12 +198,13 @@ class CompositionDiagnosticsTest {
     @Test
     fun `captured keeps the failed quantifier stage mismatch`() {
         val check = all(condition<Any, Any>("account is active") { unsatisfied("account is not active") })
-        val run = ConditionRun<List<String>, List<List<String>>>(captured(isNotNull, check))
+        val run = newRun<List<String>, List<List<String>>>(captured(isNotNull, check))
         run.probe(listOf("pending"))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(listOf("pending")))
+        val outcome = run.probe(listOf("pending"))
+        val rejected = assertInstanceOf(Unsatisfied::class.java, outcome)
         assertEquals("not all collection elements matched (checked 1): account is not active", rejected.mismatch())
         assertEquals("all collection elements match: account is active", check.description())
-        assertEquals(rejected, run.historyResult())
+        assertEquals(rejected, run.historyResult(outcome))
     }
 
     @ParameterizedTest
@@ -251,11 +253,12 @@ class CompositionDiagnosticsTest {
     @Test
     fun `a missing captured key retains lookup context without initializing its nested check`() {
         val check = valueFor("customerId", conditionPerWait<String, String>("nested") { throw AssertionError("nested factory called") })
-        val run = ConditionRun<Map<String, String>, List<Map<String, String>>>(captured(check, check))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(emptyMap()))
+        val run = newRun<Map<String, String>, List<Map<String, String>>>(captured(check, check))
+        val outcome = run.probe(emptyMap())
+        val rejected = assertInstanceOf(Unsatisfied::class.java, outcome)
         assertEquals("map did not contain the expected key", rejected.mismatch())
         assertEquals("customerId", check.references().single().value())
-        assertEquals(rejected, run.historyResult())
+        assertEquals(rejected, run.historyResult(outcome))
     }
 
     @Test

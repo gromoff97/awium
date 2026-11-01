@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied

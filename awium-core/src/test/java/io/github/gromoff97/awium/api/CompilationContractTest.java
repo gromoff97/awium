@@ -29,19 +29,17 @@ class CompilationContractTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "() -> (Integer actual) -> satisfied(actual)",
-            "() -> (String actual) -> satisfied(actual)"
+            "(Integer actual) -> satisfied(actual)",
+            "(String actual) -> satisfied(actual)"
     })
-    void executionFactoriesMustMatchTheirInputAndResultTypes(String factory) {
+    void attemptsMustMatchTheirInputAndResultTypes(String attempt) {
         assertRejected("""
-                import io.github.gromoff97.awium.execution.ConditionExecution;
+                import io.github.gromoff97.awium.function.AwaitAttempt;
                 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
                 final class Contract {
-                    void check() {
-                        new ConditionExecution<String, Integer>(%s);
-                    }
+                    AwaitAttempt<String, Integer> attempt = %s;
                 }
-                """.formatted(factory));
+                """.formatted(attempt));
     }
 
     @ParameterizedTest

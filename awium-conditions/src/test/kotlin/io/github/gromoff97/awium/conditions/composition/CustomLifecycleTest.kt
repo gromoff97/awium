@@ -10,7 +10,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
-import io.github.gromoff97.awium.execution.ConditionExecution.bind
+import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied

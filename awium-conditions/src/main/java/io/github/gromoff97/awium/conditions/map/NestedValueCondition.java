@@ -6,7 +6,7 @@ import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
-import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
+import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 
 record NestedValueCondition<INPUT>(Condition<INPUT, ?> nested) implements MapValueCondition<INPUT> {
     @Override public String description() { return nested.description(); }

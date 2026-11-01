@@ -26,7 +26,7 @@ fake clocks and engine timing tests belong to core.
 
 Checks cover condition behavior, Java fluent inference, incompatible types, both JARs,
 nesting, stage transitions, diagnostics, and concurrent `captured` reuse. Architecture
-checks reject core internals, shared product packages, and dependencies other than core.
+checks reject core internals, packages shared with core, and dependencies other than core.
 Tests use Kotlin, JUnit 6, AssertJ, Mockito, compile-testing, and ArchUnit;
 `slf4j-jdk14` supplies test logging. Plain Java consumers preserve Java inference checks.
 Kotlin and its standard library are test-only.
@@ -38,15 +38,20 @@ It is separate from `build`, `check`, and `test`.
 
 | Component | Owns |
 | --- | --- |
-| `*Conditions` | Public factories |
+| `*Conditions` | Factories returning core contracts |
 | Package-private neighbors | Checks, metadata, and lifecycle |
 | `CapturedCondition.Run` | Stage transitions, collected observations, and diagnostic data about the stages |
 
 Mutable state belongs to each run; reusable definitions stay immutable.
-Factories live in `conditions.common`, `conditions.collection`, `conditions.map`,
+Public factories live in `conditions.common`, `conditions.collection`, `conditions.map`,
 `conditions.optional`, and `conditions.string`. The Java module exports these
 packages and `io.github.gromoff97.awium.function.checked` for checked callbacks,
 requiring core transitively. Each family exposes only its factory, which returns core contracts. Implementations provide their own `description`, `references`,
 and `probe` methods. Cross-family reuse goes through public factories: size checks use
 numeric conditions, and map checks use collection conditions on map views. Helpers
 remain package-private alongside their callers.
+
+`conditions.composition` shares nested checks behind `CompositionConditions`;
+its implementations are package-private. The package is not exported by the module.
+Classpath users can technically access its factory, but it is not a supported API:
+the family factories enforce its type bounds.

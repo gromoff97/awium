@@ -1,11 +1,12 @@
 package io.github.gromoff97.awium.execution;
 
+
 import io.github.gromoff97.awium.Condition;
 import java.io.IOException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.execution.ConditionExecution.bind;
+import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;

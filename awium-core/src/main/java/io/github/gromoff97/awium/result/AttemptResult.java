@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.execution.DiagnosticText;
+import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;

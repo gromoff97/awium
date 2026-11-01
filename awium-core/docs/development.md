@@ -40,9 +40,9 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | `ConditionRun` | Executing a condition, recording history, and assembling the terminal result |
 | `AttemptHistory` | Invocation numbering and grouping within each history |
 | `Await`; fluent await classes | Source entry points and configuration |
-| `AwaitSupport` | Starting a run, passing it to the engine, and returning its result |
-| `ConditionExecution` | Lazy evaluator initialization and nested check invocation |
-| `WaitEngine` | Polling, deadlines, and persistence from immutable step snapshots |
+| `AwaitSupport` | Passing source and configuration to the engine |
+| `AwaitAttempt.bind`; internal `ConditionExecution` | Lazy evaluator initialization and nested check invocation |
+| `WaitEngine` | Running waits: polling, deadlines, persistence, and completion |
 | `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
 | `FailureDiagnostics`; `DiagnosticText` | Stop reason, attempt number, timing, cause, and guarded rendering |
 
@@ -75,5 +75,6 @@ These families preserve result inference through `because`; all use the same run
 
 The Java module `io.github.gromoff97.awium.core` exports `io.github.gromoff97.awium`,
 `.result`, `.function`, and `.execution`.
-Its `.internal` package is unexported. No `permits` list names an external condition.
-`WaitTiming` exposes durations without clock-injection hooks.
+The unexported `.internal` package owns run coordination, polling, history recording,
+and diagnostic rendering. `.execution` exposes only nested failure locations.
+No `permits` list names an external condition.

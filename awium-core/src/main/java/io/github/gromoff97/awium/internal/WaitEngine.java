@@ -1,17 +1,16 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
-import io.github.gromoff97.awium.execution.ExecutionStep;
-import io.github.gromoff97.awium.execution.WaitCompletion;
+import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.concurrent.Callable;
 
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.PERSISTENCE;
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;
-import static io.github.gromoff97.awium.execution.WaitCompletion.PersistenceFailure;
-import static io.github.gromoff97.awium.execution.WaitCompletion.SatisfiedWait;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.PERSISTENCE;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
+import static io.github.gromoff97.awium.internal.WaitCompletion.PersistenceFailure;
+import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
+import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
+import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -19,18 +18,25 @@ import static java.lang.Thread.currentThread;
 
 public final class WaitEngine<OBSERVED> {
 
+    public static <OBSERVED, RESULT> AwaitResult<OBSERVED, RESULT> execute(
+            WaitConfiguration configuration, Callable<? extends OBSERVED> source, AwaitCondition condition) {
+        var execution = new ConditionRun<OBSERVED, RESULT>(condition);
+        var outcome = new WaitEngine<>(configuration, source, execution).waitFor();
+        return execution.finish(outcome, configuration);
+    }
+
     private final WaitConfiguration configuration;
     private final AttemptExecution<OBSERVED> runner;
     private final long started;
 
-    public WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
+    WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
             ConditionRun<OBSERVED, ?> execution) {
         this.configuration = configuration;
         started = configuration.clock().getAsLong();
         runner = new AttemptExecution<>(source, execution, configuration.clock(), started);
     }
 
-    public WaitCompletion waitFor() {
+    WaitCompletion waitFor() {
         WaitCompletion acquisition = acquire();
         if (!(acquisition instanceof SatisfiedWait acquired)
                 || configuration.persistenceNanos() == 0) {

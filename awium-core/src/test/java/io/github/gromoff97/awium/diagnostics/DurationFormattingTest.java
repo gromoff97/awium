@@ -3,7 +3,7 @@ package io.github.gromoff97.awium.diagnostics;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import static io.github.gromoff97.awium.execution.DiagnosticText.unsignedDuration;
+import static io.github.gromoff97.awium.internal.DiagnosticText.unsignedDuration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DurationFormattingTest {

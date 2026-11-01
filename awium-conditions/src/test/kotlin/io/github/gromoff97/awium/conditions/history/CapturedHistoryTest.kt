@@ -23,14 +23,10 @@ import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AttemptResult.satisfied
 import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
-import io.github.gromoff97.awium.execution.ConditionRun
-import io.github.gromoff97.awium.execution.ExecutionStep
-import io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION
-import io.github.gromoff97.awium.execution.WaitCompletion.Timeout
-import io.github.gromoff97.awium.execution.WaitCompletion.SatisfiedWait
-import io.github.gromoff97.awium.execution.WaitTiming
 import io.github.gromoff97.awium.function.AwaitAttempt
 import java.io.IOException
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
+import java.time.Duration.ofMillis
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
 import org.assertj.core.api.Assertions.assertThat
@@ -43,7 +39,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito.mock
 
 class CapturedHistoryTest {
     @AfterEach
@@ -55,13 +50,8 @@ class CapturedHistoryTest {
     fun `a sequence failure identifies the pending stage and both relevant reasons`() {
         val first = equalTo("created").because("payment must be created")
         val second = equalTo("paid").because("payment must be completed")
-        val run = ConditionRun<String, List<String>>(captured(first, second).because("checkout lifecycle"))
-        run.probe("created")
-        run.record(SatisfiedObservation("created"))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe("created"))
-        val attempt = UnsatisfiedObservation("created", rejected.diagnostic(), rejected.cause())
-        run.record(attempt)
-        val result = run.finish(Timeout(ExecutionStep(false, ACQUISITION, 0, attempt)), mock(WaitTiming::class.java))
+        val result = tryAwait(Callable { "created" }).every(ofNanos(1)).upTo(ofMillis(100))
+            .until(captured(first, second).because("checkout lifecycle"))
 
         assertThat(failure(result).message()).contains("stage 2/2", "Expected: \"paid\"",
             "Because: payment must be completed", "Because: checkout lifecycle", "Mismatch: value was not equal")
@@ -75,17 +65,8 @@ class CapturedHistoryTest {
             if (it == "paid") satisfied(it) else unsatisfied("payment pending")
         }
         val shipped = condition<String, String>("shipped") { unsatisfied("tracking number missing") }
-        val run = ConditionRun<String, List<String>>(captured(paid, shipped))
-        for (actual in listOf("created", "paid", "paid")) {
-            run.probe(actual)
-            val checked = run.historyResult()
-            val attempt = if (checked is Unsatisfied<*>)
-                UnsatisfiedObservation(actual, checked.diagnostic(), checked.cause())
-            else SatisfiedObservation(actual)
-            run.record(attempt)
-        }
-        val last = UnsatisfiedObservation("paid", "tracking number missing", null)
-        val result = run.finish(Timeout(ExecutionStep(false, ACQUISITION, 0, last)), mock(WaitTiming::class.java))
+        val source = listOf("created", "paid", "paid").iterator()
+        val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(captured(paid, shipped))
 
         assertThat(failure(result).message()).contains("""
             Unsatisfied attempts (condition 1):
@@ -174,18 +155,12 @@ class CapturedHistoryTest {
             initialized++
             AwaitAttempt { satisfied(it) }
         }.because("last check")
-        val run = ConditionRun<Int, List<Int>>(captured(equalTo(1), equalTo(3), unreached))
-        run.probe(1)
-        run.record(SatisfiedObservation(1))
-        for (actual in listOf(0, 0, 2, 2)) {
-            val rejected = assertInstanceOf(Unsatisfied::class.java, run.probe(actual))
-            run.record(UnsatisfiedObservation(actual, rejected.diagnostic(), rejected.cause()))
-        }
-        val step = ExecutionStep(false, ACQUISITION, 0, UnsatisfiedObservation(2, "value was not equal", null))
-        val result = run.finish(Timeout(step), mock(WaitTiming::class.java))
+        val source = listOf(1, 0, 0, 2, 2).iterator()
+        val result = tryAwait(Callable { source.next() }).every(ofNanos(1))
+            .until(captured(equalTo(1), equalTo(3), unreached))
 
         assertEquals(3, result.conditions().size)
-        assertEquals(listOf(0, 2), result.conditions()[1].attempts().values.map(::observation))
+        assertEquals(listOf(0, 2), result.conditions()[1].attempts().values.filterIsInstance<UnsatisfiedObservation<Int>>().map { it.observed() })
         val last = result.conditions().last()
         assertSame(unreached, last.condition())
         assertTrue(last.attempts().isEmpty())
@@ -195,14 +170,12 @@ class CapturedHistoryTest {
 
     @Test
     fun `rechecking a complete run records only its final stage`() {
-        val run = ConditionRun<Int, List<Int>>(captured(equalTo(1), equalTo(2)))
-        for (actual in listOf(1, 2, 2, 2)) {
+        val run = newRun<Int, List<Int>>(captured(equalTo(1), equalTo(2)))
+        val slots = listOf(1, 2, 2, 2).map { actual ->
             run.probe(actual)
-            run.record(SatisfiedObservation(actual))
+            run.historySlot(SatisfiedObservation(actual))
         }
-        val step = ExecutionStep(true, ACQUISITION, 0, SatisfiedObservation(2))
-        val result = run.finish(SatisfiedWait(step), mock(WaitTiming::class.java))
-        assertEquals(listOf(listOf(1L), listOf(4L)), result.conditions().map { it.attempts().keys.toList() })
+        assertEquals(listOf(1, 2, 2, 2), slots)
     }
 
     @Test

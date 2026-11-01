@@ -1,10 +1,7 @@
-package io.github.gromoff97.awium.waiting;
+package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.internal.WaitEngine;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
@@ -28,7 +25,7 @@ import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase.ACQUISITION;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.Attempt.Operation.SOURCE;

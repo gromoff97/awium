@@ -1,16 +1,16 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionHistory;
 import java.util.List;
 
-import static io.github.gromoff97.awium.execution.DiagnosticText.field;
-import static io.github.gromoff97.awium.execution.DiagnosticText.unsignedDuration;
-import static io.github.gromoff97.awium.execution.WaitCompletion.PersistenceFailure;
-import static io.github.gromoff97.awium.execution.WaitCompletion.SatisfiedWait;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
+import static io.github.gromoff97.awium.internal.DiagnosticText.field;
+import static io.github.gromoff97.awium.internal.DiagnosticText.unsignedDuration;
+import static io.github.gromoff97.awium.internal.WaitCompletion.PersistenceFailure;
+import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
+import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
+import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
@@ -27,7 +27,7 @@ final class FailureDiagnostics {
     private FailureDiagnostics() {}
 
     static AwaitFailure failure(ConditionRun<?, ?> condition, WaitCompletion outcome,
-            WaitTiming configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
+            WaitConfiguration configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
         requireNonNull(outcome, "outcome must not be null");
         requireNonNull(configuration, "configuration must not be null");
         var reason = failureReason(outcome);
@@ -89,7 +89,7 @@ final class FailureDiagnostics {
         };
     }
 
-    private static void timing(StringBuilder out, WaitCompletion outcome, WaitTiming configuration) {
+    private static void timing(StringBuilder out, WaitCompletion outcome, WaitConfiguration configuration) {
         var completedAfter = outcome.step().completedAfterNanos();
         var elapsed = outcome instanceof Timeout timeout ? timeout.elapsedNanos() : completedAfter;
         out.append('\n');

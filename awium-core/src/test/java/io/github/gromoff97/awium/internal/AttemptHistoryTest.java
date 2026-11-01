@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.result.AttemptResult;

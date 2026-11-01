@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.execution;
 
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
 import io.github.gromoff97.awium.AwaitCondition.InputCondition;
@@ -7,6 +8,7 @@ import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
@@ -58,13 +60,13 @@ class CollectingConditionTest {
     @Test
     void newRunsKeepTheirCollectedValuesIndependent() throws Throwable {
         var condition = new RecordOnce();
-        var first = new ConditionRun<String, List<String>>(condition);
-        var second = new ConditionRun<String, List<String>>(condition);
-        first.probe("first");
+        var first = AwaitAttempt.<String, List<String>>bind(condition);
+        var second = AwaitAttempt.<String, List<String>>bind(condition);
+        var firstResult = result(first.probe("first"));
 
-        second.probe("second");
-        assertEquals(List.of("first"), first.result());
-        assertEquals(List.of("second"), second.result());
+        var secondResult = result(second.probe("second"));
+        assertEquals(List.of("first"), firstResult);
+        assertEquals(List.of("second"), secondResult);
     }
 
     private static final class RecordOnce implements CollectingCondition<InputCondition<Object>> {

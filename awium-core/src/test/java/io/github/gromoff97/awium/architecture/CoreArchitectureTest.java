@@ -33,7 +33,7 @@ class CoreArchitectureTest {
                             Set.of("Await", "AwaitSupport", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait",
                                     "DiagnosticSelectionAwait", "DiagnosticMapAwait", "DiagnosticText", "FailureDiagnostics"))
                             .as("polling and execution do not depend on facades or formatting"),
-                    independent(Set.of("ConditionRun"), Set.of("WaitEngine", "AttemptExecution", "WaitConfiguration",
+                    independent(Set.of("ConditionRun"), Set.of("WaitEngine", "AttemptExecution",
                             "Await", "AwaitSupport", "ValueAwait", "DiagnosticAwait"))
                             .as("run lifecycle owns history and results without polling or facade dependencies"),
                     independent(Set.of("AwaitSupport"), Set.of("AttemptHistory", "FailureDiagnostics"))

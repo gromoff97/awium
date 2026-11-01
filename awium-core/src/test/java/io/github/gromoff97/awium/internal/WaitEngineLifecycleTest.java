@@ -1,8 +1,6 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.execution.WaitCompletion;
 import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
@@ -16,8 +14,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Timeout;
-import static io.github.gromoff97.awium.execution.WaitCompletion.Uncontrolled;
+import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
+import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;

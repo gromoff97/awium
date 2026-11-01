@@ -57,7 +57,8 @@ class ArtifactContractIT {
 
     @ParameterizedTest
     @ValueSource(strings = ["common.CapturedCondition", "common.EqualityCondition", "collection.SortedCondition", "map.SingleEntryCondition",
-        "optional.PresentCondition", "string.BlankCondition", "collection.ValueMatching", "collection.ContainsElementsCondition"])
+        "optional.PresentCondition", "string.BlankCondition", "collection.ValueMatching", "collection.ContainsElementsCondition",
+        "composition.NestedCondition", "composition.SelectedNestedCondition"])
     fun `family implementations are hidden from classpath consumers`(type: String) {
         val source = forSourceString("consumer.Contract", """
             package consumer;
@@ -67,6 +68,19 @@ class ArtifactContractIT {
         val compilation = javac().withOptions("--release", "21", "-proc:none", "-classpath", "$coreJar$pathSeparator$conditionsJar")
             .compile(source)
         assertThat(compilation.errors().map { it.code }).contains("compiler.err.not.def.public.cant.access")
+    }
+
+    @Test
+    fun `the composition factory is hidden from module consumers`() {
+        val source = forSourceString("consumer.Contract", """
+            package consumer;
+            import io.github.gromoff97.awium.conditions.composition.CompositionConditions;
+            final class Contract {}
+        """.trimIndent())
+        val module = forSourceString("module-info", "module consumer { requires io.github.gromoff97.awium.conditions; }")
+        val compilation = javac().withOptions("--release", "21", "-proc:none", "--module-path", "$coreJar$pathSeparator$conditionsJar")
+            .compile(source, module)
+        assertThat(compilation.errors().map { it.code }).contains("compiler.err.package.not.visible")
     }
 
     private fun assertConsumerResult(loader: ClassLoader) {

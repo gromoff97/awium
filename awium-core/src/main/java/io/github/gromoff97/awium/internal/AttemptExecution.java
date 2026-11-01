@@ -1,14 +1,12 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.execution.ConditionRun;
-import io.github.gromoff97.awium.execution.ExecutionStep;
 import io.github.gromoff97.awium.execution.ProbeFailure;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.concurrent.Callable;
 import java.util.function.LongSupplier;
 
-import static io.github.gromoff97.awium.execution.ExecutionStep.Phase;
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Failure;

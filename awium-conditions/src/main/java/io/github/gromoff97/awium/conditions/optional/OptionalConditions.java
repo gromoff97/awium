@@ -8,7 +8,8 @@ import java.util.Optional;
 
 import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
-import static io.github.gromoff97.awium.conditions.optional.NestedCondition.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
 
 public final class OptionalConditions {
 
@@ -27,11 +28,11 @@ public final class OptionalConditions {
 
     public static <CHECKED> SelectedCondition<Optional<? extends CHECKED>> hasValue(
             PreservingCondition<? super CHECKED> nested) {
-        return new SelectedNestedCondition<>(compose("optional value", nested, present));
+        return selected(compose("optional value", nested, present));
     }
 
     public static <EXPECTED> SelectedCondition<Optional<? super EXPECTED>> hasValue(
             ComparisonCondition<EXPECTED> nested) {
-        return new SelectedNestedCondition<>(compose("optional value", nested, present));
+        return selected(compose("optional value", nested, present));
     }
 }

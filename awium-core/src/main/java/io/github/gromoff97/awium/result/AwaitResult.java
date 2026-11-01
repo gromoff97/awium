@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.execution.DiagnosticText;
+import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.List;
 
-import static io.github.gromoff97.awium.execution.DiagnosticText.conditionHistory;
-import static io.github.gromoff97.awium.execution.DiagnosticText.field;
+import static io.github.gromoff97.awium.internal.DiagnosticText.conditionHistory;
+import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static java.util.Objects.requireNonNull;
 
 public sealed interface AwaitResult<OBSERVED, RESULT> {

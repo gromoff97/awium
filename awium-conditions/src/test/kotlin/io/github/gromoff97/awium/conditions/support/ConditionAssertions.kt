@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.execution.ConditionExecution
+import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.result.Attempt
 import io.github.gromoff97.awium.result.AwaitFailure
@@ -19,8 +19,12 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.fail
 
 object ConditionAssertions {
+    @Suppress("UNCHECKED_CAST")
+    fun <INPUT, RESULT> newRun(condition: AwaitCondition): Condition<INPUT, RESULT> =
+        condition.newRun() as Condition<INPUT, RESULT>
+
     fun evaluate(condition: AwaitCondition, actual: Any?): AttemptResult<*> =
-        ConditionExecution.bind<Any?, Any?>(condition).probe(actual)
+        AwaitAttempt.bind<Any?, Any?>(condition).probe(actual)
 
     fun rejection(condition: AwaitCondition, actual: Any?): Unsatisfied<*> =
         assertInstanceOf(Unsatisfied::class.java, evaluate(condition, actual))
@@ -31,13 +35,13 @@ object ConditionAssertions {
     }
 
     fun <SOURCE, RESULT> evaluate(condition: Condition<in SOURCE, out RESULT>, actual: SOURCE): AttemptResult<out RESULT> =
-        ConditionExecution.bind(condition).probe(actual)
+        AwaitAttempt.bind(condition).probe(actual)
 
     fun <SOURCE> evaluate(condition: PreservingCondition<in SOURCE>, actual: SOURCE): AttemptResult<out SOURCE> =
-        ConditionExecution.bind<SOURCE, SOURCE>(condition).probe(actual)
+        AwaitAttempt.bind<SOURCE, SOURCE>(condition).probe(actual)
 
     fun <SOURCE> evaluate(condition: ComparisonCondition<out SOURCE>, actual: SOURCE): AttemptResult<out SOURCE> =
-        ConditionExecution.bind<SOURCE, SOURCE>(condition).probe(actual)
+        AwaitAttempt.bind<SOURCE, SOURCE>(condition).probe(actual)
 
     fun <RESULT> result(evaluation: AttemptResult<out RESULT>): RESULT =
         if (evaluation is Satisfied<out RESULT>) evaluation.value() else fail("expected a satisfied condition, got $evaluation", evaluation.cause())

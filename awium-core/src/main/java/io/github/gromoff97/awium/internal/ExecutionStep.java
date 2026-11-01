@@ -1,8 +1,8 @@
-package io.github.gromoff97.awium.execution;
+package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.result.Attempt;
 
-public record ExecutionStep<OBSERVED>(boolean complete,
+record ExecutionStep<OBSERVED>(boolean complete,
         Phase phase, long completedAfterNanos, Attempt<OBSERVED> attempt) {
 
     public enum Phase {
