@@ -7,11 +7,8 @@ import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
-import io.github.gromoff97.awium.result.ConditionHistory;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.function.Function;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +43,7 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.WAIT_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.values;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
-import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static io.github.gromoff97.awium.result.ConditionResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.assertFailure;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
@@ -87,11 +84,11 @@ class FailureDiagnosticsTest {
             @Override public String toString() { throw rendering; }
         };
         var waiting = withTime(await(() -> actual), time, time).every(ofNanos(1)).upTo(ofNanos(2));
-        var check = check("not ready", value -> io.github.gromoff97.awium.result.ConditionResult.unsatisfied("not ready", original));
+        var check = check("not ready", value -> unsatisfied("not ready", original));
 
-        var captured = failure(TIMEOUT, diagnostic(waiting).until(check));
-        assertSame(original, captured.cause());
-        assertSame(rendering, captured.suppressed().getFirst());
+        var returned = failure(TIMEOUT, diagnostic(waiting).until(check));
+        assertSame(original, returned.cause());
+        assertSame(rendering, returned.suppressed().getFirst());
         var thrown = assertInstanceOf(AwaitAssertionError.class,
                 assertFailure(TIMEOUT, () -> waiting.until(check)));
         assertSame(original, thrown.failure().cause());
@@ -115,16 +112,15 @@ class FailureDiagnosticsTest {
         var attempt = new ExecutionStep<>(false, phase, 2, retained);
         var outcome = completion.apply(attempt);
         var configuration = config(1, 2, 0);
-        var run = ConditionExecution.<Object, Object>start(metadata, false);
+        var run = ConditionExecution.<Object, Object>start(metadata, true);
         run.record(retained);
-        var captured = failure(run.finish(outcome, configuration));
-        assertEquals(reason, captured.reason());
-        assertSame(original, captured.cause());
-        assertEquals(List.of(rendering), captured.suppressed());
-        var report = new Failed<Object, String>(List.of(new ConditionHistory<>(metadata,
-                new TreeMap<>(Map.of(1L, attempt.attempt())))), captured);
+        var report = run.finish(outcome, configuration);
+        var returned = failure(report);
+        assertEquals(reason, returned.reason());
+        assertSame(original, returned.cause());
+        assertEquals(List.of(rendering), returned.suppressed());
         var reported = assertFailure(reason, report::orThrow);
-        assertSame(captured, reported instanceof AwaitAssertionError assertion
+        assertSame(returned, reported instanceof AwaitAssertionError assertion
                 ? assertion.failure() : ((AwaitExecutionException) reported).failure());
         assertSame(original, reported.getCause());
         assertArrayEquals(new Throwable[]{rendering}, reported.getSuppressed());
@@ -158,7 +154,7 @@ class FailureDiagnosticsTest {
         var interruption = new InterruptedException("interrupted");
         var waiting = new IllegalStateException("operation failed");
         var cases = List.of(
-                failureCase(TIMEOUT, timeout, ACQUISITION, new UnsatisfiedObservation<>("actual", "not ready", timeout), step -> new Timeout(step.completedAfterNanos(), step)),
+                failureCase(TIMEOUT, timeout, ACQUISITION, new UnsatisfiedObservation<>("actual", "not ready", timeout), Timeout::new),
                 failureCase(PERSISTENCE_FAILED, persistence, PERSISTENCE, new UnsatisfiedObservation<>("actual", "not ready", persistence),
                         step -> new PersistenceFailure(0, step)),
                 failureCase(SOURCE_FAILED, source, ACQUISITION, new FailedBeforeObservation<>(SOURCE, source),
@@ -169,7 +165,7 @@ class FailureDiagnosticsTest {
                         step -> new Uncontrolled(step, true)),
                 failureCase(WAIT_FAILED, waiting, ACQUISITION, new FailedBeforeObservation<>(WAITING, waiting),
                         step -> new Uncontrolled(step, false)));
-        assertThat(cases).extracting(arguments -> arguments.get()[0]).containsExactlyElementsOf(List.of(values()));
+        assertThat(cases).extracting(arguments -> arguments.get()[0]).containsExactlyInAnyOrderElementsOf(List.of(values()));
         return cases;
     }
 

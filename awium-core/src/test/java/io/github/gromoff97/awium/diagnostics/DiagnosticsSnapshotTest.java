@@ -274,13 +274,13 @@ class DiagnosticsSnapshotTest {
             Callable<String> source = () -> { throw cause; };
             var waiting = await(source);
 
-            var captured = failure(diagnostic(waiting).until(accepted));
+            var returned = failure(diagnostic(waiting).until(accepted));
             var thrown = assertThrows(AwaitExecutionException.class,
                     () -> waiting.until(accepted));
 
-            assertThat(captured.message()).contains("java.lang.IllegalStateException: " + message);
+            assertThat(returned.message()).contains("java.lang.IllegalStateException: " + message);
             assertThat(thrown.getMessage()).contains("java.lang.IllegalStateException: " + message);
-            assertSame(cause, captured.cause());
+            assertSame(cause, returned.cause());
             assertSame(cause, thrown.getCause());
             assertEquals(message, cause.getMessage());
         }
@@ -529,10 +529,10 @@ class DiagnosticsSnapshotTest {
         var check = new DefinedCondition<>("not ready", new Reference<>("Expected", value),
                 (Object actual) -> unsatisfied());
 
-        var captured = failure(diagnostic(waiting).until(check));
+        var returned = failure(diagnostic(waiting).until(check));
         var thrown = assertThrows(AwaitAssertionError.class, () -> waiting.until(check));
 
-        assertThat(captured.suppressed()).singleElement().isSameAs(diagnostic);
+        assertThat(returned.suppressed()).singleElement().isSameAs(diagnostic);
         assertThat(thrown.getSuppressed()).singleElement().isSameAs(diagnostic);
         assertEquals(0, diagnostic.getSuppressed().length);
     }

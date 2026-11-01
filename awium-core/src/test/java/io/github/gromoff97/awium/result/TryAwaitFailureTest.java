@@ -202,25 +202,25 @@ class TryAwaitFailureTest {
     private static Failed<?, ?> assertParity(Executable waiting, Supplier<AwaitResult<?, ?>> diagnostic) {
         var thrown = assertThrows(Throwable.class, waiting);
         interrupted();
-        var captured = failed(diagnostic.get());
-        assertSameFailure(thrown, captured.failure());
+        var returned = failed(diagnostic.get());
+        assertSameFailure(thrown, returned.failure());
         interrupted();
-        return captured;
+        return returned;
     }
 
-    private static void assertSameFailure(Throwable thrown, AwaitFailure captured) {
+    private static void assertSameFailure(Throwable thrown, AwaitFailure returned) {
         AwaitFailure attached = switch (thrown) {
             case AwaitAssertionError assertion -> assertion.failure();
             case AwaitExecutionException execution -> execution.failure();
             default -> throw new AssertionError("unexpected failure", thrown);
         };
-        assertEquals(attached.reason(), captured.reason());
-        assertEquals(thrown.getMessage(), captured.message());
+        assertEquals(attached.reason(), returned.reason());
+        assertEquals(thrown.getMessage(), returned.message());
         assertEquals(Optional.ofNullable(thrown.getCause()).map(Object::getClass),
-                Optional.ofNullable(captured.cause()).map(Object::getClass));
+                Optional.ofNullable(returned.cause()).map(Object::getClass));
         assertEquals(Optional.ofNullable(thrown.getCause()).map(Throwable::getMessage),
-                Optional.ofNullable(captured.cause()).map(Throwable::getMessage));
-        assertThat(captured.suppressed()).zipSatisfy(List.of(thrown.getSuppressed()), (actual, expected) ->
+                Optional.ofNullable(returned.cause()).map(Throwable::getMessage));
+        assertThat(returned.suppressed()).zipSatisfy(List.of(thrown.getSuppressed()), (actual, expected) ->
                 assertThat(actual).isExactlyInstanceOf(expected.getClass()).hasMessage(expected.getMessage()));
     }
 
