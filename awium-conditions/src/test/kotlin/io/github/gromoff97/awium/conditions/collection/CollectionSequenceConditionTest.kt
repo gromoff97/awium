@@ -7,17 +7,16 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.does
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainSubsequence
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.endsWith
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.startsWith
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import java.util.Collections.indexOfSubList
 import java.util.LinkedList
 import java.util.SequencedCollection
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -75,7 +74,7 @@ class CollectionSequenceConditionTest {
     @ParameterizedTest
     @MethodSource("rules")
     fun `rejects a missing pattern immediately`(rule: Rule) {
-        assertThrows(NullPointerException::class.java) { rule.factory(null) }
+        assertThrows<NullPointerException> { rule.factory(null) }
     }
 
     @ParameterizedTest
@@ -83,7 +82,7 @@ class CollectionSequenceConditionTest {
     fun `ordered patterns compare array elements by content`(condition: AwaitCondition) {
         val elements = listOf(null, intArrayOf(1, 2), "gap", intArrayOf(3, 4))
         for (actual in listOf(LinkedList(elements), LinkedHashSet(elements))) {
-            assertSame(actual, result(evaluate(condition, actual)))
+            preservesInstance(condition, actual)
         }
     }
 

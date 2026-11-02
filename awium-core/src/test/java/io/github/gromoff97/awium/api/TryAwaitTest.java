@@ -78,10 +78,17 @@ class TryAwaitTest {
         }
 
         assertThat(error.getMessage()).contains("""
-                Unsatisfied attempts (condition 1):
-                    Through #2: payment pending
-                    Through #3: stock missing
-                    Through #5: payment pending
+                Through #2: unsatisfied
+                    Mismatch: payment pending
+                    Observed now: "order"
+
+                Through #3: unsatisfied
+                    Mismatch: stock missing
+                    Observed now: "order"
+
+                Through #5: unsatisfied
+                    Mismatch: payment pending
+                    Observed now: "order"
                 """.stripTrailing());
         assertFalse(reasons.hasNext());
     }
@@ -102,7 +109,8 @@ class TryAwaitTest {
         });
 
         assertSame(cause, error.getCause());
-        assertThat(error.getMessage()).contains("Through #2: payment pending", "source unavailable");
+        assertThat(error.getMessage()).contains("Through #2: unsatisfied", "source unavailable")
+                .containsOnlyOnce("Mismatch: payment pending");
     }
 
     @Test

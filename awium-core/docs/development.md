@@ -36,7 +36,7 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 
 | Component | Owns |
 | --- | --- |
-| `Condition`, `AwaitCondition` families | Immutable definitions, type constraints, and creation of independent runs |
+| `Condition`, `AwaitCondition` families | Definitions, type constraints, and run creation |
 | `ConditionRun` | Executing a condition, recording history, and assembling the terminal result |
 | `AttemptHistory` | Invocation numbering and grouping within each history |
 | `Await`; fluent await classes | Source entry points and configuration |
@@ -46,17 +46,13 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
 | `FailureDiagnostics`; `DiagnosticText` | Stop reason, attempt number, timing, cause, and guarded rendering |
 
-Implement `description()` and `probe(actual)` directly; no base constructor is required.
-The default `because` returns a separate definition and preserves custom lifecycle methods.
-For state shared across attempts, override `newRun()` and return a fresh `Condition`.
-Its `probe` returns `unsatisfied(...)` to keep waiting or `satisfied(value)` to finish,
-including when nested. `newAttempt()` can instead create a lazy evaluator.
-Mutable state stays within a run; definitions stay immutable.
+Override `newRun()` for per-wait state; return a fresh `Condition` whose `probe`
+performs the check. For a lazy evaluator, override `newAttempt()` instead.
 
 Checks return `Diagnostic` data in their `AttemptResult`; `diagnostics(attempt)`
-can add final context. Core adds the stop reason, timing, and cause, retaining
-rendering failures separately. `historyResult` defaults to the probe result;
-composites can report a stage's outcome without completing the whole wait.
+can add final context. Core adds the stop reason, timing, and cause.
+`historyResult` defaults to the probe result; composites can report a stage's outcome
+without completing the whole wait.
 `historyConditions(definition)` lists the reported conditions; `definition` retains
 the original `because` reason. `historySlot(attempt)` selects a condition by its
 1-based position in that list.
@@ -72,6 +68,9 @@ as the only stage. `PreservesObservation` shares a terminal overload
 across preserving checks and comparisons. Selector implementations must return the
 corresponding source element, entry, or value; typed `Condition` declares its output.
 These families preserve result inference through `because`; all use the same run contract.
+`AwaitAttempt.bind(Condition)` retains the declared result type. Binding a general
+`AwaitCondition` trusts the chosen input type and leaves the result type unknown;
+`until` checks source-dependent types.
 
 The Java module `io.github.gromoff97.awium.core` exports `io.github.gromoff97.awium`,
 `.result`, `.function`, and `.execution`.

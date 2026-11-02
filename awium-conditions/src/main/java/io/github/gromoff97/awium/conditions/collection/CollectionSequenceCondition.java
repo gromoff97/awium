@@ -12,6 +12,7 @@ import static io.github.gromoff97.awium.conditions.collection.ValueMatching.pref
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.deepEquals;
+import static java.util.Locale.ROOT;
 
 record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?> expected, Sequence sequence, boolean negated) implements PreservingCondition<INPUT> {
     enum Sequence { PREFIX, SUFFIX, SEQUENCE, SUBSEQUENCE }
@@ -23,9 +24,9 @@ record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?>
     @Override
     public String description() {
         if (negated) {
-            return "collection does not contain unexpected " + sequence.name().toLowerCase(java.util.Locale.ROOT);
+            return "collection does not contain unexpected " + sequence.name().toLowerCase(ROOT);
         }
-        return "collection contains expected " + sequence.name().toLowerCase(java.util.Locale.ROOT);
+        return "collection contains expected " + sequence.name().toLowerCase(ROOT);
     }
 
     @Override
@@ -49,9 +50,9 @@ record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?>
             return satisfied(actual);
         }
         if (negated) {
-            return unsatisfied("collection contained unexpected " + sequence.name().toLowerCase(java.util.Locale.ROOT));
+            return unsatisfied("collection contained unexpected " + sequence.name().toLowerCase(ROOT));
         }
-        return unsatisfied("collection did not contain expected " + sequence.name().toLowerCase(java.util.Locale.ROOT));
+        return unsatisfied("collection did not contain expected " + sequence.name().toLowerCase(ROOT));
     }
 
     private static boolean containsSequence(SequencedCollection<?> actual, List<?> expected) {

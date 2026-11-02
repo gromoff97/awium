@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.conditions.value
 
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
@@ -7,7 +8,6 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.common.CommonConditions.isNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 
 class NullConditionTest {
@@ -24,7 +24,7 @@ class NullConditionTest {
     @Test
     fun `isNotNull returns the original value`() {
         val actual = Any()
-        assertSame(actual, result(evaluate(isNotNull, actual)))
+        preservesInstance(isNotNull, actual)
     }
 
     @Test

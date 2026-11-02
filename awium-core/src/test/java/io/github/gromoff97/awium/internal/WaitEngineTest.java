@@ -66,7 +66,7 @@ class WaitEngineTest {
         doReturn(satisfied(5)).when(condition).historyResult(any());
         ConditionRun<String, Integer> run = new ConditionRun<>(condition);
 
-        var outcome = new WaitEngine<>(withTime(config(1, 10, 0), time, time), () -> "ready", run)
+        var outcome = new WaitEngine(withTime(config(1, 10, 0), time, time), () -> "ready", run)
                 .waitFor();
 
         assertInstanceOf(SatisfiedWait.class, outcome);
@@ -81,7 +81,7 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         Callable<String> source = mock();
         when(clock.getAsLong()).thenReturn(0L, 7L);
-        var engine = new WaitEngine<String>(withTime(config(1, 10, 0), clock, time), source,
+        var engine = new WaitEngine(withTime(config(1, 10, 0), clock, time), source,
                 new ConditionRun<>(accepted));
         currentThread().interrupt();
 
@@ -183,7 +183,7 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L, 10L);
 
-        WaitCompletion outcome = new WaitEngine<String>(withTime(config(1, 10, 0), clock,
+        WaitCompletion outcome = new WaitEngine(withTime(config(1, 10, 0), clock,
                 ignored -> {}), () -> {
                     sourceCalls[0]++;
                     return "actual";
@@ -349,7 +349,7 @@ class WaitEngineTest {
             currentThread().interrupt();
             return 0L;
         });
-        var outcome = new WaitEngine<String>(withTime(config(5, 20, 0), clock,
+        var outcome = new WaitEngine(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 () -> { sourceCalls[0]++; return "actual"; },
                 new ConditionRun<>(accepted)).waitFor();
@@ -366,7 +366,7 @@ class WaitEngineTest {
         int[] sourceCalls = {0};
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L);
-        var outcome = new WaitEngine<String>(withTime(config(1, 2, 0), clock, nanos -> {}), () -> {
+        var outcome = new WaitEngine(withTime(config(1, 2, 0), clock, nanos -> {}), () -> {
             sourceCalls[0]++;
             return "actual";
         }, new ConditionRun<>(check("not ready", (String value) -> {
@@ -389,7 +389,7 @@ class WaitEngineTest {
         int[] parkCalls = {0};
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L);
-        var outcome = new WaitEngine<String>(withTime(config(5, 20, persistence), clock,
+        var outcome = new WaitEngine(withTime(config(5, 20, persistence), clock,
                 nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
                 new ConditionRun<>(check("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
@@ -578,7 +578,7 @@ class WaitEngineTest {
             LongConsumer parker,
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
-        return new WaitEngine<S>(withTime(config, time, parker), source,
+        return new WaitEngine(withTime(config, time, parker), source,
                 new ConditionRun<>(check("test condition", condition))).waitFor();
     }
 

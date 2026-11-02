@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.map
 
 import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.map.MapConditions.hasEntry
 import io.github.gromoff97.awium.conditions.map.MapConditions.hasNoEntry
@@ -41,13 +41,13 @@ class EntryMembershipTest {
     @Test
     fun `returns the observed map`() {
         val actual = linkedMapOf("ready" to "1")
-        assertSame(actual, result(evaluate(hasEntry("ready", "1"), actual)))
+        preservesInstance(hasEntry("ready", "1"), actual)
     }
 
     @Test
     fun `null keys and values are ordinary entry components`() {
         val actual = EntryMap(listOf(ProbeEntry(null, null)))
-        assertSame(actual, result(evaluate(hasEntry<Any?, Any?>(null, null), actual)))
+        preservesInstance(hasEntry<Any?, Any?>(null, null), actual)
     }
 
     @ParameterizedTest
@@ -59,7 +59,7 @@ class EntryMembershipTest {
     @Test
     fun `compares array keys and values by content`() {
         val actual = EntryMap(listOf(ProbeEntry(intArrayOf(1), arrayOf("value"))))
-        assertSame(actual, result(evaluate(hasEntry(intArrayOf(1), arrayOf("value")), actual)))
+        preservesInstance(hasEntry(intArrayOf(1), arrayOf("value")), actual)
     }
 
     @Test
@@ -70,7 +70,7 @@ class EntryMembershipTest {
         val expectedValue = Directional(false)
         val actual = EntryMap(listOf(ProbeEntry(key, value)))
 
-        assertSame(actual, result(evaluate(hasEntry(expectedKey, expectedValue), actual)))
+        preservesInstance(hasEntry(expectedKey, expectedValue), actual)
         assertEquals(listOf(1, 1, 0, 0), listOf(key.equalsCalls, value.equalsCalls, expectedKey.equalsCalls, expectedValue.equalsCalls))
     }
 

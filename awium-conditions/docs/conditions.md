@@ -47,7 +47,7 @@ Collections and maps have `hasSize(n)`, `hasSizeNotEqualTo(n)`, `hasSizeGreaterT
 Custom callbacks use `AwaitAttempt<INPUT, RESULT>`; predicates and assertions use
 `CheckedPredicate`, `CheckedBiPredicate`, and `CheckedConsumer` from
 `io.github.gromoff97.awium.function.checked`. All permit checked throwables.
-For stored JDK callbacks, use `predicate::test`, `consumer::accept`, or `function::apply`.
+Pass JDK predicates as `predicate::test` and consumers as `consumer::accept`.
 Negate checked predicates with `CheckedPredicate.not` or `CheckedBiPredicate.not`.
 
 ## Common conditions
@@ -100,7 +100,7 @@ var check = conditionPerWait("two paid observations", () -> {
 });
 ```
 
-## Reasons and lambda types
+## Reasons and type inference
 
 ```java
 Payment payment = await(paymentRepository::find)
@@ -115,6 +115,9 @@ Use a method reference or typed parameter:
 var check = all(Payment::paid).because("Paid payments required");
 var typed = all((Payment value) -> value.paid()).because("Paid payments required");
 ```
+
+Use `isNull.because(...)` or `isNotNull.because(...)` for null checks.
+`equalTo(null).because(...)` infers `Object`.
 
 ## Nested checks
 

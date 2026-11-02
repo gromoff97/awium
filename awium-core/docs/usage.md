@@ -13,7 +13,7 @@ Payment payment = await(paymentRepository::load)
 `paid` is a `Condition<Payment, Payment>`. `until` polls one condition, reading the
 source at most once per attempt and returning the result without another read.
 
-Immutable configurations and conditions are reusable. Each terminal call starts
+Immutable configurations are reusable. Each terminal call starts
 fresh timing and execution state.
 
 Execution stays on the calling platform or virtual thread with its `ThreadLocal`
@@ -23,8 +23,6 @@ values. Callers synchronize shared mutable values; Awium creates no worker.
 
 Pass a lambda or method reference; direct values are not accepted. Sources may
 throw checked exceptions. Both wait modes accept the same source types and timing settings.
-
-Awium retains source references. Return copies when independent snapshots are needed.
 
 A stored JDK `Callable` selects the general value overload. Pass it as a method
 reference to select the container overload:
@@ -59,9 +57,9 @@ declare container types and selected bounds separately.
 
 Settings accept `Duration` in any order, validate immediately, and use the last value.
 
-- Unless interrupted, the first attempt starts immediately. The timeout cannot cancel
-  callbacks. Acquisition attempts succeed only if they finish before the deadline;
-  late results remain in diagnostics, and no further attempts start.
+- The timeout includes run creation. Unless interrupted, the first attempt starts
+  immediately. Callbacks cannot be cancelled; acquisition attempts must finish before the deadline.
+  Late results remain in diagnostics, and no further attempts start.
 - Intervals may exceed the timeout; parking is capped at the remaining acquisition time.
 - After success, `persisting` keeps checking for its duration, possibly beyond `upTo`.
   Any persistence mismatch fails immediately.

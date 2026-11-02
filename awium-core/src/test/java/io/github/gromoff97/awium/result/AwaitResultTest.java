@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.support.TestConditions.diagnosticCondition;
+import static io.github.gromoff97.awium.support.TestConditions.accepted;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -16,7 +16,7 @@ class AwaitResultTest {
 
     @Test
     void copiesConditionHistories() {
-        var history = new ConditionHistory<String>(diagnosticCondition("ready", null), new TreeMap<>());
+        var history = new ConditionHistory<String>(accepted, new TreeMap<>());
         var mutable = new ArrayList<>(List.of(history));
 
         var result = new AwaitResult.Succeeded<>(mutable, null);

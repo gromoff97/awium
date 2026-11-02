@@ -1,15 +1,13 @@
 package io.github.gromoff97.awium.conditions.value
 
 import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.exactlyInstanceOf
 import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Named
 import org.junit.jupiter.api.Named.named
@@ -24,7 +22,7 @@ class InstanceOfConditionTest {
     @MethodSource("successfulChecks")
     fun `returns the original instance`(condition: Condition<Any, *>) {
         val actual = Child()
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @ParameterizedTest
@@ -48,13 +46,13 @@ class InstanceOfConditionTest {
     @Test
     fun `interfaces accept their implementations`() {
         val actual = StringBuilder("ready")
-        assertSame(actual, result(evaluate(instanceOf(CharSequence::class.java), actual)))
+        preservesInstance(instanceOf(CharSequence::class.java), actual)
     }
 
     @ParameterizedTest
     @MethodSource("factories")
     fun `rejects a missing type immediately`(create: (Class<String>?) -> Condition<Any, String>) {
-        val failure = assertThrows(NullPointerException::class.java) { create(null) }
+        val failure = assertThrows<NullPointerException> { create(null) }
         assertEquals("type must not be null", failure.message)
     }
 

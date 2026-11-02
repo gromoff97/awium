@@ -2,9 +2,9 @@ package io.github.gromoff97.awium.conditions.value
 
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.AwaitCondition.Reference
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
 import io.github.gromoff97.awium.conditions.common.CommonConditions.notEqualTo
@@ -15,8 +15,7 @@ import io.github.gromoff97.awium.conditions.support.ThrowingEquals
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertInstanceOf
-import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -33,7 +32,7 @@ class EqualityConditionTest {
     @ParameterizedTest
     @MethodSource("successfulComparisons")
     fun `returns the original observation`(condition: AwaitCondition, actual: Any?) {
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @ParameterizedTest
@@ -73,7 +72,7 @@ class EqualityConditionTest {
     fun `reports a comparison failure for distinct cyclic arrays`() {
         val actual = cycle()
         val expected = cycle()
-        assertInstanceOf(StackOverflowError::class.java, thrown(equalTo(expected), actual))
+        assertInstanceOf<StackOverflowError>(thrown(equalTo(expected), actual))
     }
 
     @Test

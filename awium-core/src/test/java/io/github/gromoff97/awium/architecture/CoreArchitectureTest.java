@@ -53,9 +53,9 @@ class CoreArchitectureTest {
                             Set.of("AwaitAttempt", "ConditionExecution", "AttemptExecution", "WaitEngine", "WaitCompletion"))
                             .as("condition metadata does not depend on execution"),
                     independent(Set.of("FailureDiagnostics"),
-                            Set.of("Await", "AwaitSupport", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait",
+                            Set.of("ConditionRun", "Await", "AwaitSupport", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait",
                                     "DiagnosticSelectionAwait", "DiagnosticMapAwait", "AwaitResult", "AwaitAssertionError", "AwaitExecutionException"))
-                            .as("failure formatting does not depend on facades or exception wrappers"))
+                            .as("failure formatting does not depend on run orchestration, facades or exception wrappers"))
                     .map(rule -> dynamicTest(rule.getDescription(), () -> rule.check(classes)));
         }
     }

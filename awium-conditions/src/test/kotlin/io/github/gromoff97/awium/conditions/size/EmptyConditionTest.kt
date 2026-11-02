@@ -2,9 +2,9 @@ package io.github.gromoff97.awium.conditions.size
 
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.sizeOnlyCollection
@@ -36,7 +36,7 @@ class EmptyConditionTest {
     @ParameterizedTest
     @MethodSource("matchingInputs")
     fun `returns the observation`(condition: AwaitCondition, actual: Any) {
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @ParameterizedTest

@@ -1,9 +1,12 @@
 package io.github.gromoff97.awium.internal;
 
+import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionHistory;
+import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
+import java.util.function.Function;
 
 import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static io.github.gromoff97.awium.internal.DiagnosticText.unsignedDuration;
@@ -12,7 +15,6 @@ import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
-import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.PERSISTENCE_FAILED;
@@ -20,47 +22,37 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.WAIT_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
-import static java.util.Objects.requireNonNull;
 
 final class FailureDiagnostics {
 
     private FailureDiagnostics() {}
 
-    static AwaitFailure failure(ConditionRun<?, ?> condition, WaitCompletion outcome,
-            WaitConfiguration configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
-        requireNonNull(outcome, "outcome must not be null");
-        requireNonNull(configuration, "configuration must not be null");
+    static AwaitFailure failure(AwaitCondition condition, Function<Attempt<?>, Diagnostic> diagnostics,
+            WaitCompletion outcome, WaitConfiguration configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
         var reason = failureReason(outcome);
         var step = outcome.step();
         var attempt = step.attempt();
         var cause = attempt.cause();
         var text = new DiagnosticText(cause);
+        step.relatedCauses().forEach(text::retain);
         var out = new StringBuilder(title(reason, attempt)).append('\n');
         field(out, "", "Attempt", attemptNumber + " (" + step.phase() + ")");
-        out.append('\n');
-        text.condition(out, "Condition", condition.condition, "");
+        if (histories.stream().noneMatch(history -> history.condition() == condition)) {
+            out.append('\n');
+            text.condition(out, "Condition", condition, "");
+        }
         text.render(() -> {
-            text.diagnostic(out, condition.diagnostics(attempt));
+            text.diagnostic(out, diagnostics.apply(attempt));
             return "";
         });
-        text.attemptDetails(out, attempt);
         timing(out, outcome, configuration);
-        mismatchHistory(out, histories);
-        if (cause != null) field(out, "", "Cause", text.cause(cause));
+        text.histories(out, histories);
+        if (histories.stream().noneMatch(history -> history.attempts().get(attemptNumber) == attempt)) {
+            out.append('\n');
+            text.appendAttempt(out, "Last attempt #" + attemptNumber, attempt);
+        }
         text.appendFailures(out, "");
         return new AwaitFailure(reason, out.substring(0, out.length() - 1), cause, text.failures());
-    }
-
-    private static void mismatchHistory(StringBuilder out, List<? extends ConditionHistory<?>> histories) {
-        for (int i = 0; i < histories.size(); i++) {
-            var mismatches = histories.get(i).attempts().entrySet().stream()
-                    .filter(entry -> entry.getValue() instanceof UnsatisfiedObservation<?>).toList();
-            if (mismatches.isEmpty()) continue;
-            out.append("\nUnsatisfied attempts (condition ").append(i + 1).append("):\n");
-            for (var entry : mismatches) {
-                field(out, "Through #" + entry.getKey(), entry.getValue().diagnostic().mismatch());
-            }
-        }
     }
 
     private static Reason failureReason(WaitCompletion outcome) {

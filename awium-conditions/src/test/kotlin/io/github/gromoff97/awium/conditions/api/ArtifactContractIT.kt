@@ -12,6 +12,7 @@ import java.lang.module.ModuleDescriptor.Requires.Modifier.TRANSITIVE
 import java.lang.module.ModuleFinder
 import java.net.URLClassLoader
 import java.nio.file.Files.isRegularFile
+import java.util.Map.entry
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -87,7 +88,7 @@ class ArtifactContractIT {
         val consumer = loader.loadClass("consumer.ArtifactConsumer")
         val result = consumer.getMethod("run").invoke(null) as Array<*>
         assertArrayEquals(arrayOf("ready", "ready", 5, "ready", listOf("ready", "ready"), true, "ready",
-            1, java.util.Map.entry("key", 1), "ready", "ready", "ready", 5, 5, 5, 10, 10,
+            1, entry("key", 1), "ready", "ready", "ready", 5, 5, 5, 10, 10,
             true, "text has a length", null, listOf("ready", "ready")), result)
     }
 

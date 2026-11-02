@@ -19,6 +19,7 @@ import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.AwaitAssertions.failure;
+import static io.github.gromoff97.awium.support.TestConditions.check;
 import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,8 +47,8 @@ class StructuredDiagnosticsTest {
 
         var result = diagnostic(timedAwait(() -> values, time).upTo(ofNanos(1))).until(condition);
 
-        assertThat(failure(TIMEOUT, result).message()).contains("Condition: three elements",
-                "Because: all entries must arrive", "Expected size: 3", "Actual size: 2", "Actual: []");
+        assertThat(failure(TIMEOUT, result).message()).contains("Condition 1: three elements",
+                "Because: all entries must arrive", "Expected size: 3", "Actual size: 2", "Observed now: []");
         assertEquals(1, calls.get());
         assertEquals(2, attempts(result).getFirst().diagnostic().fields().getLast().value());
     }
@@ -56,7 +57,7 @@ class StructuredDiagnosticsTest {
     void aLateSuccessRetainsItsDiagnosticFields() {
         var time = new FakeTime(0);
         var measured = new Diagnostic(null, new Reference<>("Received status", "ready"));
-        var condition = new TestCondition<String, String>("ready", null, actual -> {
+        Condition<String, String> condition = check("ready", actual -> {
             time.advanceNanos(2);
             return satisfied(actual, measured);
         });
@@ -71,7 +72,7 @@ class StructuredDiagnosticsTest {
     void historyKeepsFieldChangesEvenWhenTheObservationAndMessageStayTheSame() {
         var time = new FakeTime(0);
         var progress = List.of(1, 1, 2, 2, 1, 3).iterator();
-        var condition = new TestCondition<String, String>("progress", null, actual -> {
+        Condition<String, String> condition = check("progress", actual -> {
             int value = progress.next();
             var measured = new Diagnostic(null, new Reference<>("Progress", value));
             return value == 3 ? satisfied(actual, measured) : unsatisfied(measured.withMismatch("progress is incomplete"));
@@ -94,7 +95,7 @@ class StructuredDiagnosticsTest {
         var unreadable = new Object() {
             @Override public String toString() { throw rendering; }
         };
-        var condition = new TestCondition<String, String>("ready", null, actual -> {
+        Condition<String, String> condition = check("ready", actual -> {
             time.advanceNanos(2);
             return unsatisfied(new Diagnostic("pending", new Reference<>("Details", unreadable)), original);
         });
@@ -112,7 +113,7 @@ class StructuredDiagnosticsTest {
         var detail = new Object() {
             @Override public String toString() { throw new AssertionError("must not render"); }
         };
-        var condition = new TestCondition<String, String>("ready", null,
+        Condition<String, String> condition = check("ready",
                 actual -> satisfied(actual, new Diagnostic(null, new Reference<>("Details", detail))));
 
         assertEquals("ready", timedAwait(() -> "ready", new FakeTime(0)).until(condition));
@@ -124,7 +125,7 @@ class StructuredDiagnosticsTest {
         var nested = new TestCondition<String, String>("nested check", new Reference<>("Expected", 3), actual -> {
             throw new AssertionError("diagnostics must not run a nested check");
         }).because("nested reason");
-        var condition = new TestCondition<String, String>("ready", null, actual -> {
+        Condition<String, String> condition = check("ready", actual -> {
             time.advanceNanos(2);
             return unsatisfied(new Diagnostic("nested check is pending", new Reference<>("Nested", nested)));
         });

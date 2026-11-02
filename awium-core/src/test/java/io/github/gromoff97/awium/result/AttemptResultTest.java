@@ -9,11 +9,34 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AttemptResultTest {
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void successfulResultsGuardTheirValueRenderer(boolean fatal) {
+        var value = new Object() {
+            @Override public String toString() {
+                if (fatal) throw new AssertionError("value cannot be printed");
+                throw new IllegalStateException("value cannot be printed");
+            }
+        };
+
+        assertThat(satisfied(value).toString()).startsWith("Satisfied[value=<unprintable>, diagnostic=");
+    }
+
+    @Test
+    void successfulResultsDisplayArrayContentsAndDiagnosticFields() {
+        var diagnostic = new Diagnostic(null, new Reference<>("Size", 2));
+        var value = new Object[]{new int[]{1, 2}, null};
+
+        assertEquals("Satisfied[value=[[1, 2], null], diagnostic=Diagnostic[mismatch=null, fields=[Size=2]]]",
+                satisfied(value, diagnostic).toString());
+    }
 
     @Test
     void mappingAValuePreservesItsDiagnosticObject() {

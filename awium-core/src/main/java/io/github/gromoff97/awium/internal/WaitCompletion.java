@@ -11,7 +11,7 @@ sealed interface WaitCompletion {
     record Uncontrolled(ExecutionStep<?> step,
             boolean interrupted) implements WaitCompletion {
 
-        public Uncontrolled(ExecutionStep<?> step) {
+        Uncontrolled(ExecutionStep<?> step) {
             this(step, currentThread().isInterrupted());
         }
     }
@@ -19,7 +19,7 @@ sealed interface WaitCompletion {
     record Timeout(long elapsedNanos,
             ExecutionStep<?> step) implements WaitCompletion {
 
-        public Timeout(ExecutionStep<?> step) {
+        Timeout(ExecutionStep<?> step) {
             this(step.completedAfterNanos(), step);
         }
     }

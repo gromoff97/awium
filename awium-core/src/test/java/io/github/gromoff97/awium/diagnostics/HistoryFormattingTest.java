@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.diagnostics;
 
 import io.github.gromoff97.awium.result.ConditionHistory;
+import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,10 +25,60 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class HistoryFormattingTest {
 
     private final FakeTime time = new FakeTime(0);
+
+    @Test
+    void failureTextKeepsTheCompletedHistoryWhenObservedObjectsChange() {
+        var observed = new StringBuilder("pending");
+        var calls = new int[1];
+        var result = withTime(tryAwait(() -> {
+            if (calls[0]++ == 1) throw new IllegalStateException("offline");
+            return observed;
+        }), time, time).every(ofNanos(1)).until(check("ready", actual -> unsatisfied("not ready")));
+        String completed = result.toString();
+
+        observed.replace(0, observed.length(), "changed");
+
+        assertEquals(completed, result.toString());
+        assertEquals(completed, assertThrows(AwaitExecutionException.class, result::orThrow).getMessage());
+        assertThat(completed).containsOnlyOnce("Mismatch: not ready").contains("Observed now: \"pending\"");
+        assertThat(result.conditions().getFirst().toString()).contains("Observed now: \"changed\"");
+    }
+
+    @Test
+    void failureTextRendersEachRetainedObservationOnlyOnce() {
+        var renders = new int[1];
+        Object observed = new Object() {
+            @Override public String toString() { renders[0]++; return "pending"; }
+        };
+        var result = withTime(tryAwait(() -> observed), time, time).every(ofNanos(1)).upTo(ofNanos(2))
+                .until(check("ready", actual -> unsatisfied("not ready")));
+
+        assertThat(result.toString()).containsOnlyOnce("Mismatch: not ready");
+        assertEquals(1, renders[0]);
+    }
+
+    @Test
+    void renderingAnEarlierObservationCannotReplaceTheTerminalFailure() {
+        var rendering = new IllegalStateException("earlier value is unreadable");
+        var original = new IllegalArgumentException("source failed");
+        var calls = new int[1];
+        Object observed = new Object() {
+            @Override public String toString() { throw rendering; }
+        };
+        var result = withTime(tryAwait(() -> {
+            if (calls[0]++ == 1) throw original;
+            return observed;
+        }), time, time).every(ofNanos(1)).until(check("ready", actual -> unsatisfied("not ready")));
+
+        assertSame(original, failure(result).cause());
+        assertThat(failure(result).suppressed()).containsExactly(rendering);
+        assertThat(result.toString()).contains("Observed now: <unprintable>", "source failed");
+    }
 
     @Test
     void textValuesExposeNullTextWhitespaceAndControlCharacters() {
@@ -122,7 +173,7 @@ class HistoryFormattingTest {
         assertEquals(1, renders[0]);
         assertThat(rendered).contains(
                 "Observed now: <unprintable>",
-                "Rendering failure: java.lang.IllegalArgumentException");
+                "Suppressed: java.lang.IllegalArgumentException");
         String individual = attempts(result).getFirst().toString();
         assertEquals(2, renders[0]);
         assertThat(individual).contains("Result: satisfied", "Observed now: <unprintable>");
@@ -236,7 +287,7 @@ class HistoryFormattingTest {
         assertEquals(0, renders[0]);
         String report = result.toString();
         assertThat(report).contains(
-                "Rendering failure: java.lang.IllegalStateException",
+                "Suppressed: java.lang.IllegalStateException",
                 "Observed now: readable source");
         assertEquals(1, renders[0]);
     }
@@ -266,6 +317,6 @@ class HistoryFormattingTest {
         var history = new ConditionHistory<>(expected(expected), new java.util.TreeMap<>());
 
         String report = history.toString();
-        assertThat(report).contains("not attempted", "<unprintable>", "Rendering failure: java.lang.IllegalStateException");
+        assertThat(report).contains("not attempted", "<unprintable>", "Suppressed: java.lang.IllegalStateException");
     }
 }

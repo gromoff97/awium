@@ -13,7 +13,7 @@ import io.github.gromoff97.awium.conditions.string.StringConditions
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
@@ -67,7 +67,7 @@ class HasSizeConditionTest {
     @ParameterizedTest
     @MethodSource("invalidBounds")
     fun `rejects invalid bounds before evaluation`(factory: Executable, expected: String) {
-        assertEquals(expected, assertThrows(IllegalArgumentException::class.java, factory).message)
+        assertEquals(expected, assertThrows<IllegalArgumentException>(factory::execute).message)
     }
 
     @Test

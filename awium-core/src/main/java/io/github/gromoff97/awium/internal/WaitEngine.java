@@ -16,20 +16,20 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
 
-public final class WaitEngine<OBSERVED> {
+public final class WaitEngine {
 
     public static <OBSERVED, RESULT> AwaitResult<OBSERVED, RESULT> execute(
             WaitConfiguration configuration, Callable<? extends OBSERVED> source, AwaitCondition condition) {
         var execution = new ConditionRun<OBSERVED, RESULT>(condition);
-        var outcome = new WaitEngine<>(configuration, source, execution).waitFor();
+        var outcome = new WaitEngine(configuration, source, execution).waitFor();
         return execution.finish(outcome, configuration);
     }
 
     private final WaitConfiguration configuration;
-    private final AttemptExecution<OBSERVED> runner;
+    private final AttemptExecution<?> runner;
     private final long started;
 
-    WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
+    <OBSERVED> WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
             ConditionRun<OBSERVED, ?> execution) {
         this.configuration = configuration;
         started = configuration.clock().getAsLong();
@@ -37,6 +37,10 @@ public final class WaitEngine<OBSERVED> {
     }
 
     WaitCompletion waitFor() {
+        var initializationFailure = runner.initialize();
+        if (initializationFailure != null) {
+            return new Uncontrolled(initializationFailure);
+        }
         WaitCompletion acquisition = acquire();
         if (!(acquisition instanceof SatisfiedWait acquired)
                 || configuration.persistenceNanos() == 0) {
@@ -47,16 +51,15 @@ public final class WaitEngine<OBSERVED> {
 
     private WaitCompletion acquire() {
         long deadline = started + configuration.upToNanos();
-        ExecutionStep<OBSERVED> lastStep = null;
+        ExecutionStep<?> lastStep = null;
         long completed = started;
 
         while (true) {
-            ExecutionStep<OBSERVED> preparationFailure = lastStep == null
+            ExecutionStep<?> preparationFailure = lastStep == null
                     ? runner.interruptedBefore(ACQUISITION)
                     : waitBeforeAttempt(min(configuration.everyNanos(), remaining(completed, deadline)),
                             ACQUISITION, completed);
             if (preparationFailure != null) {
-                runner.execution().record(preparationFailure.attempt());
                 return new Uncontrolled(preparationFailure);
             }
 
@@ -65,16 +68,15 @@ public final class WaitEngine<OBSERVED> {
                 return new Timeout(retrievalStarted - started, lastStep);
             }
 
-            ExecutionStep<OBSERVED> step = runner.call(ACQUISITION);
+            ExecutionStep<?> step = runner.call(ACQUISITION);
             completed = started + step.completedAfterNanos();
-            runner.execution().record(step.attempt());
             if (step.attempt() instanceof Failure<?>) {
                 return new Uncontrolled(step);
             }
             if (reached(completed, deadline)) {
                 return new Timeout(step);
             }
-            if (step.complete()) {
+            if (runner.execution().isSatisfied()) {
                 return new SatisfiedWait(step);
             }
             lastStep = step;
@@ -87,20 +89,18 @@ public final class WaitEngine<OBSERVED> {
         long completed = acquiredAt;
 
         while (true) {
-            ExecutionStep<OBSERVED> preparationFailure = waitBeforeAttempt(
+            ExecutionStep<?> preparationFailure = waitBeforeAttempt(
                     min(configuration.everyNanos(), remaining(completed, deadline)), PERSISTENCE, completed);
             if (preparationFailure != null) {
-                runner.execution().record(preparationFailure.attempt());
                 return new Uncontrolled(preparationFailure);
             }
 
-            ExecutionStep<OBSERVED> step = runner.call(PERSISTENCE);
+            ExecutionStep<?> step = runner.call(PERSISTENCE);
             completed = started + step.completedAfterNanos();
-            runner.execution().record(step.attempt());
             if (step.attempt() instanceof Failure<?>) {
                 return new Uncontrolled(step);
             }
-            if (!step.complete()) {
+            if (!runner.execution().isSatisfied()) {
                 return new PersistenceFailure(acquired.step().completedAfterNanos(), step);
             }
             if (reached(completed, deadline)) {
@@ -109,12 +109,12 @@ public final class WaitEngine<OBSERVED> {
         }
     }
 
-    private ExecutionStep<OBSERVED> waitBeforeAttempt(long delay,
+    private ExecutionStep<?> waitBeforeAttempt(long delay,
             Phase phase, long completed) {
         long deadline = completed + delay;
         long remaining;
         while ((remaining = remaining(configuration.clock().getAsLong(), deadline)) > 0) {
-            ExecutionStep<OBSERVED> interrupted = runner.interruptedBefore(phase);
+            ExecutionStep<?> interrupted = runner.interruptedBefore(phase);
             if (interrupted != null) {
                 return interrupted;
             }

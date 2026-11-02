@@ -5,6 +5,7 @@ import io.github.gromoff97.awium.AwaitCondition.InputCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
@@ -42,7 +43,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -62,7 +63,7 @@ class QuantifiedConditionTest {
     @ParameterizedTest
     @MethodSource("conditionFamilies")
     fun `matching inputs preserve the observation`(example: Example) {
-        assertSame(example.matching, result(evaluate(example.condition, example.matching)))
+        preservesInstance(example.condition, example.matching)
     }
 
     @ParameterizedTest
@@ -102,7 +103,7 @@ class QuantifiedConditionTest {
         }
         val actual = listOf(ready, ready)
         repeat(2) {
-            assertSame(actual, result(bind<List<User>, List<User>>(any(nested)).probe(actual)))
+            assertSame(actual, result(bind<List<User>>(any(nested)).probe(actual)))
         }
         assertEquals(2, factories)
     }
@@ -116,9 +117,9 @@ class QuantifiedConditionTest {
             AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("waiting for a second observation") }
         }
         val actual = listOf(ready, ready)
-        val execution = bind<List<User>, List<List<User>>>(captured(any(nested), any(nested)))
+        val execution = bind<List<User>>(captured(any(nested), any(nested)))
 
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         assertEquals(listOf(actual, actual), result(execution.probe(actual)))
         assertEquals(2, factories)
     }
@@ -159,7 +160,7 @@ class QuantifiedConditionTest {
     fun `interruption stops before the next candidate`() {
         var calls = 0
         val nested = matches { _: User -> calls++; Thread.currentThread().interrupt(); false }
-        assertInstanceOf(InterruptedException::class.java, thrown(any(nested), listOf(ready, pending)))
+        assertInstanceOf<InterruptedException>(thrown(any(nested), listOf(ready, pending)))
         assertEquals(1, calls)
         assertTrue(Thread.currentThread().isInterrupted)
     }
@@ -172,7 +173,7 @@ class QuantifiedConditionTest {
             Thread.interrupted()
             true
         })
-        assertSame(actual, result(evaluate(check, actual)))
+        preservesInstance(check, actual)
         assertFalse(Thread.currentThread().isInterrupted)
     }
 

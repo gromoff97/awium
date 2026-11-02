@@ -8,9 +8,11 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
+import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
@@ -49,25 +51,21 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         AwaitAttempt<Collection<?>, ?> evaluator = bind(nested);
         return actual -> {
             if (actual == null) return unsatisfied("map was null");
-            var result = evaluator.probeAt(view(actual), "map " + part.label());
+            var result = evaluator.probeAt(view(actual, () -> part.elements(actual)), "map " + part.label());
             if (result instanceof Unsatisfied<?> failure) {
                 return unsatisfied(failure.diagnostic().withMismatch(
                         "map " + part.label() + ": " + failure.mismatch()), failure.cause());
             }
-            return result.mapValue(ignored -> actual);
+            return satisfied(actual, result.diagnostic());
         };
     }
-    private Collection<Object> view(INPUT actual) {
+    private static <ELEMENT> Collection<ELEMENT> view(Map<?, ?> actual, Supplier<Iterable<ELEMENT>> elements) {
         return new AbstractCollection<>() {
-            private Iterable<?> values;
+            private Iterable<ELEMENT> values;
             @Override public int size() { return actual.size(); }
-            @Override public Iterator<Object> iterator() {
-                if (values == null) values = part.elements(actual);
-                var iterator = values.iterator();
-                return new Iterator<>() {
-                    @Override public boolean hasNext() { return iterator.hasNext(); }
-                    @Override public Object next() { return iterator.next(); }
-                };
+            @Override public Iterator<ELEMENT> iterator() {
+                if (values == null) values = elements.get();
+                return values.iterator();
             }
         };
     }

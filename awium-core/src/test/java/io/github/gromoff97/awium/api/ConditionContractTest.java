@@ -1,18 +1,25 @@
 package io.github.gromoff97.awium.api;
 
+import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
+import static io.github.gromoff97.awium.support.TestConditions.check;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
+import static io.github.gromoff97.awium.result.AwaitResult.Failed;
+import static java.time.Duration.ofNanos;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -21,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class ConditionContractTest {
     @Test
     void replacingTheReasonManyTimesStillAllowsEvaluation() throws Throwable {
-        Condition<String, Integer> condition = new TestCondition<>("length", null,
+        Condition<String, Integer> condition = check("length",
                 actual -> satisfied(actual.length()));
         for (int i = 0; i < 50_000; i++) condition = condition.because("updated reason");
 
@@ -80,6 +87,33 @@ class ConditionContractTest {
         assertEquals(5, result.orThrow());
         assertSame(condition, result.conditions().getFirst().condition());
         assertEquals("observed", assertInstanceOf(UnsatisfiedObservation.class, attempts(result).getFirst()).mismatch());
+    }
+
+    @Test
+    void aRunReturnedWithAReasonKeepsItsHistoryAndDiagnostics() {
+        var unused = check("unused", AttemptResult::satisfied);
+        var observed = check("observed", AttemptResult::satisfied);
+        var run = new Condition<String, String>() {
+            @Override public String description() { return "check text"; }
+            @Override public AttemptResult<String> probe(String actual) { return unsatisfied("pending"); }
+            @Override public AttemptResult<?> historyResult(AttemptResult<? extends String> attempt) { return unsatisfied("recorded"); }
+            @Override public int historySlot(Attempt<?> attempt) { return 2; }
+            @Override public List<? extends AwaitCondition> historyConditions(AwaitCondition definition) { return List.of(unused, observed); }
+            @Override public Diagnostic diagnostics(Attempt<?> attempt) { return new Diagnostic(null, new Reference<>("Run detail", "retained")); }
+        }.because("check the prepared run");
+        var definition = new Condition<String, String>() {
+            @Override public String description() { return "prepare text check"; }
+            @Override public AttemptResult<String> probe(String actual) { throw new AssertionError("use the run"); }
+            @Override public Condition<String, String> newRun() { return run; }
+        };
+
+        var result = diagnostic(timedAwait(() -> "actual", new FakeTime(0))).upTo(ofNanos(1)).until(definition);
+
+        assertThat(result.conditions()).extracting(history -> history.condition()).containsExactly(unused, observed);
+        assertThat(result.conditions().getFirst().attempts()).isEmpty();
+        assertEquals("recorded", assertInstanceOf(UnsatisfiedObservation.class,
+                result.conditions().getLast().attempts().lastEntry().getValue()).mismatch());
+        assertThat(assertInstanceOf(Failed.class, result).failure().message()).contains("Run detail: \"retained\"");
     }
 
     @Test

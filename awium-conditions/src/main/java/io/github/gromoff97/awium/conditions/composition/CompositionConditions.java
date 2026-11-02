@@ -11,12 +11,12 @@ public final class CompositionConditions {
     // Family factories supply the type bounds; this package must remain unexported.
     public static <INPUT, VALUE> Condition<INPUT, VALUE> compose(
             String selection, ApplicableCondition<?, ?> nested, AwaitCondition extraction) {
-        return new NestedCondition<INPUT, VALUE, VALUE>(selection, nested, extraction);
+        return new NestedCondition<>(selection, nested, extraction);
     }
 
-    public static <INPUT, VALUE, RESULT> Condition<INPUT, RESULT> compose(
-            String selection, Condition<? super VALUE, RESULT> nested, AwaitCondition extraction) {
-        return new NestedCondition<INPUT, VALUE, RESULT>(selection, nested, extraction);
+    public static <INPUT, RESULT> Condition<INPUT, RESULT> compose(
+            String selection, Condition<?, RESULT> nested, AwaitCondition extraction) {
+        return new NestedCondition<>(selection, nested, extraction);
     }
 
     public static <INPUT> SelectedCondition<INPUT> selected(Condition<INPUT, ?> nested) {

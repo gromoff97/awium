@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
@@ -58,16 +59,33 @@ import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 class FailureDiagnosticsTest {
 
     @Test
+    void aCustomRunWithoutHistoriesStillExplainsItsTerminalAttempt() {
+        var original = new IllegalStateException("receipt is unavailable");
+        var condition = new Condition<String, String>() {
+            @Override public String description() { return "receipt"; }
+            @Override public AttemptResult<String> probe(String actual) { throw original; }
+            @Override public List<AwaitCondition> historyConditions(AwaitCondition definition) { return List.of(); }
+        };
+
+        var result = tryAwait(() -> "order").until(condition);
+
+        assertThat(result.conditions()).isEmpty();
+        assertSame(original, failure(result).cause());
+        assertThat(result.toString()).contains("Condition: receipt", "Last attempt #1: failed (CONDITION)",
+                "Observed now: \"order\"", "Cause: java.lang.IllegalStateException: receipt is unavailable");
+    }
+
+    @Test
     void aRunCanAddFailureDetailsWithoutRepeatingItsProbe() {
         var run = describedRun(() -> new Diagnostic(null, new Reference<>("Detail", "custom")));
         var attempt = new UnsatisfiedObservation<Object>("actual", "not ready", null);
-        run.record(attempt);
-        var outcome = new Timeout(new ExecutionStep<>(false, ACQUISITION, 2, attempt));
+        run.record(1, attempt);
+        var outcome = new Timeout(new ExecutionStep<>(ACQUISITION, 2, attempt));
 
         var report = failure(run.finish(outcome, config(1, 2, 0)));
 
-        assertThat(report.message()).contains("Attempt: 1 (ACQUISITION)", "Condition: ready",
-                "Expected: \"ready\"", "Actual: \"actual\"", "Mismatch: not ready", "Timing:")
+        assertThat(report.message()).contains("Attempt: 1 (ACQUISITION)", "Condition 1: ready",
+                "Expected: \"ready\"", "Observed now: \"actual\"", "Mismatch: not ready", "Timing:")
                 .containsOnlyOnce("Detail: \"custom\"");
     }
 
@@ -78,8 +96,8 @@ class FailureDiagnosticsTest {
             Function<ExecutionStep<Object>, WaitCompletion> completion) {
         var rendering = new AssertionError("custom diagnostics failed");
         var run = describedRun(() -> { throw rendering; });
-        run.record(retained);
-        var outcome = completion.apply(new ExecutionStep<>(false, phase, 2, retained));
+        run.record(1, retained);
+        var outcome = completion.apply(new ExecutionStep<>(phase, 2, retained));
 
         var report = failure(run.finish(outcome, config(1, 2, 0)));
 
@@ -87,7 +105,7 @@ class FailureDiagnosticsTest {
         assertSame(original, report.cause());
         assertThat(report.suppressed()).containsExactly(rendering);
         assertThat(report.message()).contains("Attempt: 1 (" + phase + ")", "Timing:",
-                "Cause:", "Rendering failure: java.lang.AssertionError");
+                "Cause:", "Suppressed: java.lang.AssertionError");
         assertEquals(0, original.getSuppressed().length);
     }
 
@@ -102,7 +120,7 @@ class FailureDiagnosticsTest {
         var result = tryAwait(() -> "ready").until(condition);
         assertSame(probeFailure, failure(result).cause());
         assertThat(failure(result).suppressed()).containsExactly(renderingFailure);
-        assertThat(result.toString()).contains("Condition: <unprintable>", "probe failed");
+        assertThat(result.toString()).contains("Condition 1: <unprintable>", "probe failed");
     }
 
     @Test
@@ -167,11 +185,12 @@ class FailureDiagnosticsTest {
             @Override public String toString() { throw rendering; }
         };
         var metadata = diagnosticCondition("ready", new Reference<>("Expected", expected));
-        var attempt = new ExecutionStep<>(false, phase, 2, retained);
+        var attempt = new ExecutionStep<>(phase, 2, retained);
         var outcome = completion.apply(attempt);
         var configuration = config(1, 2, 0);
         var run = new ConditionRun<Object, Object>(metadata);
-        run.record(retained);
+        run.initialize();
+        run.record(1, retained);
         var report = run.finish(outcome, configuration);
         var returned = failure(report);
         assertEquals(reason, returned.reason());
@@ -205,13 +224,15 @@ class FailureDiagnosticsTest {
     }
 
     private static ConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
-        return new ConditionRun<>(new Condition<Object, Object>() {
+        var run = new ConditionRun<>(new Condition<Object, Object>() {
             @Override public String description() { return "ready"; }
             @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", "ready")); }
             @Override public AttemptResult<Object> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
             @Override public AttemptResult<?> historyResult(AttemptResult<?> attempt) { throw new AssertionError("diagnostics must not project history"); }
             @Override public Diagnostic diagnostics(Attempt<?> attempt) { return diagnostic.get(); }
         });
+        run.initialize();
+        return run;
     }
 
     private static List<Arguments> failureCases() {

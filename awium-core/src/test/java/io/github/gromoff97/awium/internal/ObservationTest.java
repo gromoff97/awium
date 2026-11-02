@@ -125,7 +125,7 @@ class ObservationTest {
             time.advanceNanos(3);
             return AttemptResult.satisfied(result);
         }));
-        WaitCompletion terminal = new WaitEngine<>(withTime(config(1, 20, 0), time, time), () -> {
+        WaitCompletion terminal = new WaitEngine(withTime(config(1, 20, 0), time, time), () -> {
             time.advanceNanos(2);
             return actual;
         }, execution).waitFor();
@@ -358,7 +358,7 @@ class ObservationTest {
 
     private static Attempt<?> attempt(Callable<Object> source, AwaitAttempt<Object, Object> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine<Object>(withTime(config(1, 2, 0), time, time), source, new ConditionRun<>(check("test condition", actual -> {
+        return new WaitEngine(withTime(config(1, 2, 0), time, time), source, new ConditionRun<>(check("test condition", actual -> {
             AttemptResult<?> evaluation = condition.probe(actual);
             time.advanceNanos(2);
             return evaluation;

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
+import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static io.github.gromoff97.awium.support.TestConditions.check;
 import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.time.Duration.ofNanos;
@@ -23,7 +24,7 @@ class FailureSerializationTest {
         var assertion = new AssertionError("not ready");
         var timeout = assertThrows(AwaitAssertionError.class,
                 () -> timedAwait(() -> display, time).every(ofNanos(1)).upTo(ofNanos(2))
-                        .until(check("not ready", value -> io.github.gromoff97.awium.result.AttemptResult.unsatisfied("not ready", assertion))));
+                        .until(check("not ready", value -> unsatisfied("not ready", assertion))));
         Callable<BrokenDisplay> source = () -> { throw new IOException("source failed"); };
         var execution = assertThrows(AwaitExecutionException.class,
                 () -> await(source).until(expected(display)));

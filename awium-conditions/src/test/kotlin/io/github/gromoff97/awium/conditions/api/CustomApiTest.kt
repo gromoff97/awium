@@ -7,7 +7,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
 import io.github.gromoff97.awium.result.AwaitResult.Succeeded
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
@@ -56,7 +56,7 @@ class CustomApiTest {
         val actual = User(42)
         val result = CustomConsumer.nullSelectionResult(actual)
 
-        assertInstanceOf(Succeeded::class.java, result)
+        assertInstanceOf<Succeeded<*, *>>(result)
         assertNull(result.orThrow())
         assertSame(actual, observation(attempts(result).single()))
     }

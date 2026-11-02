@@ -47,20 +47,20 @@ Keep definitions immutable; [custom lifecycles](docs/development.md) support per
 | Factory | Meaning |
 | --- | --- |
 | `satisfied(value)` | Chosen result, including null; pass `actual` to return the observation |
-| `unsatisfied(message)`, `unsatisfied(message, cause)` | Mismatch with a required non-blank message and optional cause |
+| `unsatisfied(message)`, `unsatisfied(message, cause)` | Mismatch with an optional cause |
 | `unsatisfied(diagnostic)`, `unsatisfied(diagnostic, cause)` | Mismatch with structured fields |
-| `satisfied(value, diagnostic)` | Success with fields retained in history or if it arrives after the deadline |
+| `satisfied(value, diagnostic)` | Success with diagnostic fields |
 
 The declared result sets the terminal type: `AttemptResult<CharSequence>` yields
 `CharSequence` even for a `String` source. `mapValue(function)` transforms success
-values and preserves diagnostic data. Every mismatch requires a message, including
-one supplied through `Diagnostic`. Null, empty, or whitespace-only messages are rejected.
+values and preserves diagnostic data. Blank or null mismatch messages, including
+`Diagnostic.mismatch`, cause `IllegalArgumentException`.
 
 ## Reasons
 
-`because(nonBlankReason)` copies the condition, replacing any previous or inherited
-reason. Keep its specific type: `AwaitCondition` alone
-lacks the constraints required by `until`.
+The default `because(nonBlankReason)` copies the condition, preserving lifecycle
+methods and replacing any previous or inherited reason. Keep its specific type:
+`AwaitCondition` alone lacks the constraints required by `until`.
 
 ## Documentation
 

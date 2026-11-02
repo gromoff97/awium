@@ -48,8 +48,8 @@ class SelectorLifecycleTest {
     }
 
     private static <INPUT> void assertIndependentRuns(AwaitCondition selector, INPUT actual) throws Throwable {
-        var first = AwaitAttempt.<INPUT, String>bind(selector);
-        var second = AwaitAttempt.<INPUT, String>bind(selector);
+        var first = AwaitAttempt.<INPUT>bind(selector);
+        var second = AwaitAttempt.<INPUT>bind(selector);
 
         assertEquals(unsatisfied("condition is not yet complete"), first.probe(actual));
         assertEquals(unsatisfied("condition is not yet complete"), second.probe(actual));

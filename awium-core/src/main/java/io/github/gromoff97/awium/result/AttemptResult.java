@@ -48,6 +48,11 @@ public sealed interface AttemptResult<RESULT> {
     record Satisfied<RESULT>(RESULT value, Diagnostic diagnostic) implements AttemptResult<RESULT> {
         public Satisfied { requireNonNull(diagnostic, "diagnostic must not be null"); }
         public Satisfied(RESULT value) { this(value, Diagnostic.EMPTY); }
+
+        @Override
+        public final String toString() {
+            return "Satisfied[value=" + new DiagnosticText(null).value(value) + ", diagnostic=" + diagnostic + "]";
+        }
     }
 
     record Unsatisfied<RESULT>(Diagnostic diagnostic, Throwable cause) implements AttemptResult<RESULT> {

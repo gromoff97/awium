@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.map
 
 import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsExactlyEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.doesNotContainExactlyEntries
@@ -16,7 +16,7 @@ import io.github.gromoff97.awium.conditions.support.ThrowingEquals
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -46,7 +46,7 @@ class MapContentConditionTest {
     @ParameterizedTest
     @MethodSource("rules")
     fun `rejects a missing expected map`(factory: (Map<*, *>?) -> AwaitCondition) {
-        assertThrows(NullPointerException::class.java) { factory(null) }
+        assertThrows<NullPointerException> { factory(null) }
     }
 
     @ParameterizedTest
@@ -75,7 +75,7 @@ class MapContentConditionTest {
     @Test
     fun `compares array keys and values by content`() {
         val actual = EntryMap(listOf(ProbeEntry(intArrayOf(1), intArrayOf(2))))
-        assertSame(actual, result(evaluate(containsExactlyEntries(mapOf(intArrayOf(1) to intArrayOf(2))), actual)))
+        preservesInstance(containsExactlyEntries(mapOf(intArrayOf(1) to intArrayOf(2))), actual)
     }
 
     @Test
@@ -85,7 +85,7 @@ class MapContentConditionTest {
         val actual = EntryMap(listOf(ProbeEntry(key, "value")))
         val expectedMap = EntryMap(listOf(ProbeEntry(expected, "value")))
 
-        assertSame(actual, result(evaluate(containsExactlyEntries(expectedMap), actual)))
+        preservesInstance(containsExactlyEntries(expectedMap), actual)
         assertEquals(1, key.equalsCalls)
         assertEquals(0, expected.equalsCalls)
     }

@@ -21,7 +21,7 @@ import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -43,7 +43,7 @@ class FactoryContractTest {
     @ParameterizedTest
     @MethodSource("missingChecks")
     fun `a missing check is rejected by its factory`(argument: String, create: Executable) {
-        assertEquals("$argument must not be null", assertThrows(NullPointerException::class.java, create).message)
+        assertEquals("$argument must not be null", assertThrows<NullPointerException>(create::execute).message)
     }
 
     companion object {

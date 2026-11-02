@@ -1,4 +1,4 @@
-package io.github.gromoff97.awium.diagnostics;
+package io.github.gromoff97.awium.internal;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

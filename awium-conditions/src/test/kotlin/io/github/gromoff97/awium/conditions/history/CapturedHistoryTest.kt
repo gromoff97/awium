@@ -25,14 +25,14 @@ import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.function.AwaitAttempt
 import java.io.IOException
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.capturedRun
 import java.time.Duration.ofMillis
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -55,7 +55,7 @@ class CapturedHistoryTest {
 
         assertThat(failure(result).message()).contains("stage 2/2", "Expected: \"paid\"",
             "Because: payment must be completed", "Because: checkout lifecycle", "Mismatch: value was not equal")
-            .doesNotContain("payment must be created")
+            .contains("payment must be created")
         assertSame(second, result.conditions().last().condition())
     }
 
@@ -69,12 +69,17 @@ class CapturedHistoryTest {
         val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(captured(paid, shipped))
 
         assertThat(failure(result).message()).contains("""
-            Unsatisfied attempts (condition 1):
-                Through #1: payment pending
-
-            Unsatisfied attempts (condition 2):
-                Through #3: tracking number missing
+            Through #1: unsatisfied
+                Mismatch: payment pending
+                Observed now: "created"
+        """.trimIndent()).contains("""
+            Through #3: unsatisfied
+                Mismatch: tracking number missing
+                Observed now: "paid"
         """.trimIndent())
+        assertEquals(failure(result).message(), result.toString())
+        assertThat(result.toString()).containsOnlyOnce("Mismatch: payment pending")
+            .containsOnlyOnce("Mismatch: tracking number missing")
     }
 
     @Test
@@ -123,11 +128,11 @@ class CapturedHistoryTest {
 
         assertSame(first, result.conditions().first().condition())
         assertTrue(result.conditions().last().attempts().isEmpty())
-        val attempt = assertInstanceOf(FailedBeforeObservation::class.java, attempts(result).single())
+        val attempt = assertInstanceOf<FailedBeforeObservation<*>>(attempts(result).single())
         assertEquals(if (interrupted) WAITING else SOURCE, attempt.operation())
         val failure = failure(result)
         assertEquals(if (interrupted) INTERRUPTED else SOURCE_FAILED, failure.reason())
-        if (interrupted) assertInstanceOf(InterruptedException::class.java, failure.cause())
+        if (interrupted) assertInstanceOf<InterruptedException>(failure.cause())
         else assertSame(cause, failure.cause())
         assertThat(failure.message()).contains("Because: lifecycle", "stage 1/2")
     }
@@ -170,7 +175,7 @@ class CapturedHistoryTest {
 
     @Test
     fun `rechecking a complete run records only its final stage`() {
-        val run = newRun<Int, List<Int>>(captured(equalTo(1), equalTo(2)))
+        val run = capturedRun<Int>(captured(equalTo(1), equalTo(2)))
         val slots = listOf(1, 2, 2, 2).map { actual ->
             run.probe(actual)
             run.historySlot(SatisfiedObservation(actual))
@@ -206,9 +211,9 @@ class CapturedHistoryTest {
         val result = tryAwait(Callable<String?> { if (reads++ == 0) null else throw cause })
             .every(ofNanos(1)).until(captured(isNull, isNull, isNull))
 
-        assertInstanceOf(SatisfiedObservation::class.java, result.conditions().first().attempts().firstEntry().value)
+        assertInstanceOf<SatisfiedObservation<*>>(result.conditions().first().attempts().firstEntry().value)
         val pending = result.conditions()[1]
-        val attempt = assertInstanceOf(FailedBeforeObservation::class.java, pending.attempts().lastEntry().value)
+        val attempt = assertInstanceOf<FailedBeforeObservation<*>>(pending.attempts().lastEntry().value)
         assertSame(cause, attempt.cause())
         assertEquals(SOURCE, attempt.operation())
         assertTrue(result.conditions().last().attempts().isEmpty())
@@ -224,7 +229,7 @@ class CapturedHistoryTest {
         }).every(ofNanos(1)).until(captured(equalTo("ready"), equalTo("done"), equalTo("closed")))
 
         val pending = result.conditions()[1]
-        val attempt = assertInstanceOf(FailedAfterObservation::class.java, pending.attempts().lastEntry().value)
+        val attempt = assertInstanceOf<FailedAfterObservation<*>>(pending.attempts().lastEntry().value)
         assertEquals(2L, pending.attempts().lastKey())
         assertEquals("ready", attempt.observed())
         assertEquals(SOURCE, attempt.operation())
@@ -240,7 +245,7 @@ class CapturedHistoryTest {
 
         val pending = result.conditions().last()
         assertEquals(2L, pending.attempts().lastKey())
-        val attempt = assertInstanceOf(FailedAfterObservation::class.java, pending.attempts().lastEntry().value)
+        val attempt = assertInstanceOf<FailedAfterObservation<*>>(pending.attempts().lastEntry().value)
         assertNull(attempt.observed())
         assertSame(cause, attempt.cause())
         assertEquals(CONDITION, attempt.operation())

@@ -20,7 +20,7 @@ class HasValueTest {
     @Test
     fun `a predicate is called only for present values`() {
         val checked = mutableListOf<String>()
-        val execution = bind<Optional<String>, String>(hasValue { value: String -> checked += value; value == "ready" })
+        val execution = bind<Optional<String>>(hasValue { value: String -> checked += value; value == "ready" })
         execution.probe(Optional.empty())
         execution.probe(Optional.of("ready"))
         assertEquals(listOf("ready"), checked)

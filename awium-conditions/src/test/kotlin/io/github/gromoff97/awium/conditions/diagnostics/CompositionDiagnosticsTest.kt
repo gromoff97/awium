@@ -34,7 +34,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.noValue
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.capturedRun
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
 import io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
@@ -46,10 +46,10 @@ import java.util.Optional
 import java.util.concurrent.Callable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -92,7 +92,7 @@ class CompositionDiagnosticsTest {
         assertEquals(0, key.renders)
         assertSame(key, check.references().first().value())
         assertEquals("ready", check.references().last().value())
-        assertThrows(UnsupportedOperationException::class.java) { (check.references() as MutableList).clear() }
+        assertThrows<UnsupportedOperationException> { (check.references() as MutableList).clear() }
         assertThat(check.references().toString()).contains("Key=<unprintable>", "Expected=\"ready\"")
         assertThat(result.conditions().single().toString()).contains("Key: <unprintable>", "Expected: \"ready\"",
             "Because: selected value must be ready")
@@ -198,10 +198,10 @@ class CompositionDiagnosticsTest {
     @Test
     fun `captured keeps the failed quantifier stage mismatch`() {
         val check = all(condition<Any, Any>("account is active") { unsatisfied("account is not active") })
-        val run = newRun<List<String>, List<List<String>>>(captured(isNotNull, check))
+        val run = capturedRun<List<String>>(captured(isNotNull, check))
         run.probe(listOf("pending"))
         val outcome = run.probe(listOf("pending"))
-        val rejected = assertInstanceOf(Unsatisfied::class.java, outcome)
+        val rejected = assertInstanceOf<Unsatisfied<*>>(outcome)
         assertEquals("not all collection elements matched (checked 1): account is not active", rejected.mismatch())
         assertEquals("all collection elements match: account is active", check.description())
         assertEquals(rejected, run.historyResult(outcome))
@@ -253,9 +253,9 @@ class CompositionDiagnosticsTest {
     @Test
     fun `a missing captured key retains lookup context without initializing its nested check`() {
         val check = valueFor("customerId", conditionPerWait<String, String>("nested") { throw AssertionError("nested factory called") })
-        val run = newRun<Map<String, String>, List<Map<String, String>>>(captured(check, check))
+        val run = capturedRun<Map<String, String>>(captured(check, check))
         val outcome = run.probe(emptyMap())
-        val rejected = assertInstanceOf(Unsatisfied::class.java, outcome)
+        val rejected = assertInstanceOf<Unsatisfied<*>>(outcome)
         assertEquals("map did not contain the expected key", rejected.mismatch())
         assertEquals("customerId", check.references().single().value())
         assertEquals(rejected, run.historyResult(outcome))

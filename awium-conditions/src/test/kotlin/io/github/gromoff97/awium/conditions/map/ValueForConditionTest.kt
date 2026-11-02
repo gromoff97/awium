@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
@@ -18,7 +18,7 @@ class ValueForConditionTest {
     @Test
     fun `a predicate is called only when the key is present`() {
         val checked = mutableListOf<String>()
-        val execution = bind<Map<String, String>, String>(valueFor("key") { value: String -> checked += value; value == "ready" })
+        val execution = bind<Map<String, String>>(valueFor("key") { value: String -> checked += value; value == "ready" })
         execution.probe(emptyMap())
         execution.probe(mapOf("key" to "pending"))
         execution.probe(mapOf("key" to "ready"))
@@ -48,15 +48,15 @@ class ValueForConditionTest {
 
     @Test
     fun `reused execution selects the current value`() {
-        val execution = bind<Map<String, String>, String>(valueFor("key"))
+        val execution = bind<Map<String, String>>(valueFor("key"))
         assertEquals("old", result(execution.probe(mapOf("key" to "old"))))
         assertEquals("new", result(execution.probe(mapOf("key" to "new"))))
     }
 
     @Test
     fun `nested conditions are checked again after success`() {
-        val execution = bind<Map<String, String>, String>(valueFor("key", equalTo("ready")))
+        val execution = bind<Map<String, String>>(valueFor("key", equalTo("ready")))
         assertEquals("ready", result(execution.probe(mapOf("key" to "ready"))))
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(mapOf("key" to "changed")))
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(mapOf("key" to "changed")))
     }
 }

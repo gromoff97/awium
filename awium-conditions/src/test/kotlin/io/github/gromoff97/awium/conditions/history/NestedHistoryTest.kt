@@ -10,7 +10,7 @@ import java.time.Duration.ofNanos
 import java.util.Optional
 import java.util.concurrent.Callable
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 
@@ -26,7 +26,7 @@ class NestedHistoryTest {
         assertEquals("ready", result.orThrow())
         assertEquals(listOf(2L, 4L, 5L), result.conditions().single().attempts().keys.toList())
         assertEquals(listOf("collection size was 0", "single element: collection size was 0"),
-            attempts(result).take(2).map { assertInstanceOf(UnsatisfiedObservation::class.java, it).mismatch() })
+            attempts(result).take(2).map { assertInstanceOf<UnsatisfiedObservation<*>>(it).mismatch() })
         assertSame(check, result.conditions().single().condition())
     }
 
@@ -40,6 +40,6 @@ class NestedHistoryTest {
         assertEquals("ready", result.orThrow())
         assertEquals(listOf("optional was empty", "optional value: collection size was 0",
             "optional value: single element: collection size was 0"),
-            attempts(result).take(3).map { assertInstanceOf(UnsatisfiedObservation::class.java, it).mismatch() })
+            attempts(result).take(3).map { assertInstanceOf<UnsatisfiedObservation<*>>(it).mismatch() })
     }
 }

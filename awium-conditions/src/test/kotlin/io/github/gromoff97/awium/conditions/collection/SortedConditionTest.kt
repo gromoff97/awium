@@ -1,9 +1,8 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.sorted
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import java.util.Comparator.naturalOrder
 import java.util.Comparator.nullsFirst
@@ -11,7 +10,7 @@ import java.util.Comparator.nullsLast
 import java.util.Comparator.reverseOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -24,7 +23,7 @@ class SortedConditionTest {
     @ParameterizedTest
     @MethodSource("orderedValues")
     fun `uses the supplied order and permits equal neighbours`(actual: List<Int?>, comparator: Comparator<Int?>) {
-        assertSame(actual, result(evaluate(sorted(comparator), actual)))
+        preservesInstance(sorted(comparator), actual)
     }
 
     @ParameterizedTest
@@ -42,7 +41,7 @@ class SortedConditionTest {
     fun `zero or one element needs no comparison`(size: Int) {
         val comparator: Comparator<Int> = mock()
         val actual = List(size) { 1 }
-        assertSame(actual, result(evaluate(sorted(comparator), actual)))
+        preservesInstance(sorted(comparator), actual)
         verifyNoInteractions(comparator)
     }
 
@@ -59,7 +58,7 @@ class SortedConditionTest {
 
     @Test
     fun `rejects a missing comparator immediately`() {
-        val cause = assertThrows(NullPointerException::class.java) { sorted<Int>(null) }
+        val cause = assertThrows<NullPointerException> { sorted<Int>(null) }
         assertEquals("comparator must not be null", cause.message)
     }
 

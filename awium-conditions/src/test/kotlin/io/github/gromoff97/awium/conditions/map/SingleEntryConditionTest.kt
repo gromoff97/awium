@@ -10,7 +10,7 @@ import io.github.gromoff97.awium.conditions.support.ProbeContainers.once
 import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -35,9 +35,9 @@ class SingleEntryConditionTest {
         val entries = mutableListOf<Map.Entry<String, String>>(ProbeEntry("key", "old"))
         val actual = EntryMap(entries)
         actual.beforeEntrySet = once { entries.clear() }
-        val execution = bind<Map<String, String>, Map.Entry<String, String>>(singleEntry)
+        val execution = bind<Map<String, String>>(singleEntry)
 
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         val ready = ProbeEntry("key", "ready")
         entries.add(ready)
         assertSame(ready, result(execution.probe(actual)))

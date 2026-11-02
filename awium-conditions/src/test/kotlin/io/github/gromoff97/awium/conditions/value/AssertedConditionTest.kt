@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.common.CommonConditions.asserted
 import io.github.gromoff97.awium.function.checked.CheckedConsumer
@@ -10,7 +9,7 @@ import java.io.IOException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -26,7 +25,7 @@ class AssertedConditionTest {
         val assertion: CheckedConsumer<Any> = mock()
         val actual = Any()
 
-        assertSame(actual, result(evaluate(asserted(assertion), actual)))
+        preservesInstance(asserted(assertion), actual)
         verify(assertion).accept(actual)
     }
 
@@ -57,7 +56,7 @@ class AssertedConditionTest {
 
     @Test
     fun `rejects a missing assertion immediately`() {
-        val failure = assertThrows(NullPointerException::class.java) { asserted<String>(null) }
+        val failure = assertThrows<NullPointerException> { asserted<String>(null) }
         assertEquals("assertion must not be null", failure.message)
     }
 }

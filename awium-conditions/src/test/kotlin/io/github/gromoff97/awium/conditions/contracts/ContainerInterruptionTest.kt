@@ -50,7 +50,7 @@ import java.util.AbstractMap.SimpleImmutableEntry
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -78,7 +78,7 @@ class ContainerInterruptionTest {
         }
         var factories = 0
         val nested = conditionPerWait<String, String>("nested check") { factories++; AwaitAttempt { satisfied(it) } }
-        assertInstanceOf(InterruptedException::class.java, thrown(quantify(nested), actual))
+        assertInstanceOf<InterruptedException>(thrown(quantify(nested), actual))
         assertTrue(currentThread().isInterrupted)
         assertEquals(0, factories)
     }
@@ -100,7 +100,7 @@ class ContainerInterruptionTest {
         val nested = conditionPerWait<String, String>("nested check") { factories++; AwaitAttempt { satisfied(it) } }
         val check = valueFor("key", nested).because("value must be readable")
         val actual = SignallingMap("getValue")
-        assertInstanceOf(InterruptedException::class.java, thrown(if (sequence) captured(check, check) else check, actual))
+        assertInstanceOf<InterruptedException>(thrown(if (sequence) captured(check, check) else check, actual))
         assertEquals(0, factories)
         assertEquals("key", check.references().first().value())
         assertEquals("value must be readable", check.explanation())
@@ -111,7 +111,7 @@ class ContainerInterruptionTest {
     @ValueSource(booleans = [false, true])
     fun `an interrupted narrowing keeps the condition definition`(sequence: Boolean) {
         val check = valueFor("key", instanceOf(String::class.java)).because("value must be readable")
-        assertInstanceOf(InterruptedException::class.java, thrown(if (sequence) captured(check, check) else check, SignallingMap("getValue")))
+        assertInstanceOf<InterruptedException>(thrown(if (sequence) captured(check, check) else check, SignallingMap("getValue")))
         assertEquals("key", check.references().first().value())
         assertEquals("value must be readable", check.explanation())
         assertTrue(currentThread().isInterrupted)
@@ -140,7 +140,7 @@ class ContainerInterruptionTest {
     }
 
     private fun assertInterrupted(check: AwaitCondition, actual: Any, boundary: String, calls: List<String>) {
-        assertInstanceOf(InterruptedException::class.java, thrown(check, actual))
+        assertInstanceOf<InterruptedException>(thrown(check, actual))
         assertThat(calls).contains(boundary)
         assertTrue(currentThread().isInterrupted)
     }

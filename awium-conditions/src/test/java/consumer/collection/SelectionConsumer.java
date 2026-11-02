@@ -26,6 +26,8 @@ import static io.github.gromoff97.awium.conditions.common.CommonConditions.match
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue;
 import static java.time.Duration.ofNanos;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public final class SelectionConsumer {
     private SelectionConsumer() {}
@@ -145,8 +147,8 @@ public final class SelectionConsumer {
     }
 
     public static List<String> nullableSingle() {
-        var values = java.util.Collections.singletonList((String) null);
-        return java.util.Arrays.asList(await(() -> values).until(singleElement),
+        var values = singletonList((String) null);
+        return asList(await(() -> values).until(singleElement),
                 await(() -> values).until(singleElement(matches(value -> value == null))),
                 await(() -> values).until(singleElement(isNull)));
     }

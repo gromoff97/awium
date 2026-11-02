@@ -3,9 +3,8 @@ package io.github.gromoff97.awium.conditions.membership
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.contains
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContain
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsKey
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsValue
@@ -38,9 +37,9 @@ class ContainsConditionTest {
     @MethodSource("subjects")
     fun `inclusion and exclusion are complementary`(subject: Subject) {
         val actual = subject.container(listOf("a", "b"))
-        assertSame(actual, result(evaluate(subject.include("b"), actual)))
+        preservesInstance(subject.include("b"), actual)
         assertThat(rejection(subject.exclude("b"), actual).mismatch()).isNotBlank()
-        assertSame(actual, result(evaluate(subject.exclude("c"), actual)))
+        preservesInstance(subject.exclude("c"), actual)
         assertThat(rejection(subject.include("c"), actual).mismatch()).isNotBlank()
     }
 
@@ -48,7 +47,7 @@ class ContainsConditionTest {
     @MethodSource("subjects")
     fun `null is an ordinary element`(subject: Subject) {
         val actual = subject.container(listOf(null))
-        assertSame(actual, result(evaluate(subject.include(null), actual)))
+        preservesInstance(subject.include(null), actual)
         rejection(subject.exclude(null), actual)
     }
 
@@ -63,8 +62,8 @@ class ContainsConditionTest {
     @MethodSource("subjects")
     fun `compares primitive and nested arrays by content`(subject: Subject) {
         val actual = subject.container(listOf(intArrayOf(1, 2), arrayOf<Any>(intArrayOf(3))))
-        assertSame(actual, result(evaluate(subject.include(intArrayOf(1, 2)), actual)))
-        assertSame(actual, result(evaluate(subject.include(arrayOf<Any>(intArrayOf(3))), actual)))
+        preservesInstance(subject.include(intArrayOf(1, 2)), actual)
+        preservesInstance(subject.include(arrayOf<Any>(intArrayOf(3))), actual)
         rejection(subject.exclude(intArrayOf(1, 2)), actual)
     }
 
@@ -74,7 +73,7 @@ class ContainsConditionTest {
         val element = Directional(true)
         val expected = Directional(false)
         val actual = subject.container(listOf(element))
-        assertSame(actual, result(evaluate(subject.include(expected), actual)))
+        preservesInstance(subject.include(expected), actual)
         assertEquals(1, element.equalsCalls)
         assertEquals(0, expected.equalsCalls)
     }
@@ -88,10 +87,10 @@ class ContainsConditionTest {
         val condition = subject.include(expected)
 
         assertSame(expected, condition.references().single().value())
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
         expected.add("changed")
         element.add("changed")
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @ParameterizedTest

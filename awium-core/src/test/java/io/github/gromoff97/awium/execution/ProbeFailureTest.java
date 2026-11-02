@@ -1,13 +1,15 @@
-package io.github.gromoff97.awium.internal;
+package io.github.gromoff97.awium.execution;
 
-import io.github.gromoff97.awium.execution.ProbeFailure;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
+import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
+import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,7 +39,7 @@ class ProbeFailureTest {
     @Test
     void aLocatedProbeReturnsTheUnchangedSuccessfulResult() throws Throwable {
         var expected = satisfied(42);
-        var execution = new ConditionExecution<String, Integer>(() -> actual -> expected);
+        AwaitAttempt<String, Integer> execution = actual -> expected;
 
         assertSame(expected, execution.probeAt("ready", "receipt"));
     }
@@ -46,10 +48,10 @@ class ProbeFailureTest {
     @ValueSource(booleans = {false, true})
     void aLocatedProbeIdentifiesFactoryAndEvaluatorFailures(boolean factoryFails) {
         var cause = new IOException("offline");
-        var execution = new ConditionExecution<String, Integer>(() -> {
+        AwaitAttempt<String, Integer> execution = bind(checkPerWait("located probe", () -> {
             if (factoryFails) throw cause;
             return actual -> { throw cause; };
-        });
+        }));
 
         var failure = assertThrows(ProbeFailure.class, () -> execution.probeAt("ready", "receipt"));
         assertEquals("receipt", failure.location());
@@ -59,8 +61,8 @@ class ProbeFailureTest {
     @Test
     void nestedProbesKeepTheOriginalFailureAndFullLocation() {
         var cause = new IOException("offline");
-        var inner = new ConditionExecution<String, Integer>(() -> actual -> { throw cause; });
-        var outer = new ConditionExecution<String, Integer>(() -> actual -> inner.probeAt(actual, "receipt"));
+        AwaitAttempt<String, Integer> inner = actual -> { throw cause; };
+        AwaitAttempt<String, Integer> outer = actual -> inner.probeAt(actual, "receipt");
 
         var failure = assertThrows(ProbeFailure.class, () -> outer.probeAt("ready", "payments[2]"));
         assertEquals("payments[2] → receipt", failure.location());

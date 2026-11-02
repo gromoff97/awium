@@ -122,7 +122,7 @@ class TryAwaitFailureTest {
                 }, config(1, 2, 0), time, time),
                 () -> accepted);
         assertThat(sourceFlag.failure().message()).startsWith("Source retrieval interrupted");
-        assertThat(sourceFlag.failure().message()).contains("elapsed 7 ns", "Actual: \"actual\"");
+        assertThat(sourceFlag.failure().message()).contains("elapsed 7 ns", "Observed now: \"actual\"");
     }
 
     @Test
@@ -152,7 +152,8 @@ class TryAwaitFailureTest {
                 TryAwaitFailureTest::brokenDiagnostics);
 
         assertInstanceOf(AssertionError.class, diagnostics.failure().cause());
-        assertThat(diagnostics.failure().suppressed()).singleElement().isInstanceOf(IllegalStateException.class);
+        assertThat(diagnostics.failure().suppressed()).hasSize(2)
+                .allSatisfy(failure -> assertInstanceOf(IllegalStateException.class, failure));
     }
 
     @Test

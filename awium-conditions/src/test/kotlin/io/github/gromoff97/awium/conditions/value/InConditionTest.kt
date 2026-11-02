@@ -1,15 +1,13 @@
 package io.github.gromoff97.awium.conditions.value
 
 import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.`in`
 import io.github.gromoff97.awium.conditions.common.CommonConditions.notIn
 import io.github.gromoff97.awium.conditions.support.Directional
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
@@ -23,7 +21,7 @@ class InConditionTest {
     @ParameterizedTest
     @MethodSource("values")
     fun `membership compares complete values including null and arrays`(actual: Any?, expected: Any?) {
-        assertSame(actual, result(evaluate(`in`(listOf(expected)), actual)))
+        preservesInstance(`in`(listOf(expected)), actual)
         assertEquals("value was in the unexpected values", rejection(notIn(listOf(expected)), actual).mismatch())
     }
 
@@ -32,7 +30,7 @@ class InConditionTest {
         val actual = "ready"
         val candidates = listOf("pending", "failed")
         assertEquals("value was not in the expected values", rejection(`in`(candidates), actual).mismatch())
-        assertSame(actual, result(evaluate(notIn(candidates), actual)))
+        preservesInstance(notIn(candidates), actual)
     }
 
     @ParameterizedTest
@@ -40,13 +38,13 @@ class InConditionTest {
     @ValueSource(strings = ["ready"])
     fun `an empty candidate set excludes every value`(actual: String?) {
         rejection(`in`(emptyList<String>()), actual)
-        assertSame(actual, result(evaluate(notIn(emptyList<String>()), actual)))
+        preservesInstance(notIn(emptyList<String>()), actual)
     }
 
     @ParameterizedTest
     @MethodSource("factories")
     fun `rejects a missing candidate set immediately`(create: (Iterable<Any?>?) -> ComparisonCondition<Any?>) {
-        assertThrows(NullPointerException::class.java) { create(null) }
+        assertThrows<NullPointerException> { create(null) }
     }
 
     @Test
@@ -54,7 +52,7 @@ class InConditionTest {
         val actual = Directional(true)
         val candidate = Directional(false)
 
-        assertSame(actual, result(evaluate(`in`(listOf(candidate)), actual)))
+        preservesInstance(`in`(listOf(candidate)), actual)
         assertEquals(1, actual.equalsCalls)
         assertEquals(0, candidate.equalsCalls)
     }

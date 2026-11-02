@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
+import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
 import static io.github.gromoff97.awium.AwaitCondition.Reference;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
@@ -60,7 +60,7 @@ class ConditionExecutionTest {
     void eachProbeReturnsAnIndependentResultAndSharesOneLazyEvaluator() throws Throwable {
         int[] factories = {0};
         var observations = new ArrayList<String>();
-        Condition<String, Integer> condition = new TestCondition<>("count calls", null, () -> {
+        Condition<String, Integer> condition = checkPerWait("count calls", () -> {
             factories[0]++;
             return actual -> {
                 observations.add(actual);
@@ -85,7 +85,7 @@ class ConditionExecutionTest {
     void thrownAndInvalidResultsBelongToTheirOwnCalls() throws Throwable {
         var failure = new AssertionError("first call failed");
         int[] calls = {0};
-        Condition<String, Integer> condition = new TestCondition<>("three calls", null,
+        Condition<String, Integer> condition = checkPerWait("three calls",
                 () -> actual -> switch (++calls[0]) {
                     case 1 -> throw failure;
                     case 2 -> null;
@@ -101,7 +101,7 @@ class ConditionExecutionTest {
 
     @Test
     void nullIsAValidObservation() throws Throwable {
-        Condition<String, String> condition = new TestCondition<>("preserve null", null,
+        Condition<String, String> condition = checkPerWait("preserve null",
                 () -> AttemptResult::satisfied);
         assertNull(result(bind(condition).probe(null)));
     }
@@ -109,7 +109,7 @@ class ConditionExecutionTest {
     @Test
     void interruptedCallDoesNotInitializeTheConditionAndCanBeRetriedAfterClearingTheFlag() throws Throwable {
         int[] factories = {0};
-        Condition<String, String> condition = new TestCondition<>("preserve", null, () -> {
+        Condition<String, String> condition = checkPerWait("preserve", () -> {
             factories[0]++;
             return AttemptResult::satisfied;
         });
@@ -144,11 +144,10 @@ class ConditionExecutionTest {
 
     @Test
     void ordinaryConditionKeepsMetadataAndCreatesIndependentEvaluators() throws Throwable {
-        Condition<Integer, Integer> ordinary = new TestCondition<>(
-                "counted", null, () -> {
-                    int[] calls = {0};
-                    return ignored -> satisfied(++calls[0]);
-                });
+        Condition<Integer, Integer> ordinary = checkPerWait("counted", () -> {
+            int[] calls = {0};
+            return ignored -> satisfied(++calls[0]);
+        });
         assertEquals("counted", ordinary.description());
         var first = bind(ordinary);
         var second = bind(ordinary);

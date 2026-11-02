@@ -43,6 +43,26 @@ class CompilationContractTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {
+            "AwaitAttempt<String, String> attempt = bind(definition);",
+            "AwaitAttempt<String, String> attempt = AwaitAttempt.<String, String>bind(length);"
+    })
+    void bindingCannotInventAResultType(String expression) {
+        assertRejected("""
+                import io.github.gromoff97.awium.AwaitCondition;
+                import io.github.gromoff97.awium.Condition;
+                import io.github.gromoff97.awium.function.AwaitAttempt;
+                import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
+                final class Contract {
+                    void check(Condition<String, Integer> length) {
+                        AwaitCondition definition = length;
+                        %s
+                    }
+                }
+                """.formatted(expression));
+    }
+
+    @ParameterizedTest
     @MethodSource("invalidFixtures")
     void negativeFixturesRejectValidCodeAndUnrelatedErrors(String source) {
         assertThrows(AssertionError.class, () -> assertRejected(source));

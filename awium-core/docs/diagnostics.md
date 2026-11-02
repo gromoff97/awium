@@ -31,13 +31,11 @@ On failure, ordinary `await` and `orThrow()` throw a wrapper exposing `failure()
 | `AwaitAssertionError extends AssertionError` | `TIMEOUT`, `PERSISTENCE_FAILED` |
 | `AwaitExecutionException extends RuntimeException` | `SOURCE_FAILED`, `CONDITION_FAILED`, `INTERRUPTED`, `WAIT_FAILED` |
 
-Wrappers use `AwaitFailure`'s message and cause. Distinct rendering failures are
-retained by identity in `suppressed()` and wrapper `getSuppressed()`; original
-throwables remain unchanged.
+Wrappers use `AwaitFailure`'s message and cause; `getSuppressed()` mirrors `suppressed()`.
+Additional failures are deduplicated by identity without changing original throwables.
 
 Failure messages include the last attempt's details and unsatisfied reasons in
 attempt order, grouped by condition. Earlier reasons may already be resolved.
-`orThrow()` uses the same message as ordinary `await`.
 
 ## Condition diagnostics
 
@@ -59,10 +57,7 @@ final class ThreeItems implements Condition<List<String>, List<String>> {
 }
 ```
 
-`Diagnostic` contains a `mismatch` and an immutable list of named `fields`.
-The message must be non-blank for an unsatisfied result; success and extra lifecycle
-context may omit it. Null, empty, or whitespace-only mismatch messages cause an
-`IllegalArgumentException`: `unsatisfied message must not be null or blank`.
+`Diagnostic` pairs an optional `mismatch` with an immutable list of named `fields`.
 Here the size is measured once, so later list changes cannot alter that field.
 Field values are retained by reference; use measured scalars or immutable values to
 preserve their contents. A condition-valued field prints its description, operands,
@@ -71,12 +66,14 @@ and reason. Core supplies the layout, stop reason, attempt number, and timing.
 ## Execution failures
 
 Null sources or conditions and invalid eager arguments fail before polling.
-Any throwable escaping a source, check, or evaluator factory stops the wait.
+Any throwable escaping a source, run factory, evaluator factory, probe, or history
+callback stops the wait. Existing execution failures remain primary.
 
-An interrupt flag stops polling and further nested checks, and survives formatting.
+An existing interrupt flag survives run preparation, history callbacks, and formatting;
+it prevents further polls and nested checks.
 Existing condition causes take precedence over a generated interruption cause.
 A thrown `InterruptedException` with a cleared flag is an ordinary failure; its type
-does not restore the flag. Blocked callbacks cannot be forcibly stopped.
+does not restore the flag.
 
 ## Attempts
 
@@ -101,6 +98,8 @@ and optional nested `location()`. Record patterns preserve types without casts.
 
 `result.conditions()` is immutable. Ordinary conditions have one history; custom
 lifecycles define scopes and order. Unreached scopes have empty maps.
+If user history declarations fail, collected observations remain in one history under
+the original condition. `Last attempt #N` explains a terminal failure outside the retained groups.
 Each `ConditionHistory<OBSERVED>` exposes:
 
 | Access | Value |
@@ -108,8 +107,9 @@ Each `ConditionHistory<OBSERVED>` exposes:
 | `condition()` | Original check |
 | `attempts()` | Immutable `NavigableMap<Long, Attempt<OBSERVED>>` |
 
-Consecutive satisfied or unsatisfied attempts share an entry when observations match
-under `Objects.deepEquals` and status, diagnostic data, and exception instance stay unchanged.
+Consecutive satisfied or unsatisfied attempts share an entry when observations and
+diagnostic field values match under `Objects.deepEquals`. Status, mismatch text,
+field labels/order, and exception instance must also match.
 Equal exception text is insufficient. Execution failures remain separate.
 Entries retain the latest observation. Returning to an earlier value starts a new
 entry; phase changes alone do not.
@@ -152,7 +152,7 @@ Histories print the definition, operands, and `Because` reason once, followed by
 `Observed: unavailable` differs from `Observed now: null`. Text is quoted and control
 characters escaped; other objects supply their representation. Cause type/message
 share a field; times use exact units such as `1 s 20 ms`. Rendering failures produce
-`<unprintable>` and `Rendering failure` while preserving other fields.
+`<unprintable>`; secondary errors appear as `Suppressed` without replacing the primary cause.
 
-Terminal failure text saves elapsed time, phase, and custom lifecycle context at
-completion. Histories and operands render their current contents on demand.
+A failed result and its exception share text fixed at completion. Printing either
+does not render values again; printing histories separately shows their current values.

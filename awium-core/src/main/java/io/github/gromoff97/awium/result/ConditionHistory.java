@@ -23,6 +23,6 @@ public record ConditionHistory<OBSERVED>(AwaitCondition condition, NavigableMap<
 
     @Override
     public String toString() {
-        return conditionHistory("Condition", this);
+        return conditionHistory(this);
     }
 }

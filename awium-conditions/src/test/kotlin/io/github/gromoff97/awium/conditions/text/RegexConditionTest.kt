@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.text
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
@@ -13,7 +14,7 @@ import java.util.regex.Pattern.CASE_INSENSITIVE
 import java.util.regex.Pattern.compile
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
@@ -27,7 +28,7 @@ class RegexConditionTest {
     fun `rejects a pattern whose toString returns null`() {
         val pattern: CharSequence = mock()
         `when`(pattern.toString()).thenReturn(null)
-        assertThrows(NullPointerException::class.java) { matchesRegex(pattern) }
+        assertThrows<NullPointerException> { matchesRegex(pattern) }
     }
 
     @ParameterizedTest
@@ -46,7 +47,7 @@ class RegexConditionTest {
         pattern.replace(0, pattern.length, "changed")
 
         val actual = StringBuilder("ready")
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @Test
@@ -57,7 +58,7 @@ class RegexConditionTest {
     @ParameterizedTest
     @MethodSource("missingPatterns")
     fun `rejects a missing pattern before evaluation`(factory: Executable) {
-        assertThrows(NullPointerException::class.java, factory)
+        assertThrows<NullPointerException>(factory::execute)
     }
 
     companion object {

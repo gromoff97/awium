@@ -9,7 +9,6 @@ import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
@@ -38,13 +37,13 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
 
     private final class Run<OBSERVED> implements Condition<OBSERVED, List<OBSERVED>> {
 
-        private final List<AwaitAttempt<OBSERVED, Object>> evaluations;
+        private final List<AwaitAttempt<OBSERVED, ?>> evaluations;
         private final List<OBSERVED> results = new ArrayList<>();
         private int attemptedStage = 1;
         private AttemptResult<?> stageResult;
 
         private Run() {
-            evaluations = stages.stream().map(AwaitAttempt::<OBSERVED, Object>bind).toList();
+            evaluations = stages.stream().<AwaitAttempt<OBSERVED, ?>>map(AwaitAttempt::<OBSERVED>bind).toList();
         }
 
         @Override
@@ -83,15 +82,8 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         @Override
         public Diagnostic diagnostics(Attempt<?> attempt) {
             int stage = historySlot(attempt);
-            var fields = new ArrayList<Reference<?>>();
-            fields.add(new Reference<>("Sequence", "captured " + results.size() + "/" + stages.size()
-                    + "; stage " + stage + "/" + stages.size()));
-            fields.add(new Reference<>("Current stage", stages.get(stage - 1)));
-            if (attempt instanceof SatisfiedObservation<?> && results.size() != stages.size()) {
-                int next = results.size() + 1;
-                fields.add(new Reference<>("Next stage " + next + "/" + stages.size(), stages.get(next - 1)));
-            }
-            return new Diagnostic(null, fields);
+            return new Diagnostic(null, new Reference<>("Sequence",
+                    "captured " + results.size() + "/" + stages.size() + "; stage " + stage + "/" + stages.size()));
         }
     }
 }

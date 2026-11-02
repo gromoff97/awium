@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.function.checked.CheckedPredicate.not
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -34,14 +34,14 @@ class CheckedPredicateTest {
 
     @Test
     fun `negation rejects a missing predicate`() {
-        assertThrows(NullPointerException::class.java) { not<Any>(null) }
+        assertThrows<NullPointerException> { not<Any>(null) }
     }
 
     @ParameterizedTest
     @MethodSource("failures")
     fun `negation propagates the original failure`(cause: Throwable) {
         val predicate = not { _: Any -> throw cause }
-        assertSame(cause, assertThrows(Throwable::class.java) { predicate.test("value") })
+        assertSame(cause, assertThrows<Throwable> { predicate.test("value") })
     }
 
     companion object {

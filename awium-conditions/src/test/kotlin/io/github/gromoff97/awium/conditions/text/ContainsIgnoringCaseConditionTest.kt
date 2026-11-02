@@ -1,13 +1,12 @@
 package io.github.gromoff97.awium.conditions.text
 
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.string.StringConditions.containsIgnoringCase
 import io.github.gromoff97.awium.conditions.support.Characters
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -23,7 +22,7 @@ class ContainsIgnoringCaseConditionTest {
     @Test
     fun `matches characters without rendering the observation`() {
         val actual = Characters("Ready 42")
-        assertSame(actual, result(evaluate(containsIgnoringCase("READY"), actual)))
+        preservesInstance(containsIgnoringCase("READY"), actual)
     }
 
     @Test
@@ -33,7 +32,7 @@ class ContainsIgnoringCaseConditionTest {
         expected.replace(0, expected.length, "changed")
 
         val actual = StringBuilder("READY")
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @Test

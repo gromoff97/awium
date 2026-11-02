@@ -3,7 +3,6 @@ package io.github.gromoff97.awium.result;
 import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.List;
 
-import static io.github.gromoff97.awium.internal.DiagnosticText.conditionHistory;
 import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static java.util.Objects.requireNonNull;
 
@@ -24,15 +23,6 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         };
     }
 
-    private static String withHistory(String summary, List<? extends ConditionHistory<?>> conditions) {
-        var out = new StringBuilder(summary);
-        for (int i = 0; i < conditions.size(); i++) {
-            var history = conditions.get(i);
-            out.append("\n\n").append(conditionHistory("Condition " + (i + 1), history));
-        }
-        return out.toString();
-    }
-
     record Succeeded<OBSERVED, RESULT>(List<ConditionHistory<OBSERVED>> conditions,
             RESULT result) implements AwaitResult<OBSERVED, RESULT> {
 
@@ -45,8 +35,9 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
             var summary = new StringBuilder("Wait satisfied\n");
             var text = new DiagnosticText(null);
             field(summary, "Result", text.value(result));
+            text.histories(summary, conditions);
             text.appendFailures(summary, "    ");
-            return withHistory(summary.substring(0, summary.length() - 1), conditions);
+            return summary.substring(0, summary.length() - 1);
         }
     }
 
@@ -60,7 +51,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
         @Override
         public String toString() {
-            return withHistory(failure.message(), conditions);
+            return failure.message();
         }
     }
 }

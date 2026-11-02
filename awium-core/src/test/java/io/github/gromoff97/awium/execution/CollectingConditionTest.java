@@ -60,8 +60,8 @@ class CollectingConditionTest {
     @Test
     void newRunsKeepTheirCollectedValuesIndependent() throws Throwable {
         var condition = new RecordOnce();
-        var first = AwaitAttempt.<String, List<String>>bind(condition);
-        var second = AwaitAttempt.<String, List<String>>bind(condition);
+        var first = AwaitAttempt.<String>bind(condition);
+        var second = AwaitAttempt.<String>bind(condition);
         var firstResult = result(first.probe("first"));
 
         var secondResult = result(second.probe("second"));

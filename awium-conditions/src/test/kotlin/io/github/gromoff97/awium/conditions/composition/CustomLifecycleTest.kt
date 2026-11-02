@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 
@@ -43,7 +43,7 @@ class CustomLifecycleTest {
         val check = singleElement(CountedCondition(2).because("twice"))
         repeat(2) {
             val execution = bind(check)
-            assertInstanceOf(Unsatisfied::class.java, execution.probe(listOf("ready")))
+            assertInstanceOf<Unsatisfied<*>>(execution.probe(listOf("ready")))
             assertEquals(10, result(execution.probe(listOf("ready"))))
         }
     }

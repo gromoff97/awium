@@ -2,9 +2,9 @@ package io.github.gromoff97.awium.conditions.value
 
 import consumer.value.ComparableConsumer.missingBound
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.atLeast
 import io.github.gromoff97.awium.conditions.common.CommonConditions.atMost
 import io.github.gromoff97.awium.conditions.common.CommonConditions.greaterThan
@@ -12,8 +12,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.lessThan
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -30,14 +29,14 @@ class BoundConditionTest {
     @ParameterizedTest
     @MethodSource("nonUnitComparisons")
     fun `uses the sign of the comparison`(condition: PreservingCondition<String>) {
-        assertSame("m", result(evaluate(condition, "m")))
+        preservesInstance(condition, "m")
     }
 
     @Test
     fun `returns the observed instance when comparison ignores scale`() {
         val actual = BigDecimal("5.00")
         val condition: PreservingCondition<BigDecimal> = atLeast(BigDecimal("5"))
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @Test
@@ -47,7 +46,7 @@ class BoundConditionTest {
 
     @Test
     fun `rejects a missing bound before evaluation`() {
-        assertThrows(NullPointerException::class.java) { missingBound() }
+        assertThrows<NullPointerException> { missingBound() }
     }
 
     companion object {

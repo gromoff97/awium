@@ -5,13 +5,17 @@ import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.ConditionHistory;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.AttemptResult;
+import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.io.IOException;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +50,7 @@ import static io.github.gromoff97.awium.support.TestConditions.expected;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
 import static java.time.Duration.ofNanos;
+import static java.util.Map.entry;
 import static org.apache.commons.lang3.exception.ExceptionUtils.rethrow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -85,13 +90,15 @@ class DiagnosticsSnapshotTest {
                 Wait timed out
                 Attempt: 4 (ACQUISITION)
 
-                Condition: collection to be non-empty
-                    Actual: null
-                    Mismatch: collection was empty
-
                 Timing: elapsed 10 s; timeout 10 s; interval 3 s
                 Last completed after: 9 s
-                Cause: java.lang.AssertionError: collection was empty""", failure.getMessage());
+
+                Condition 1: collection to be non-empty
+
+                Through #4: unsatisfied
+                    Mismatch: collection was empty
+                    Observed now: null
+                    Cause: java.lang.AssertionError: collection was empty""", failure.getMessage());
         assertSame(cause, failure.getCause());
     }
 
@@ -106,11 +113,13 @@ class DiagnosticsSnapshotTest {
                 Wait timed out
                 Attempt: 100 (ACQUISITION)
 
-                Condition: status equals COMPLETED
-                    Actual: "Payment[PENDING]"
-                    Mismatch: status was PENDING
+                Timing: elapsed 10 s 200 ms; timeout 10 s; interval 100 ms
 
-                Timing: elapsed 10 s 200 ms; timeout 10 s; interval 100 ms""", failure.getMessage());
+                Condition 1: status equals COMPLETED
+
+                Through #100: unsatisfied
+                    Mismatch: status was PENDING
+                    Observed now: "Payment[PENDING]\"""", failure.getMessage());
     }
 
     @Test
@@ -124,10 +133,12 @@ class DiagnosticsSnapshotTest {
                 Wait timed out
                 Attempt: 100 (ACQUISITION)
 
-                Condition: status equals COMPLETED
-                    Actual: "Payment[COMPLETED]"
+                Timing: elapsed 10 s 200 ms; timeout 10 s; interval 100 ms
 
-                Timing: elapsed 10 s 200 ms; timeout 10 s; interval 100 ms""", failure.getMessage());
+                Condition 1: status equals COMPLETED
+
+                Through #100: satisfied
+                    Observed now: "Payment[COMPLETED]\"""", failure.getMessage());
     }
 
     @Test
@@ -135,7 +146,7 @@ class DiagnosticsSnapshotTest {
         var cause = new AssertionError("optional was empty");
         var attempt = evaluatedAttempt("Optional.empty", unsatisfied("optional was empty", cause), 9 * SECOND + 100 * MILLISECOND);
         var outcome = new PersistenceFailure(7 * SECOND,
-                new ExecutionStep<>(false, PERSISTENCE, attempt.completedAfterNanos(), attempt.attempt()));
+                new ExecutionStep<>(PERSISTENCE, attempt.completedAfterNanos(), attempt.attempt()));
 
         var failure = renderFailure(diagnosticCondition("optional to remain present", null), PERSISTENCE_FAILED,
                 outcome, config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND), 71);
@@ -144,13 +155,15 @@ class DiagnosticsSnapshotTest {
                 Condition did not stay satisfied
                 Attempt: 71 (PERSISTENCE)
 
-                Condition: optional to remain present
-                    Actual: "Optional.empty"
-                    Mismatch: optional was empty
-
                 Timing: elapsed 9 s 100 ms; timeout 10 s; interval 100 ms
                 Persistence: failed after 2 s 100 ms; required 5 s; acquired after 7 s
-                Cause: java.lang.AssertionError: optional was empty""", failure.getMessage());
+
+                Condition 1: optional to remain present
+
+                Through #71: unsatisfied
+                    Mismatch: optional was empty
+                    Observed now: "Optional.empty"
+                    Cause: java.lang.AssertionError: optional was empty""", failure.getMessage());
         assertSame(cause, failure.getCause());
     }
 
@@ -164,10 +177,13 @@ class DiagnosticsSnapshotTest {
                 Source retrieval failed
                 Attempt: 2 (ACQUISITION)
 
-                Condition: condition
-
                 Timing: elapsed 1 s; timeout 10 s; interval 1 s
-                Cause: java.lang.IllegalStateException: source failed""", failure.getMessage());
+
+                Condition 1: condition
+
+                Through #2: failed (SOURCE)
+                    Observed: unavailable
+                    Cause: java.lang.IllegalStateException: source failed""", failure.getMessage());
     }
 
     @Test
@@ -181,11 +197,13 @@ class DiagnosticsSnapshotTest {
                 Condition evaluation failed
                 Attempt: 3 (ACQUISITION)
 
-                Condition: condition
-                    Actual: "actual"
-
                 Timing: elapsed 1 s; timeout 10 s; interval 1 s
-                Cause: java.lang.IllegalArgumentException: condition failed""", failure.getMessage());
+
+                Condition 1: condition
+
+                Through #3: failed (CONDITION)
+                    Observed now: "actual"
+                    Cause: java.lang.IllegalArgumentException: condition failed""", failure.getMessage());
     }
 
     @Test
@@ -198,10 +216,13 @@ class DiagnosticsSnapshotTest {
                 Waiting failed
                 Attempt: 4 (ACQUISITION)
 
-                Condition: condition
-
                 Timing: elapsed 1 s; timeout 10 s; interval 1 s
-                Cause: java.lang.IllegalStateException: waiting failed""", failure.getMessage());
+
+                Condition 1: condition
+
+                Through #4: failed (WAITING)
+                    Observed: unavailable
+                    Cause: java.lang.IllegalStateException: waiting failed""", failure.getMessage());
     }
 
     @Test
@@ -214,10 +235,13 @@ class DiagnosticsSnapshotTest {
                 Waiting failed
                 Attempt: 5 (ACQUISITION)
 
-                Condition: condition
-
                 Timing: elapsed 1 s; timeout 10 s; interval 1 s
-                Cause: java.lang.InterruptedException: stopped""", failure.getMessage());
+
+                Condition 1: condition
+
+                Through #5: failed (WAITING)
+                    Observed: unavailable
+                    Cause: java.lang.InterruptedException: stopped""", failure.getMessage());
     }
 
     @Test
@@ -254,12 +278,14 @@ class DiagnosticsSnapshotTest {
                 Wait timed out
                 Attempt: 2 (ACQUISITION)
 
-                Condition: condition
-                    Actual: "actual"
-                    Mismatch: business mismatch
-
                 Timing: elapsed 3 s; timeout 2 s; interval 1 s
-                Cause: io.github.gromoff97.awium.internal.DiagnosticsSnapshotTest$CountingAssertion: assertion failed""", failure.getMessage());
+
+                Condition 1: condition
+
+                Through #2: unsatisfied
+                    Mismatch: business mismatch
+                    Observed now: "actual"
+                    Cause: io.github.gromoff97.awium.internal.DiagnosticsSnapshotTest$CountingAssertion: assertion failed""", failure.getMessage());
         assertEquals(1, assertion.calls);
     }
 
@@ -324,12 +350,14 @@ class DiagnosticsSnapshotTest {
                 Wait timed out
                 Attempt: 1 (ACQUISITION)
 
-                Condition: condition
-                    Actual: <unprintable>
-                    Mismatch: not ready
-
                 Timing: elapsed 2 ns; timeout 2 ns; interval 1 ns
-                Rendering failure: java.lang.IllegalArgumentException""", valueFailure.getMessage());
+
+                Condition 1: condition
+
+                Through #1: unsatisfied
+                    Mismatch: not ready
+                    Observed now: <unprintable>
+                Suppressed: java.lang.IllegalArgumentException""", valueFailure.getMessage());
         assertEquals(1, actual.calls);
     }
 
@@ -361,9 +389,9 @@ class DiagnosticsSnapshotTest {
 
         assertNull(failure.getCause());
         assertArrayEquals(new Throwable[]{cause}, failure.getSuppressed());
-        assertThat(failure).hasMessageContainingAll("Condition: expected value",
+        assertThat(failure).hasMessageContainingAll("Condition 1: expected value",
                 "Expected: <unprintable>",
-                "Actual: java.lang.Object@");
+                "Observed now: java.lang.Object@");
         assertEquals(1, expected.calls);
     }
 
@@ -427,7 +455,7 @@ class DiagnosticsSnapshotTest {
 
         assertNull(valueFailure.getCause());
         assertEquals(0, valueFailure.getSuppressed().length);
-        assertThat(valueFailure).hasMessageContainingAll(array ? "Actual: [null]" : "Actual: null", "Timing:");
+        assertThat(valueFailure).hasMessageContainingAll(array ? "Observed now: [null]" : "Observed now: null", "Timing:");
     }
 
     @ParameterizedTest(name = "{displayName} [{index}] tryAwait={0}")
@@ -513,7 +541,7 @@ class DiagnosticsSnapshotTest {
                         .until(check("not ready", actual -> unsatisfied("not ready"))));
         assertNull(diagnosticFailure.getCause());
         assertArrayEquals(new Throwable[]{cause}, diagnosticFailure.getSuppressed());
-        assertThat(diagnosticFailure).hasMessageContainingAll("Rendering failure: " + cause.getClass().getName());
+        assertThat(diagnosticFailure).hasMessageContainingAll("Suppressed: " + cause.getClass().getName());
     }
 
     @Test
@@ -574,15 +602,18 @@ class DiagnosticsSnapshotTest {
                 Source retrieval failed
                 Attempt: 1 (ACQUISITION)
 
-                Condition:
+                Timing: elapsed 0 ns; timeout 2 ns; interval 1 ns
+
+                Condition 1:
                     condition
                     description
 
-                Timing: elapsed 0 ns; timeout 2 ns; interval 1 ns
-                Cause:
-                    java.lang.IllegalStateException: first
+                Through #1: failed (SOURCE)
+                    Observed: unavailable
+                    Cause:
+                        java.lang.IllegalStateException: first
 
-                    second""", sourceFailure.getMessage());
+                        second""", sourceFailure.getMessage());
     }
 
     @Test
@@ -623,15 +654,18 @@ class DiagnosticsSnapshotTest {
 
     private static Throwable renderFailure(AwaitCondition condition, AwaitFailure.Reason reason, WaitCompletion outcome,
             WaitConfiguration configuration, long attemptNumber) {
-        var run = new ConditionRun<>(condition);
-        for (long number = 0; number < attemptNumber; number++) {
-            run.record(new Attempt.SatisfiedObservation<>(null));
-        }
-        return assertFailure(reason, () -> run.finish(outcome, configuration).orThrow());
+        var attempts = new TreeMap<Long, Attempt<Object>>();
+        @SuppressWarnings("unchecked")
+        var attempt = (Attempt<Object>) outcome.step().attempt();
+        attempts.put(attemptNumber, attempt);
+        var histories = List.of(new ConditionHistory<>(condition, attempts));
+        var failure = FailureDiagnostics.failure(condition, ignored -> Diagnostic.EMPTY,
+                outcome, configuration, attemptNumber, histories);
+        return assertFailure(reason, () -> new AwaitResult.Failed<>(histories, failure).orThrow());
     }
 
     private static <OBSERVED> ExecutionStep<OBSERVED> evaluatedAttempt(OBSERVED observed, AttemptResult<?> result, long completedNanos) {
-        return new ExecutionStep<>(false, ACQUISITION, completedNanos,
+        return new ExecutionStep<>(ACQUISITION, completedNanos,
                 switch (result) {
                     case AttemptResult.Satisfied<?> success -> new Attempt.SatisfiedObservation<>(observed, success.diagnostic());
                     case AttemptResult.Unsatisfied<?> mismatch -> new Attempt.UnsatisfiedObservation<>(observed, mismatch.diagnostic(), mismatch.cause());
@@ -639,17 +673,17 @@ class DiagnosticsSnapshotTest {
     }
 
     private static WaitCompletion sourceFailure(Throwable failure, long completedNanos) {
-        return new Uncontrolled(new ExecutionStep<>(false, ACQUISITION, completedNanos,
+        return new Uncontrolled(new ExecutionStep<>(ACQUISITION, completedNanos,
                 new FailedBeforeObservation<>(Operation.SOURCE, failure)));
     }
 
     private static WaitCompletion waitingFailure(Throwable failure, long completedNanos) {
-        return new Uncontrolled(new ExecutionStep<>(false, ACQUISITION, completedNanos,
+        return new Uncontrolled(new ExecutionStep<>(ACQUISITION, completedNanos,
                 new FailedBeforeObservation<>(Operation.WAITING, failure)));
     }
 
     private static WaitCompletion conditionFailure(Object observed, Throwable failure, long completedNanos) {
-        return new Uncontrolled(new ExecutionStep<>(false, ACQUISITION, completedNanos,
+        return new Uncontrolled(new ExecutionStep<>(ACQUISITION, completedNanos,
                 new FailedAfterObservation<>(observed, Operation.CONDITION, failure, null)));
     }
 
@@ -723,7 +757,7 @@ class DiagnosticsSnapshotTest {
         Object expected = switch (shape) {
             case "array" -> new Object[]{signalling, clearing};
             case "list" -> List.of(signalling, clearing);
-            case "entry" -> java.util.Map.entry(signalling, clearing);
+            case "entry" -> entry(signalling, clearing);
             default -> signalling;
         };
         var check = new AwaitCondition.PreservingCondition<Object>() {

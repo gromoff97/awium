@@ -5,9 +5,9 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.cont
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsAny
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainAll
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainAny
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllEntries
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllKeys
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllValues
@@ -23,7 +23,7 @@ import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -70,7 +70,7 @@ class ContainsElementsConditionTest {
     @ParameterizedTest
     @MethodSource("mapMemberships")
     fun `rejects missing expected map contents`(membership: MapMembership) {
-        assertThrows(NullPointerException::class.java) { membership.factory(null) }
+        assertThrows<NullPointerException> { membership.factory(null) }
     }
 
     @Test
@@ -78,7 +78,7 @@ class ContainsElementsConditionTest {
         val cause = IllegalStateException("expected entries failed")
         val expected = EntryMap(listOf(ProbeEntry("key", "value")))
         expected.beforeEntrySet = Runnable { throw cause }
-        assertSame(cause, assertThrows(IllegalStateException::class.java) { doesNotContainAnyEntries(expected) })
+        assertSame(cause, assertThrows<IllegalStateException> { doesNotContainAnyEntries(expected) })
     }
 
     @ParameterizedTest
@@ -111,14 +111,14 @@ class ContainsElementsConditionTest {
     @ParameterizedTest
     @MethodSource("memberships")
     fun `rejects missing expected elements immediately`(membership: Membership) {
-        val cause = assertThrows(NullPointerException::class.java) { membership.factory(null) }
+        val cause = assertThrows<NullPointerException> { membership.factory(null) }
         assertThat(cause.message).contains("elements")
     }
 
     @Test
     fun `nested collections and arrays remain complete elements`() {
         val actual = listOf(listOf("a", "b"), intArrayOf(1, 2))
-        assertSame(actual, result(evaluate(containsAll(listOf(listOf("a", "b"), intArrayOf(1, 2))), actual)))
+        preservesInstance(containsAll(listOf(listOf("a", "b"), intArrayOf(1, 2))), actual)
         rejection(containsAll(listOf(listOf("a"))), actual)
     }
 
@@ -150,7 +150,7 @@ class ContainsElementsConditionTest {
         val actual = listOf(Value("a", comparisons), Value("b", comparisons))
         val expected = listOf(Value("b", mutableListOf()), Value("a", mutableListOf()))
 
-        assertSame(actual, result(evaluate(containsAll(expected), actual)))
+        preservesInstance(containsAll(expected), actual)
         assertEquals(listOf("a->b", "b->b", "a->a"), comparisons)
         assertEquals(emptyList<String>(), expected.flatMap { it.calls })
     }

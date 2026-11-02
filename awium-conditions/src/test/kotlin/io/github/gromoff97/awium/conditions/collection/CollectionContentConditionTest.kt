@@ -7,9 +7,9 @@ import io.github.gromoff97.awium.conditions.collection.CollectionConditions.cont
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainExactly
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainExactlyInAnyOrder
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.subsetOf
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.once
 import io.github.gromoff97.awium.conditions.support.Directional
@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -57,7 +57,7 @@ class CollectionContentConditionTest {
     @ParameterizedTest
     @MethodSource("rules")
     fun `rejects a missing expected collection`(rule: Rule) {
-        assertThrows(NullPointerException::class.java) { rule.factory(null) }
+        assertThrows<NullPointerException> { rule.factory(null) }
     }
 
     @ParameterizedTest
@@ -91,7 +91,7 @@ class CollectionContentConditionTest {
         val expected = Directional(false)
         val actual = listOf(observed)
 
-        assertSame(actual, result(evaluate(rule.factory(listOf(expected)), actual)))
+        preservesInstance(rule.factory(listOf(expected)), actual)
         assertThat(observed.equalsCalls).isGreaterThan(0)
         assertEquals(0, expected.equalsCalls)
     }
@@ -100,7 +100,7 @@ class CollectionContentConditionTest {
     @MethodSource("positiveRules")
     fun `compares arrays by their contents`(rule: Rule) {
         val actual = listOf(intArrayOf(1, 2), null)
-        assertSame(actual, result(evaluate(rule.factory(listOf(intArrayOf(1, 2), null)), actual)))
+        preservesInstance(rule.factory(listOf(intArrayOf(1, 2), null)), actual)
     }
 
     @Test

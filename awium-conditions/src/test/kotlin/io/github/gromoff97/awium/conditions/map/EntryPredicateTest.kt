@@ -13,9 +13,9 @@ import io.github.gromoff97.awium.function.checked.CheckedBiPredicate
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 
 class EntryPredicateTest {
@@ -38,9 +38,9 @@ class EntryPredicateTest {
     @Test
     fun `checks the next observation after a mismatch`() {
         val condition = singleEntry { _: String, value: Int -> value == 42 }
-        val execution = bind<Map<String, Int>, Map.Entry<String, Int>>(condition)
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(mapOf("key" to 1)))
-        assertEquals(42, result(execution.probe(mapOf("key" to 42))).value)
+        val execution = bind<Map<String, Int>>(condition)
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(mapOf("key" to 1)))
+        assertEquals(mapOf("key" to 42).entries.single(), result(execution.probe(mapOf("key" to 42))))
     }
 
     @Test
@@ -52,12 +52,12 @@ class EntryPredicateTest {
 
     @Test
     fun `rejects a missing predicate`() {
-        val failure = assertThrows(NullPointerException::class.java) { singleEntry(null as CheckedBiPredicate<String, Int>?) }
+        val failure = assertThrows<NullPointerException> { singleEntry(null as CheckedBiPredicate<String, Int>?) }
         assertEquals("predicate must not be null", failure.message)
     }
 
     @Test
     fun `entry quantifiers reject a missing paired predicate`() {
-        assertThrows(NullPointerException::class.java) { allEntries(null as CheckedBiPredicate<String, Int>?) }
+        assertThrows<NullPointerException> { allEntries(null as CheckedBiPredicate<String, Int>?) }
     }
 }

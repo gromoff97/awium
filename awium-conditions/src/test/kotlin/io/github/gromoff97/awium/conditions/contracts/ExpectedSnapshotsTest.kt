@@ -3,9 +3,9 @@ package io.github.gromoff97.awium.conditions.contracts
 import io.github.gromoff97.awium.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsAll
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsAllEntries
@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -128,7 +128,7 @@ class ExpectedSnapshotsTest {
         val check = containsExactlyEntries(expected)
         expected.clear()
         assertEquals(2, actual.size)
-        assertSame(actual, result(evaluate(check, actual)))
+        preservesInstance(check, actual)
     }
 
     @Test
@@ -138,7 +138,7 @@ class ExpectedSnapshotsTest {
         expected[key] = "value"
         val check = containsExactlyEntries(expected)
         assertEquals(0, key.equalsCalls)
-        assertSame(expected, result(evaluate(check, expected)))
+        preservesInstance(check, expected)
     }
 
     @Test
@@ -150,15 +150,15 @@ class ExpectedSnapshotsTest {
         expected.clear()
         element.append(" changed")
         assertSame(element, snapshot.single())
-        assertThrows(UnsupportedOperationException::class.java) { snapshot.clear() }
+        assertThrows<UnsupportedOperationException> { snapshot.clear() }
         val actual = listOf(element)
-        assertSame(actual, result(evaluate(check, actual)))
+        preservesInstance(check, actual)
     }
 
     @Test
     fun `text expectation references are read only`() {
         val snapshot = StringConditions.containsAll(listOf("before")).references().single().value() as MutableList<*>
-        assertThrows(UnsupportedOperationException::class.java) { snapshot.clear() }
+        assertThrows<UnsupportedOperationException> { snapshot.clear() }
     }
 
     @Test
@@ -168,10 +168,10 @@ class ExpectedSnapshotsTest {
         expected["b"] = "after"
         expected.remove("a")
         assertEquals("[b=before, a=null]", snapshot.toString())
-        assertThrows(UnsupportedOperationException::class.java) { snapshot.clear() }
+        assertThrows<UnsupportedOperationException> { snapshot.clear() }
         @Suppress("UNCHECKED_CAST")
         val first = snapshot.first() as MutableMap.MutableEntry<String, String?>
-        assertThrows(UnsupportedOperationException::class.java) { first.setValue(null) }
+        assertThrows<UnsupportedOperationException> { first.setValue(null) }
     }
 
     companion object {

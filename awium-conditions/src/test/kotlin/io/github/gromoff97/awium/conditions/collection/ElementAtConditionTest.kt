@@ -14,10 +14,10 @@ import java.util.SequencedCollection
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -56,13 +56,13 @@ class ElementAtConditionTest {
 
     @Test
     fun `rejects a negative index immediately`() {
-        val failure = assertThrows(IllegalArgumentException::class.java) { elementAt(-1) }
+        val failure = assertThrows<IllegalArgumentException> { elementAt(-1) }
         assertEquals("index must be non-negative", failure.message)
     }
 
     @Test
     fun `a reused evaluator reads the latest last element`() {
-        val execution = bind<List<Int>, Int>(lastElement)
+        val execution = bind<List<Int>>(lastElement)
         for (last in 1..3) assertEquals(last, result(execution.probe(listOf(last))))
     }
 
@@ -94,9 +94,9 @@ class ElementAtConditionTest {
     ) {
         val actual = create()
         actual.add("old")
-        val execution = bind<SequencedCollection<String>, String>(condition)
+        val execution = bind<SequencedCollection<String>>(condition)
 
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         actual.add("ready")
         assertEquals("ready", result(execution.probe(actual)))
     }

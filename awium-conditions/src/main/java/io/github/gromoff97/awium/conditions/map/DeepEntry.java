@@ -22,7 +22,7 @@ record DeepEntry(Entry<?, ?> entry) {
 
     static Object reference(Object value) {
         if (value instanceof DeepEntry pair) return pair.entry;
-        if (value instanceof List<?> values && values.stream().anyMatch(DeepEntry.class::isInstance)) {
+        if (value instanceof List<?> values) {
             return values.stream().map(DeepEntry::reference).toList();
         }
         return value;

@@ -1,8 +1,7 @@
 package io.github.gromoff97.awium.conditions.text
 
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.string.StringConditions.blank
 import io.github.gromoff97.awium.conditions.string.StringConditions.nonBlank
 import io.github.gromoff97.awium.conditions.support.Characters
@@ -25,7 +24,7 @@ class BlankConditionTest {
         val matching = if (isBlank) blank else nonBlank
         val mismatching = if (isBlank) nonBlank else blank
 
-        assertSame(actual, result(evaluate(matching, actual)))
+        preservesInstance(matching, actual)
         assertNull(rejection(mismatching, actual).cause())
     }
 
@@ -40,7 +39,7 @@ class BlankConditionTest {
             }
         }
 
-        assertSame(actual, result(evaluate(blank, actual)))
+        preservesInstance(blank, actual)
     }
 
     @Test

@@ -1,14 +1,12 @@
 package io.github.gromoff97.awium.conditions.text
 
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.string.StringConditions
 import io.github.gromoff97.awium.conditions.support.Characters
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,14 +23,14 @@ class TextMatchConditionTest {
         expected.replace(0, expected.length, "changed")
         val actual = StringBuilder(example.matching)
 
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
         rejection(condition, example.mismatch)
     }
 
     @ParameterizedTest
     @MethodSource("examples")
     fun `rejects missing expected text immediately`(example: Example) {
-        assertThrows(NullPointerException::class.java) { example.factory(null) }
+        assertThrows<NullPointerException> { example.factory(null) }
     }
 
     @ParameterizedTest
@@ -41,20 +39,20 @@ class TextMatchConditionTest {
         val expected: CharSequence = mock()
         `when`(expected.toString()).thenReturn(null)
 
-        val failure = assertThrows(NullPointerException::class.java) { example.factory(expected) }
+        val failure = assertThrows<NullPointerException> { example.factory(expected) }
         assertEquals("text.toString() must not return null", failure.message)
     }
 
     @Test
     fun `contentEquals reads characters without rendering the observation`() {
         val actual = Characters("ready")
-        assertSame(actual, result(evaluate(StringConditions.contentEquals("ready"), actual)))
+        preservesInstance(StringConditions.contentEquals("ready"), actual)
     }
 
     @Test
     fun `contentEquals accepts empty text`() {
         val actual = StringBuilder()
-        assertSame(actual, result(evaluate(StringConditions.contentEquals(""), actual)))
+        preservesInstance(StringConditions.contentEquals(""), actual)
     }
 
     @Test

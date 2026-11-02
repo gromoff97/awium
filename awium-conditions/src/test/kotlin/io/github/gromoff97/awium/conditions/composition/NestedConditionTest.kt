@@ -30,9 +30,9 @@ import java.io.IOException
 import java.util.Optional
 import java.util.AbstractMap.SimpleImmutableEntry
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.AfterEach
@@ -77,9 +77,9 @@ class NestedConditionTest {
         val actual = selection.wrap(selected)
 
         repeat(2) { completedRuns ->
-            val execution = bind<Any, Number>(condition)
+            val execution = bind<Any>(condition)
             assertEquals(completedRuns, factories)
-            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+            assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
             assertSame(selected, result(execution.probe(actual)))
             assertEquals(completedRuns + 1, factories)
         }
@@ -109,10 +109,10 @@ class NestedConditionTest {
         val execution = bind(singleElement(nested))
 
         for (actual in listOf(emptyList(), listOf(42, 42), listOf(1, 42))) {
-            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+            assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         }
         assertEquals(0, checked)
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(listOf(1)))
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(listOf(1)))
         assertEquals(42, result(execution.probe(listOf(42))))
         assertEquals(2, checked)
     }
@@ -127,7 +127,7 @@ class NestedConditionTest {
         val execution = bind(valueFor("key", nested))
 
         for (actual in listOf(null, emptyMap(), mapOf("other" to 2))) {
-            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+            assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         }
         assertEquals(emptyList<String>(), events)
         assertEquals(1, result(execution.probe(mapOf("key" to 1, "other" to 2))))
@@ -145,7 +145,7 @@ class NestedConditionTest {
         val execution = bind(singleEntry(nested))
 
         for (actual in listOf(null, emptyMap(), mapOf("key" to 2, "other" to 1))) {
-            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+            assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         }
         assertEquals(emptyList<String>(), events)
         assertEquals(1, result(execution.probe(mapOf("key" to 1))))
@@ -170,13 +170,13 @@ class NestedConditionTest {
                 get() { Thread.currentThread().interrupt(); return super.value }
         }
         val nested = conditionPerWait<String, String>("must not run") { throw AssertionError("nested factory called") }
-        assertInstanceOf(InterruptedException::class.java, thrown(valueFor("key", nested), EntryMap(listOf(entry))))
+        assertInstanceOf<InterruptedException>(thrown(valueFor("key", nested), EntryMap(listOf(entry))))
         assertTrue(Thread.currentThread().isInterrupted)
     }
 
     @Test
     fun `single entry rejects a missing nested condition`() {
-        assertThrows(NullPointerException::class.java) { singleEntry(null as PreservingCondition<Map.Entry<String, Int>>?) }
+        assertThrows<NullPointerException> { singleEntry(null as PreservingCondition<Map.Entry<String, Int>>?) }
     }
 
     @ParameterizedTest
@@ -189,7 +189,7 @@ class NestedConditionTest {
     @ParameterizedTest
     @MethodSource("positions")
     fun `positional selectors reject a missing nested condition`(select: (Condition<Any, String>?) -> AwaitCondition) {
-        assertEquals("condition must not be null", assertThrows(NullPointerException::class.java) { select(null) }.message)
+        assertEquals("condition must not be null", assertThrows<NullPointerException> { select(null) }.message)
     }
 
     @Test
@@ -201,12 +201,12 @@ class NestedConditionTest {
 
     @Test
     fun `a negative index is rejected before creating a nested selector`() {
-        assertThrows(IllegalArgumentException::class.java) { elementAt(-1, instanceOf(String::class.java)) }
+        assertThrows<IllegalArgumentException> { elementAt(-1, instanceOf(String::class.java)) }
     }
 
     @Test
     fun `single element rejects a missing preserving condition`() {
-        assertEquals("condition must not be null", assertThrows(NullPointerException::class.java) {
+        assertEquals("condition must not be null", assertThrows<NullPointerException> {
             singleElement(null as PreservingCondition<String>?)
         }.message)
     }
@@ -214,15 +214,15 @@ class NestedConditionTest {
     @ParameterizedTest
     @MethodSource("nullableCollections")
     fun `a nested selector can recover after a null collection`(condition: AwaitCondition) {
-        val execution = bind<List<String>?, String>(condition)
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(null))
+        val execution = bind<List<String>?>(condition)
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(null))
         assertEquals(" ", result(execution.probe(listOf(" "))))
     }
 
     @Test
     fun `a nested null result fails the probe`() {
         val invalid = condition<String, String>("invalid") { null }
-        assertInstanceOf(NullPointerException::class.java, thrown(singleElement(invalid), listOf("ready")))
+        assertInstanceOf<NullPointerException>(thrown(singleElement(invalid), listOf("ready")))
     }
 
     @ParameterizedTest
@@ -245,7 +245,7 @@ class NestedConditionTest {
             false
         }
         val condition = if (last) lastElement(predicate) else firstElement(predicate)
-        assertInstanceOf(InterruptedException::class.java, thrown(condition, listOf(1, 2)))
+        assertInstanceOf<InterruptedException>(thrown(condition, listOf(1, 2)))
         assertEquals(1, calls)
         assertTrue(Thread.currentThread().isInterrupted)
     }

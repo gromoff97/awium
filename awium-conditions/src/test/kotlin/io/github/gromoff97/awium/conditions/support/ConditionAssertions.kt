@@ -1,8 +1,7 @@
 package io.github.gromoff97.awium.conditions.support
 
 import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.AwaitCondition.CollectingCondition
 import io.github.gromoff97.awium.Condition
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.execution.ProbeFailure
@@ -14,43 +13,39 @@ import io.github.gromoff97.awium.result.AttemptResult
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Assertions.fail
 
 object ConditionAssertions {
     @Suppress("UNCHECKED_CAST")
-    fun <INPUT, RESULT> newRun(condition: AwaitCondition): Condition<INPUT, RESULT> =
-        condition.newRun() as Condition<INPUT, RESULT>
+    fun <OBSERVED> capturedRun(condition: CollectingCondition<*>): Condition<OBSERVED, List<OBSERVED>> =
+        condition.newRun() as Condition<OBSERVED, List<OBSERVED>>
 
     fun evaluate(condition: AwaitCondition, actual: Any?): AttemptResult<*> =
-        AwaitAttempt.bind<Any?, Any?>(condition).probe(actual)
+        AwaitAttempt.bind<Any?>(condition).probe(actual)
 
     fun rejection(condition: AwaitCondition, actual: Any?): Unsatisfied<*> =
-        assertInstanceOf(Unsatisfied::class.java, evaluate(condition, actual))
+        assertInstanceOf<Unsatisfied<*>>(evaluate(condition, actual))
 
     fun thrown(condition: AwaitCondition, actual: Any?): Throwable {
-        val failure = assertThrows(Throwable::class.java) { evaluate(condition, actual) }
+        val failure = assertThrows<Throwable> { evaluate(condition, actual) }
         return if (failure is ProbeFailure) failure.cause!! else failure
     }
 
-    fun <SOURCE, RESULT> evaluate(condition: Condition<in SOURCE, out RESULT>, actual: SOURCE): AttemptResult<out RESULT> =
-        AwaitAttempt.bind(condition).probe(actual)
-
-    fun <SOURCE> evaluate(condition: PreservingCondition<in SOURCE>, actual: SOURCE): AttemptResult<out SOURCE> =
-        AwaitAttempt.bind<SOURCE, SOURCE>(condition).probe(actual)
-
-    fun <SOURCE> evaluate(condition: ComparisonCondition<out SOURCE>, actual: SOURCE): AttemptResult<out SOURCE> =
-        AwaitAttempt.bind<SOURCE, SOURCE>(condition).probe(actual)
+    fun preservesInstance(condition: AwaitCondition, actual: Any?) {
+        assertSame(actual, result(evaluate(condition, actual)))
+    }
 
     fun <RESULT> result(evaluation: AttemptResult<out RESULT>): RESULT =
         if (evaluation is Satisfied<out RESULT>) evaluation.value() else fail("expected a satisfied condition, got $evaluation", evaluation.cause())
 
     fun mismatch(evaluation: AttemptResult<*>): String? =
-        assertInstanceOf(Unsatisfied::class.java, evaluation).mismatch()
+        assertInstanceOf<Unsatisfied<*>>(evaluation).mismatch()
 
     fun failure(result: AwaitResult<*, *>): AwaitFailure =
-        assertInstanceOf(AwaitResult.Failed::class.java, result).failure()
+        assertInstanceOf<AwaitResult.Failed<*, *>>(result).failure()
 
     fun failure(expected: Reason, result: AwaitResult<*, *>): AwaitFailure =
         failure(result).also { assertEquals(expected, it.reason()) }
@@ -66,5 +61,5 @@ object ConditionAssertions {
     }
 
     fun uncontrolled(operation: Attempt.Operation, attempt: Attempt<*>): Attempt.Failure<*> =
-        assertInstanceOf(Attempt.Failure::class.java, attempt).also { assertEquals(operation, it.operation()) }
+        assertInstanceOf<Attempt.Failure<*>>(attempt).also { assertEquals(operation, it.operation()) }
 }

@@ -16,7 +16,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.function.AwaitAttempt.bind
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.capturedRun
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.Attempt.Operation.CONDITION
@@ -33,9 +33,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -57,7 +57,7 @@ class CompositionFailureTest {
         }
         val check = if (sequence) captured(nested, isNotNull) else hasValue(nested)
         val actual = if (sequence) "ready" else Optional.of("ready")
-        assertInstanceOf(InterruptedException::class.java, thrown(check, actual))
+        assertInstanceOf<InterruptedException>(thrown(check, actual))
         assertEquals(listOf("factory"), events)
         assertTrue(Thread.currentThread().isInterrupted)
     }
@@ -79,7 +79,7 @@ class CompositionFailureTest {
             Thread.currentThread().interrupt()
             if (throwing) throw cause else unsatisfied("not ready", cause)
         })
-        val failure = assertThrows(ProbeFailure::class.java) { bind(check).probe(Optional.of("actual")) }
+        val failure = assertThrows<ProbeFailure> { bind(check).probe(Optional.of("actual")) }
         assertSame(cause, failure.cause)
         assertEquals("optional value", failure.location())
         assertTrue(Thread.currentThread().isInterrupted)
@@ -103,13 +103,13 @@ class CompositionFailureTest {
                 null
             } else satisfied(it)
         }
-        val run = newRun<String, List<String>>(captured(broken, isNotNull))
-        assertThat(assertThrows(NullPointerException::class.java) { run.probe("actual") })
+        val run = capturedRun<String>(captured(broken, isNotNull))
+        assertThat(assertThrows<NullPointerException> { run.probe("actual") })
             .hasMessage("condition returned null AttemptResult")
         assertEquals(interrupted, Thread.currentThread().isInterrupted)
         Thread.interrupted()
         brokenResult = false
-        assertInstanceOf(Unsatisfied::class.java, run.probe("first"))
+        assertInstanceOf<Unsatisfied<*>>(run.probe("first"))
         assertEquals(listOf("first", "second"), result(run.probe("second")))
     }
 

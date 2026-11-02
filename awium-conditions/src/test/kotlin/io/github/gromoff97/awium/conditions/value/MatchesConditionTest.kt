@@ -1,15 +1,14 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -26,7 +25,7 @@ class MatchesConditionTest {
         val predicate: CheckedPredicate<Any> = mock()
         `when`(predicate.test(actual)).thenReturn(true)
 
-        assertSame(actual, result(evaluate(matches(predicate), actual)))
+        preservesInstance(matches(predicate), actual)
         verify(predicate).test(actual)
     }
 
@@ -34,7 +33,7 @@ class MatchesConditionTest {
     @NullAndEmptySource
     @ValueSource(strings = ["ready"])
     fun `the predicate decides whether null or any other value matches`(actual: String?) {
-        assertSame(actual, result(evaluate(matches<String?> { it === actual }, actual)))
+        preservesInstance(matches<String?> { it === actual }, actual)
     }
 
     @Test
@@ -52,7 +51,7 @@ class MatchesConditionTest {
 
     @Test
     fun `rejects a missing predicate immediately`() {
-        val failure = assertThrows(NullPointerException::class.java) { matches<Any>(null) }
+        val failure = assertThrows<NullPointerException> { matches<Any>(null) }
         assertEquals("predicate must not be null", failure.message)
     }
 

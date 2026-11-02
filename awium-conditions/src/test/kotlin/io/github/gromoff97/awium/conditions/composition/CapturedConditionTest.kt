@@ -15,7 +15,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
 import io.github.gromoff97.awium.conditions.common.CommonConditions.matches
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.newRun
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.capturedRun
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
@@ -24,11 +24,11 @@ import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import java.time.Duration.ofNanos
 import java.util.concurrent.Callable
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.AfterEach
@@ -60,12 +60,12 @@ class CapturedConditionTest {
 
     @Test
     fun `a null reason is rejected`() {
-        assertThrows(NullPointerException::class.java) { captured(isNotNull).because(null) }
+        assertThrows<NullPointerException> { captured(isNotNull).because(null) }
     }
 
     @Test
     fun `a blank reason is rejected`() {
-        assertThrows(IllegalArgumentException::class.java) { captured(isNotNull).because(" \n\t") }
+        assertThrows<IllegalArgumentException> { captured(isNotNull).because(" \n\t") }
     }
 
     @Test
@@ -78,17 +78,17 @@ class CapturedConditionTest {
     @Test
     fun `the stage list cannot be modified`() {
         val stages = captured(equalTo("early"), equalTo("final")).stages()
-        assertThrows(UnsupportedOperationException::class.java) { (stages as MutableList).clear() }
+        assertThrows<UnsupportedOperationException> { (stages as MutableList).clear() }
     }
 
     @Test
     fun `an empty stage array is rejected`() {
-        assertThrows(IllegalArgumentException::class.java) { captured(*emptyArray<PreservingCondition<String>>()) }
+        assertThrows<IllegalArgumentException> { captured(*emptyArray<PreservingCondition<String>>()) }
     }
 
     @Test
     fun `a null stage array is rejected`() {
-        assertThrows(NullPointerException::class.java) { CapturedConsumer.nullStages() }
+        assertThrows<NullPointerException> { CapturedConsumer.nullStages() }
     }
 
     @ParameterizedTest
@@ -96,13 +96,13 @@ class CapturedConditionTest {
     fun `a null stage is rejected before evaluation`(index: Int) {
         val stages = arrayOf<PreservingCondition<String>?>(matches { true }, matches { true }, matches { true })
         stages[index] = null
-        assertThrows(NullPointerException::class.java) { captured(*stages) }
+        assertThrows<NullPointerException> { captured(*stages) }
     }
     @Test
     fun `selector stages capture whole observations instead of their selected values`() {
         val first = listOf("first", 1)
         val last = listOf(2, "last")
-        val run = newRun<List<Any>, List<List<Any>>>(captured(firstElement(instanceOf(String::class.java)),
+        val run = capturedRun<List<Any>>(captured(firstElement(instanceOf(String::class.java)),
             lastElement(instanceOf(String::class.java))))
 
         run.probe(first)
@@ -114,11 +114,11 @@ class CapturedConditionTest {
     @Test
     fun `a pending nested stage preserves earlier captures`() {
         val pending = listOf(false)
-        val run = newRun<List<Boolean>, List<List<Boolean>>>(captured(
+        val run = capturedRun<List<Boolean>>(captured(
             singleElement(matches { ready: Boolean -> !ready }), singleElement(matches { ready: Boolean -> ready })))
         run.probe(pending)
 
-        repeat(2) { assertInstanceOf(Unsatisfied::class.java, run.probe(pending)) }
+        repeat(2) { assertInstanceOf<Unsatisfied<*>>(run.probe(pending)) }
         val ready = listOf(true)
         assertEquals(listOf(pending, ready), result(run.probe(ready)))
     }
@@ -131,7 +131,7 @@ class CapturedConditionTest {
             var calls = 0
             AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("retry") }
         }
-        val run = newRun<List<String>, List<List<String>>>(captured(singleElement(nested), singleElement(nested)))
+        val run = capturedRun<List<String>>(captured(singleElement(nested), singleElement(nested)))
 
         repeat(3) { run.probe(listOf("ready")) }
         assertEquals(List(2) { listOf("ready") }, result(run.probe(listOf("ready"))))
@@ -148,7 +148,7 @@ class CapturedConditionTest {
         }
         val sequence = captured(afterRetry, equalTo("pending"), afterRetry)
         repeat(2) {
-            val run = newRun<String, List<String>>(sequence)
+            val run = capturedRun<String>(sequence)
             for (actual in listOf("created", "created", "pending", "created")) run.probe(actual)
             assertEquals(listOf("created", "pending", "created"), result(run.probe("created")))
         }
@@ -157,10 +157,10 @@ class CapturedConditionTest {
 
     @Test
     fun `captured results cannot be modified`() {
-        val run = newRun<List<String>, List<List<String>>>(captured(singleElement, singleElement))
+        val run = capturedRun<List<String>>(captured(singleElement, singleElement))
         run.probe(listOf("ready"))
         val captured = result(run.probe(listOf("ready")))
-        assertThrows(UnsupportedOperationException::class.java) { (captured as MutableList).clear() }
+        assertThrows<UnsupportedOperationException> { (captured as MutableList).clear() }
     }
 
     @Test
@@ -168,7 +168,7 @@ class CapturedConditionTest {
         val first = mapOf<String, Number?>("first" to null)
         val acquired = mapOf<String, Number?>("last" to 2)
         val refreshed = mapOf<String, Number?>("last" to 3)
-        val run = newRun<Map<String, Number?>, List<Map<String, Number?>>>(
+        val run = capturedRun<Map<String, Number?>>(
             captured(valueFor("first"), valueFor("last", isNotNull)))
 
         run.probe(first)
@@ -184,7 +184,7 @@ class CapturedConditionTest {
         val first = listOf("first", "ignored")
         val acquired = listOf("ignored", "acquired")
         val refreshed = listOf("ignored", "refreshed")
-        val run = newRun<List<String>, List<List<String>>>(captured(firstElement, lastElement))
+        val run = capturedRun<List<String>>(captured(firstElement, lastElement))
         run.probe(first)
         run.probe(acquired)
         val captured = result(run.probe(refreshed))
@@ -202,7 +202,7 @@ class CapturedConditionTest {
         val second = matches { _: String -> Thread.currentThread().interrupt(); matching }
         val result = tryAwait(Callable { "ready" }).every(ofNanos(1)).until(captured(first, second))
 
-        assertInstanceOf(InterruptedException::class.java, failure(result).cause())
+        assertInstanceOf<InterruptedException>(failure(result).cause())
         assertTrue(failure(result).message().contains("captured ${stage - 1}/2"))
         assertTrue(Thread.currentThread().isInterrupted)
     }
@@ -211,11 +211,11 @@ class CapturedConditionTest {
     fun `each probe advances at most one stage`() {
         var calls = 0
         val stage = matches { value: Int -> calls++; value == 1 }
-        val run = newRun<Int, List<Int>>(captured(stage, stage, stage))
+        val run = capturedRun<Int>(captured(stage, stage, stage))
         for (count in 1..3) {
             val outcome = run.probe(1)
             assertEquals(count == 3, outcome is Satisfied<*>)
-            assertInstanceOf(Satisfied::class.java, run.historyResult(outcome))
+            assertInstanceOf<Satisfied<*>>(run.historyResult(outcome))
             assertEquals(count, calls)
             if (count == 3) assertEquals(listOf(1, 1, 1), result(outcome))
         }
@@ -225,7 +225,7 @@ class CapturedConditionTest {
     fun `a completed sequence rechecks only its final stage`() {
         var earlyCalls = 0
         var finalCalls = 0
-        val run = newRun<String, List<String>>(captured(
+        val run = capturedRun<String>(captured(
             matches { value: String -> earlyCalls++; value == "early" },
             matches { value: String -> finalCalls++; value != "early" }))
 
@@ -237,35 +237,35 @@ class CapturedConditionTest {
 
     @Test
     fun `a final stage mismatch removes its previous capture`() {
-        val run = newRun<String, List<String>>(captured(equalTo("early"), equalTo("final")))
+        val run = capturedRun<String>(captured(equalTo("early"), equalTo("final")))
         run.probe("early")
         run.probe("final")
 
-        assertInstanceOf(Unsatisfied::class.java, run.probe("rejected"))
+        assertInstanceOf<Unsatisfied<*>>(run.probe("rejected"))
         assertEquals(listOf("early", "final"), result(run.probe("final")))
     }
 
     @Test
     fun `later states cannot skip an unfinished intermediate stage`() {
-        val run = newRun<String, List<String>>(captured(equalTo("created"), equalTo("pending"), equalTo("finished")))
+        val run = capturedRun<String>(captured(equalTo("created"), equalTo("pending"), equalTo("finished")))
         run.probe("created")
-        repeat(2) { assertInstanceOf(Unsatisfied::class.java, run.probe("finished")) }
-        assertInstanceOf(Unsatisfied::class.java, run.probe("pending"))
+        repeat(2) { assertInstanceOf<Unsatisfied<*>>(run.probe("finished")) }
+        assertInstanceOf<Unsatisfied<*>>(run.probe("pending"))
         assertEquals(listOf("created", "pending", "finished"), result(run.probe("finished")))
     }
 
     @Test
     fun `new runs are independent of completed and incomplete executions`() {
         val condition = captured(equalTo("created"), equalTo("finished"))
-        val complete = newRun<String, List<String>>(condition)
+        val complete = capturedRun<String>(condition)
         complete.probe("created")
         val completeResult = result(complete.probe("finished"))
-        val incomplete = newRun<String, List<String>>(condition)
+        val incomplete = capturedRun<String>(condition)
         incomplete.probe("created")
         incomplete.probe("pending")
-        val next = newRun<String, List<String>>(condition)
+        val next = capturedRun<String>(condition)
 
-        assertInstanceOf(Unsatisfied::class.java, next.probe("finished"))
+        assertInstanceOf<Unsatisfied<*>>(next.probe("finished"))
         next.probe("created")
         val nextResult = result(next.probe("finished"))
         assertEquals(listOf("created", "finished"), nextResult)

@@ -67,7 +67,7 @@ class ConditionDefinitionTest {
     @MethodSource("preservingDefinitions")
     void preservingRunsReturnTheObservationRegardlessOfTheProbeValue(AwaitCondition condition) throws Throwable {
         var actual = new StringBuilder("observed");
-        var execution = AwaitAttempt.<StringBuilder, StringBuilder>bind(condition);
+        var execution = AwaitAttempt.<StringBuilder>bind(condition);
         assertSame(actual, result(execution.probe(actual)));
     }
 
@@ -83,7 +83,7 @@ class ConditionDefinitionTest {
                 return actual -> ++calls[0] == 1 ? unsatisfied("retry") : satisfied("different");
             }
         }.because("two probes");
-        var execution = AwaitAttempt.<String, String>bind(condition);
+        var execution = AwaitAttempt.<String>bind(condition);
 
         assertEquals(0, factories[0]);
         assertEquals(unsatisfied("retry"), execution.probe("ready"));

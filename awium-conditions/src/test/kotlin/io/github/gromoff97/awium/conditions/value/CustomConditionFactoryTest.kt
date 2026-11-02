@@ -15,7 +15,7 @@ import io.github.gromoff97.awium.result.AttemptResult.unsatisfied
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -109,7 +109,7 @@ class CustomConditionFactoryTest {
 
         repeat(2) {
             val execution = bind(condition)
-            assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+            assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
             assertSame(actual, result(execution.probe(actual)))
         }
         assertEquals(2, factories)

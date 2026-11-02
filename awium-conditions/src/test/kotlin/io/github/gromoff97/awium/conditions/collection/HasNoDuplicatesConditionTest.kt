@@ -1,14 +1,13 @@
 package io.github.gromoff97.awium.conditions.collection
 
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasNoDuplicates
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments.argumentSet
@@ -25,7 +24,7 @@ class HasNoDuplicatesConditionTest {
     @Test
     fun `returns the original collection`() {
         val actual = listOf("a", "b", null)
-        assertSame(actual, result(evaluate(hasNoDuplicates, actual)))
+        preservesInstance(hasNoDuplicates, actual)
     }
 
     @Test

@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.function.AwaitAttempt.bind
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
@@ -45,9 +45,9 @@ class SingleElementConditionTest {
             }
         }
         actual.add("old")
-        val execution = bind<Collection<String>, String>(singleElement)
+        val execution = bind<Collection<String>>(singleElement)
 
-        assertInstanceOf(Unsatisfied::class.java, execution.probe(actual))
+        assertInstanceOf<Unsatisfied<*>>(execution.probe(actual))
         actual.add("ready")
         assertEquals("ready", result(execution.probe(actual)))
     }

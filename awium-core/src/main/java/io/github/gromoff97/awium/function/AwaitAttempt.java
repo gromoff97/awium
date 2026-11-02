@@ -14,7 +14,7 @@ public interface AwaitAttempt<INPUT, RESULT> {
         return ConditionExecution.bind(condition);
     }
 
-    static <INPUT, RESULT> AwaitAttempt<INPUT, RESULT> bind(AwaitCondition condition) {
+    static <INPUT> AwaitAttempt<INPUT, ?> bind(AwaitCondition condition) {
         return ConditionExecution.bind(condition);
     }
 

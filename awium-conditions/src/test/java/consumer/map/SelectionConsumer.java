@@ -23,6 +23,7 @@ import static io.github.gromoff97.awium.conditions.map.MapConditions.allEntries;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.entryFor;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.valueFor;
+import static java.util.Collections.singletonMap;
 
 public final class SelectionConsumer {
     private SelectionConsumer() {}
@@ -143,7 +144,7 @@ public final class SelectionConsumer {
     }
     public static int nullableKeyLength() {
         String missing = null;
-        var actual = java.util.Collections.singletonMap(missing, "ready");
+        var actual = singletonMap(missing, "ready");
         var selected = await(() -> actual).until(valueFor(missing));
         return selected.length();
     }

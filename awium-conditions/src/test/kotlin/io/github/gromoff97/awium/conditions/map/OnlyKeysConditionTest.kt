@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditions.map
 
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.map.MapConditions.containsOnlyKeys
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.ProbeEntry
@@ -10,8 +10,7 @@ import io.github.gromoff97.awium.conditions.support.Directional
 import io.github.gromoff97.awium.conditions.support.smallLists
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 
 class OnlyKeysConditionTest {
@@ -35,7 +34,7 @@ class OnlyKeysConditionTest {
 
     @Test
     fun `rejects missing expected keys`() {
-        assertThrows(NullPointerException::class.java) { containsOnlyKeys<String>(null) }
+        assertThrows<NullPointerException> { containsOnlyKeys<String>(null) }
     }
 
     @Test
@@ -44,7 +43,7 @@ class OnlyKeysConditionTest {
         val expected = Directional(false)
         val actual = EntryMap(listOf(ProbeEntry(key, "value")))
 
-        assertSame(actual, result(evaluate(containsOnlyKeys(listOf(expected)), actual)))
+        preservesInstance(containsOnlyKeys(listOf(expected)), actual)
         assertEquals(2, key.equalsCalls)
         assertEquals(0, expected.equalsCalls)
     }
@@ -52,6 +51,6 @@ class OnlyKeysConditionTest {
     @Test
     fun `compares array keys by content`() {
         val actual = EntryMap(listOf(ProbeEntry(intArrayOf(1), "value")))
-        assertSame(actual, result(evaluate(containsOnlyKeys(listOf(intArrayOf(1))), actual)))
+        preservesInstance(containsOnlyKeys(listOf(intArrayOf(1))), actual)
     }
 }

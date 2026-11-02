@@ -3,16 +3,15 @@ package io.github.gromoff97.awium.conditions.value
 import consumer.value.ComparableConsumer.missingLowerBound
 import consumer.value.ComparableConsumer.missingUpperBound
 import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
-import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.between
 import io.github.gromoff97.awium.conditions.common.CommonConditions.strictlyBetween
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Named.named
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
@@ -30,14 +29,14 @@ class RangeConditionTest {
     @ParameterizedTest
     @MethodSource("nonUnitComparisons")
     fun `uses the sign of each bound comparison`(condition: PreservingCondition<String>) {
-        assertSame("m", result(evaluate(condition, "m")))
+        preservesInstance(condition, "m")
     }
 
     @Test
     fun `returns the observed instance when comparison ignores scale`() {
         val actual = BigDecimal("5.00")
         val condition: PreservingCondition<BigDecimal> = between(BigDecimal("5"), BigDecimal("7"))
-        assertSame(actual, result(evaluate(condition, actual)))
+        preservesInstance(condition, actual)
     }
 
     @Test
@@ -48,13 +47,13 @@ class RangeConditionTest {
     @ParameterizedTest
     @MethodSource("missingBounds")
     fun `rejects a missing bound before evaluation`(factory: Executable) {
-        assertThrows(NullPointerException::class.java, factory)
+        assertThrows<NullPointerException>(factory::execute)
     }
 
     @ParameterizedTest
     @MethodSource("reversedBounds")
     fun `rejects reversed bounds before evaluation`(factory: Executable) {
-        assertThrows(IllegalArgumentException::class.java, factory)
+        assertThrows<IllegalArgumentException>(factory::execute)
     }
 
     companion object {
