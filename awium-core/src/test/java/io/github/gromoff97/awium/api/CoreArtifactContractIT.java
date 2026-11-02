@@ -58,7 +58,7 @@ class CoreArtifactContractIT {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"io.github.gromoff97.awium.Explained", "io.github.gromoff97.awium.internal.ConditionRun",
+    @ValueSource(strings = {"io.github.gromoff97.awium.Explained", "io.github.gromoff97.awium.internal.AwaitRun",
             "io.github.gromoff97.awium.internal.ExecutionStep", "io.github.gromoff97.awium.internal.WaitCompletion"})
     void implementationTypesAreHiddenFromClasspathConsumers(String type) {
         var consumer = forSourceString("consumer.Contract", """
@@ -72,7 +72,7 @@ class CoreArtifactContractIT {
 
     @Test
     void engineInternalsAreHiddenFromModuleConsumers() {
-        for (var type : List.of("WaitConfiguration", "WaitEngine", "ConditionRun", "ConditionExecution",
+        for (var type : List.of("WaitConfiguration", "WaitEngine", "AwaitRun", "GuardedAttempt",
                 "ExecutionStep", "WaitCompletion", "DiagnosticText")) {
             var consumer = forSourceString("consumer.Contract", """
                     package consumer;

@@ -11,29 +11,29 @@ import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 
 record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
-        Attempt<OBSERVED> attempt, List<Throwable> relatedCauses) {
+        Attempt<OBSERVED> reportedAttempt, boolean conditionSatisfied, List<Throwable> relatedCauses) {
 
     ExecutionStep { relatedCauses = List.copyOf(relatedCauses); }
 
-    ExecutionStep(Phase phase, long completedAfterNanos, Attempt<OBSERVED> attempt) {
-        this(phase, completedAfterNanos, attempt, List.of());
+    ExecutionStep(Phase phase, long completedAfterNanos, Attempt<OBSERVED> reportedAttempt, boolean conditionSatisfied) {
+        this(phase, completedAfterNanos, reportedAttempt, conditionSatisfied, List.of());
     }
 
     ExecutionStep<OBSERVED> withConditionFailure(Throwable cause, String location) {
         return new ExecutionStep<>(phase, completedAfterNanos,
-                conditionFailure(cause, location), relatedCauses)
-                .withRelatedCause(attempt.cause()).withRelatedCause(cause);
+                conditionFailure(cause, location), conditionSatisfied, relatedCauses)
+                .withRelatedCause(reportedAttempt.cause()).withRelatedCause(cause);
     }
 
     ExecutionStep<OBSERVED> withRelatedCause(Throwable cause) {
-        if (cause == null || cause == attempt.cause()) return this;
+        if (cause == null || cause == reportedAttempt.cause()) return this;
         var failures = new ArrayList<>(relatedCauses);
         failures.add(cause);
-        return new ExecutionStep<>(phase, completedAfterNanos, attempt, failures);
+        return new ExecutionStep<>(phase, completedAfterNanos, reportedAttempt, conditionSatisfied, failures);
     }
 
     private Failure<OBSERVED> conditionFailure(Throwable cause, String location) {
-        return switch (attempt) {
+        return switch (reportedAttempt) {
             case SatisfiedObservation<OBSERVED> observation -> new FailedAfterObservation<>(
                     observation.observed(), CONDITION, cause, location, observation.diagnostic());
             case UnsatisfiedObservation<OBSERVED> observation -> new FailedAfterObservation<>(

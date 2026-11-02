@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.function;
 
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.internal.ConditionExecution;
+import io.github.gromoff97.awium.internal.GuardedAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
@@ -11,11 +11,11 @@ import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
 public interface AwaitAttempt<INPUT, RESULT> {
 
     static <INPUT, RESULT> AwaitAttempt<INPUT, RESULT> bind(Condition<? super INPUT, ? extends RESULT> condition) {
-        return ConditionExecution.bind(condition);
+        return GuardedAttempt.bind(condition);
     }
 
     static <INPUT> AwaitAttempt<INPUT, ?> bind(AwaitCondition condition) {
-        return ConditionExecution.bind(condition);
+        return GuardedAttempt.bind(condition);
     }
 
     AttemptResult<? extends RESULT> probe(INPUT actual) throws Throwable;

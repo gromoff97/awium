@@ -4,12 +4,12 @@ import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.ConditionHistory;
 import io.github.gromoff97.awium.result.Diagnostic;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.stream.IntStream;
 
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
@@ -45,12 +45,9 @@ final class AttemptHistory<OBSERVED> {
         if (!definitions.isEmpty() && histories.keySet().stream().anyMatch(slot -> slot > definitions.size())) {
             throw new IllegalArgumentException("history slot exceeds condition count");
         }
-        var result = new ArrayList<ConditionHistory<OBSERVED>>(definitions.size());
-        for (int i = 0; i < definitions.size(); i++) {
-            var attempts = histories.getOrDefault(i + 1, emptyNavigableMap());
-            result.add(new ConditionHistory<>(definitions.get(i), attempts));
-        }
-        return List.copyOf(result);
+        return IntStream.range(0, definitions.size())
+                .mapToObj(i -> new ConditionHistory<>(definitions.get(i), histories.getOrDefault(i + 1, emptyNavigableMap())))
+                .toList();
     }
 
     private static boolean sameGroup(Attempt<?> previous, Attempt<?> next) {

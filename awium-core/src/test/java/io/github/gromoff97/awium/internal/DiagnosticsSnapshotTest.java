@@ -146,7 +146,7 @@ class DiagnosticsSnapshotTest {
         var cause = new AssertionError("optional was empty");
         var attempt = evaluatedAttempt("Optional.empty", unsatisfied("optional was empty", cause), 9 * SECOND + 100 * MILLISECOND);
         var outcome = new PersistenceFailure(7 * SECOND,
-                new ExecutionStep<>(PERSISTENCE, attempt.completedAfterNanos(), attempt.attempt()));
+                new ExecutionStep<>(PERSISTENCE, attempt.completedAfterNanos(), attempt.reportedAttempt(), attempt.conditionSatisfied()));
 
         var failure = renderFailure(diagnosticCondition("optional to remain present", null), PERSISTENCE_FAILED,
                 outcome, config(100 * MILLISECOND, 10 * SECOND, 5 * SECOND), 71);
@@ -656,7 +656,7 @@ class DiagnosticsSnapshotTest {
             WaitConfiguration configuration, long attemptNumber) {
         var attempts = new TreeMap<Long, Attempt<Object>>();
         @SuppressWarnings("unchecked")
-        var attempt = (Attempt<Object>) outcome.step().attempt();
+        var attempt = (Attempt<Object>) outcome.step().reportedAttempt();
         attempts.put(attemptNumber, attempt);
         var histories = List.of(new ConditionHistory<>(condition, attempts));
         var failure = FailureDiagnostics.failure(condition, ignored -> Diagnostic.EMPTY,
@@ -669,22 +669,22 @@ class DiagnosticsSnapshotTest {
                 switch (result) {
                     case AttemptResult.Satisfied<?> success -> new Attempt.SatisfiedObservation<>(observed, success.diagnostic());
                     case AttemptResult.Unsatisfied<?> mismatch -> new Attempt.UnsatisfiedObservation<>(observed, mismatch.diagnostic(), mismatch.cause());
-                });
+                }, result instanceof AttemptResult.Satisfied<?>);
     }
 
     private static WaitCompletion sourceFailure(Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(ACQUISITION, completedNanos,
-                new FailedBeforeObservation<>(Operation.SOURCE, failure)));
+                new FailedBeforeObservation<>(Operation.SOURCE, failure), false));
     }
 
     private static WaitCompletion waitingFailure(Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(ACQUISITION, completedNanos,
-                new FailedBeforeObservation<>(Operation.WAITING, failure)));
+                new FailedBeforeObservation<>(Operation.WAITING, failure), false));
     }
 
     private static WaitCompletion conditionFailure(Object observed, Throwable failure, long completedNanos) {
         return new Uncontrolled(new ExecutionStep<>(ACQUISITION, completedNanos,
-                new FailedAfterObservation<>(observed, Operation.CONDITION, failure, null)));
+                new FailedAfterObservation<>(observed, Operation.CONDITION, failure, null), false));
     }
 
     private static final class EqualFailure extends RuntimeException {

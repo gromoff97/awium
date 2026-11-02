@@ -339,7 +339,7 @@ class WaitEngineLifecycleTest {
         when(run.historyResult(any())).thenThrow(cause);
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
-        var attempt = assertInstanceOf(FailedAfterObservation.class, outcome.step().attempt());
+        var attempt = assertInstanceOf(FailedAfterObservation.class, outcome.step().reportedAttempt());
         assertEquals("actual", attempt.observed());
         assertEquals(CONDITION, attempt.operation());
         assertSame(cause, attempt.cause());
@@ -409,7 +409,7 @@ class WaitEngineLifecycleTest {
         var cause = new IOException("source failed");
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> { throw cause; }));
 
-        assertSame(cause, outcome.step().attempt().cause());
+        assertSame(cause, outcome.step().reportedAttempt().cause());
         verify(run, never()).historyResult(any());
     }
 
@@ -419,7 +419,7 @@ class WaitEngineLifecycleTest {
         doThrow(cause).when(run).probe("actual");
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
-        assertSame(cause, outcome.step().attempt().cause());
+        assertSame(cause, outcome.step().reportedAttempt().cause());
         verify(run, never()).historyResult(any());
     }
 
@@ -437,7 +437,7 @@ class WaitEngineLifecycleTest {
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
         assertTrue(outcome.interrupted());
-        assertInstanceOf(InterruptedException.class, outcome.step().attempt().cause());
+        assertInstanceOf(InterruptedException.class, outcome.step().reportedAttempt().cause());
         assertTrue(currentThread().isInterrupted());
         verify(run, times(historyCalls)).historyResult(any());
     }
@@ -454,12 +454,12 @@ class WaitEngineLifecycleTest {
 
         var outcome = assertInstanceOf(Uncontrolled.class, execute(() -> "actual"));
         assertTrue(outcome.interrupted());
-        assertSame(cause, outcome.step().attempt().cause());
-        assertSame(diagnostic, outcome.step().attempt().diagnostic());
+        assertSame(cause, outcome.step().reportedAttempt().cause());
+        assertSame(diagnostic, outcome.step().reportedAttempt().diagnostic());
     }
 
     private WaitCompletion execute(Callable<String> source) {
-        return new WaitEngine(withTime(config(1, 10, 0), time, time), source, new ConditionRun<>(run))
+        return new WaitEngine(withTime(config(1, 10, 0), time, time), new AwaitRun<>(source, run, time))
                 .waitFor();
     }
 }

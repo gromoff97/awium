@@ -3,12 +3,16 @@ package io.github.gromoff97.awium.internal;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
+import io.github.gromoff97.awium.result.AwaitResult;
+import io.github.gromoff97.awium.result.ConditionHistory;
 import io.github.gromoff97.awium.result.AwaitAssertionError;
 import io.github.gromoff97.awium.result.AwaitExecutionException;
 import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
@@ -55,6 +59,12 @@ import static java.time.Duration.ofNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class FailureDiagnosticsTest {
 
@@ -76,17 +86,20 @@ class FailureDiagnosticsTest {
     }
 
     @Test
-    void aRunCanAddFailureDetailsWithoutRepeatingItsProbe() {
-        var run = describedRun(() -> new Diagnostic(null, new Reference<>("Detail", "custom")));
-        var attempt = new UnsatisfiedObservation<Object>("actual", "not ready", null);
-        run.record(1, attempt);
-        var outcome = new Timeout(new ExecutionStep<>(ACQUISITION, 2, attempt));
+    void aRunCanAddFailureDetailsWithoutRepeatingItsProbe() throws Throwable {
+        var time = new FakeTime(0);
+        Condition<String, String> condition = mock(CALLS_REAL_METHODS);
+        when(condition.description()).thenReturn("ready");
+        when(condition.references()).thenReturn(List.of(new Reference<>("Expected", "ready")));
+        when(condition.diagnostics(any())).thenReturn(new Diagnostic(null, new Reference<>("Detail", "custom")));
+        doAnswer(ignored -> { time.advanceNanos(2); return unsatisfied("not ready"); }).when(condition).probe("actual");
 
-        var report = failure(run.finish(outcome, config(1, 2, 0)));
+        var report = failure(withTime(tryAwait(() -> "actual"), time, time).upTo(ofNanos(2)).until(condition));
 
         assertThat(report.message()).contains("Attempt: 1 (ACQUISITION)", "Condition 1: ready",
                 "Expected: \"ready\"", "Observed now: \"actual\"", "Mismatch: not ready", "Timing:")
                 .containsOnlyOnce("Detail: \"custom\"");
+        verify(condition).probe("actual");
     }
 
     @ParameterizedTest
@@ -95,11 +108,10 @@ class FailureDiagnosticsTest {
             Reason reason, Throwable original, Phase phase, Attempt<Object> retained,
             Function<ExecutionStep<Object>, WaitCompletion> completion) {
         var rendering = new AssertionError("custom diagnostics failed");
-        var run = describedRun(() -> { throw rendering; });
-        run.record(1, retained);
-        var outcome = completion.apply(new ExecutionStep<>(phase, 2, retained));
+        var condition = describedCondition(() -> { throw rendering; });
+        var outcome = completion.apply(new ExecutionStep<>(phase, 2, retained, false));
 
-        var report = failure(run.finish(outcome, config(1, 2, 0)));
+        var report = failure(report(condition, retained, outcome));
 
         assertEquals(reason, report.reason());
         assertSame(original, report.cause());
@@ -185,13 +197,9 @@ class FailureDiagnosticsTest {
             @Override public String toString() { throw rendering; }
         };
         var metadata = diagnosticCondition("ready", new Reference<>("Expected", expected));
-        var attempt = new ExecutionStep<>(phase, 2, retained);
+        var attempt = new ExecutionStep<>(phase, 2, retained, false);
         var outcome = completion.apply(attempt);
-        var configuration = config(1, 2, 0);
-        var run = new ConditionRun<Object, Object>(metadata);
-        run.initialize();
-        run.record(1, retained);
-        var report = run.finish(outcome, configuration);
+        var report = report(metadata, retained, outcome);
         var returned = failure(report);
         assertEquals(reason, returned.reason());
         assertSame(original, returned.cause());
@@ -223,16 +231,21 @@ class FailureDiagnosticsTest {
         assertEquals(0, original.getSuppressed().length);
     }
 
-    private static ConditionRun<Object, Object> describedRun(Supplier<Diagnostic> diagnostic) {
-        var run = new ConditionRun<>(new Condition<Object, Object>() {
+    private static Condition<Object, Object> describedCondition(Supplier<Diagnostic> diagnostic) {
+        return new Condition<>() {
             @Override public String description() { return "ready"; }
             @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", "ready")); }
             @Override public AttemptResult<Object> probe(Object actual) { throw new AssertionError("diagnostics must not probe"); }
             @Override public AttemptResult<?> historyResult(AttemptResult<?> attempt) { throw new AssertionError("diagnostics must not project history"); }
             @Override public Diagnostic diagnostics(Attempt<?> attempt) { return diagnostic.get(); }
-        });
-        run.initialize();
-        return run;
+        };
+    }
+
+    private static AwaitResult<Object, Object> report(Condition<Object, Object> condition,
+            Attempt<Object> retained, WaitCompletion outcome) {
+        var histories = List.of(new ConditionHistory<>(condition, new TreeMap<>(Map.of(1L, retained))));
+        var failure = FailureDiagnostics.failure(condition, condition::diagnostics, outcome, config(1, 2, 0), 1, histories);
+        return new AwaitResult.Failed<>(histories, failure);
     }
 
     private static List<Arguments> failureCases() {

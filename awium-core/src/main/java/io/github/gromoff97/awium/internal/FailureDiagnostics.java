@@ -8,7 +8,6 @@ import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 import java.util.function.Function;
 
-import static io.github.gromoff97.awium.internal.DiagnosticText.field;
 import static io.github.gromoff97.awium.internal.DiagnosticText.unsignedDuration;
 import static io.github.gromoff97.awium.internal.WaitCompletion.PersistenceFailure;
 import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
@@ -31,35 +30,34 @@ final class FailureDiagnostics {
             WaitCompletion outcome, WaitConfiguration configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
         var reason = failureReason(outcome);
         var step = outcome.step();
-        var attempt = step.attempt();
+        var attempt = step.reportedAttempt();
         var cause = attempt.cause();
         var text = new DiagnosticText(cause);
         step.relatedCauses().forEach(text::retain);
-        var out = new StringBuilder(title(reason, attempt)).append('\n');
-        field(out, "", "Attempt", attemptNumber + " (" + step.phase() + ")");
+        text.line(title(reason, attempt));
+        text.field("", "Attempt", attemptNumber + " (" + step.phase() + ")");
         if (histories.stream().noneMatch(history -> history.condition() == condition)) {
-            out.append('\n');
-            text.condition(out, "Condition", condition, "");
+            text.line("");
+            text.condition("Condition", condition, "");
         }
         text.render(() -> {
-            text.diagnostic(out, diagnostics.apply(attempt));
+            text.diagnostic(diagnostics.apply(attempt));
             return "";
         });
-        timing(out, outcome, configuration);
-        text.histories(out, histories);
+        timing(text, outcome, configuration);
+        text.histories(histories);
         if (histories.stream().noneMatch(history -> history.attempts().get(attemptNumber) == attempt)) {
-            out.append('\n');
-            text.appendAttempt(out, "Last attempt #" + attemptNumber, attempt);
+            text.line("");
+            text.appendAttempt("Last attempt #" + attemptNumber, attempt);
         }
-        text.appendFailures(out, "");
-        return new AwaitFailure(reason, out.substring(0, out.length() - 1), cause, text.failures());
+        return new AwaitFailure(reason, text.finish(""), cause, text.failures());
     }
 
     private static Reason failureReason(WaitCompletion outcome) {
         return switch (outcome) {
             case PersistenceFailure ignored -> PERSISTENCE_FAILED;
             case Uncontrolled failure -> failure.interrupted()
-                    ? INTERRUPTED : switch (((Failure<?>) failure.step().attempt()).operation()) {
+                    ? INTERRUPTED : switch (((Failure<?>) failure.step().reportedAttempt()).operation()) {
                         case WAITING -> WAIT_FAILED;
                         case SOURCE -> SOURCE_FAILED;
                         case CONDITION -> CONDITION_FAILED;
@@ -81,17 +79,17 @@ final class FailureDiagnostics {
         };
     }
 
-    private static void timing(StringBuilder out, WaitCompletion outcome, WaitConfiguration configuration) {
+    private static void timing(DiagnosticText text, WaitCompletion outcome, WaitConfiguration configuration) {
         var completedAfter = outcome.step().completedAfterNanos();
         var elapsed = outcome instanceof Timeout timeout ? timeout.elapsedNanos() : completedAfter;
-        out.append('\n');
-        field(out, "", "Timing", "elapsed " + unsignedDuration(elapsed)
+        text.line("");
+        text.field("", "Timing", "elapsed " + unsignedDuration(elapsed)
                 + "; timeout " + unsignedDuration(configuration.upToNanos())
                 + "; interval " + unsignedDuration(configuration.everyNanos()));
-        if (elapsed != completedAfter) field(out, "", "Last completed after", unsignedDuration(completedAfter));
+        if (elapsed != completedAfter) text.field("", "Last completed after", unsignedDuration(completedAfter));
         if (outcome instanceof PersistenceFailure failure) {
             var acquiredAfter = failure.acquiredAfterNanos();
-            field(out, "", "Persistence", "failed after " + unsignedDuration(completedAfter - acquiredAfter)
+            text.field("", "Persistence", "failed after " + unsignedDuration(completedAfter - acquiredAfter)
                     + "; required " + unsignedDuration(configuration.persistenceNanos())
                     + "; acquired after " + unsignedDuration(acquiredAfter));
         }

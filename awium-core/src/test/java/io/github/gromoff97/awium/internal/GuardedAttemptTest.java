@@ -29,7 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-class ConditionExecutionTest {
+class GuardedAttemptTest {
 
     @Test
     void nestedChecksKeepTheirOutcomeWithoutBuildingHistory() throws Throwable {
@@ -46,7 +46,7 @@ class ConditionExecutionTest {
     @Test
     void evaluatorFactoriesAcceptBroaderInputsAndNarrowerResults() throws Throwable {
         Callable<AwaitAttempt<CharSequence, Integer>> factory = () -> actual -> satisfied(actual.length());
-        var execution = new ConditionExecution<String, Number>(factory);
+        var execution = new GuardedAttempt<String, Number>(factory);
 
         assertEquals(5, result(execution.probe("ready")));
     }
@@ -128,7 +128,7 @@ class ConditionExecutionTest {
     void factoryInterruptionSkipsEvaluationAndKeepsTheEvaluatorForTheNextProbe() throws Throwable {
         int[] factories = {0};
         int[] probes = {0};
-        var execution = new ConditionExecution<String, String>(() -> {
+        var execution = new GuardedAttempt<String, String>(() -> {
             factories[0]++;
             currentThread().interrupt();
             return actual -> { probes[0]++; return satisfied(actual); };

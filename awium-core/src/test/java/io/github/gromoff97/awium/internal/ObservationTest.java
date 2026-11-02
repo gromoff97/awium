@@ -121,22 +121,22 @@ class ObservationTest {
         var actual = new Object();
         var result = new Object();
 
-        var execution = new ConditionRun<>(check("test condition", (Object value) -> {
-            time.advanceNanos(3);
-            return AttemptResult.satisfied(result);
-        }));
-        WaitCompletion terminal = new WaitEngine(withTime(config(1, 20, 0), time, time), () -> {
+        var execution = new AwaitRun<>(() -> {
             time.advanceNanos(2);
             return actual;
-        }, execution).waitFor();
+        }, check("test condition", (Object value) -> {
+            time.advanceNanos(3);
+            return AttemptResult.satisfied(result);
+        }), time);
+        WaitCompletion terminal = new WaitEngine(withTime(config(1, 20, 0), time, time), execution).waitFor();
 
         var step = terminal.step();
-        var observation = step.attempt();
+        var observation = step.reportedAttempt();
         assertInstanceOf(SatisfiedObservation.class, observation);
         assertEquals(ACQUISITION, step.phase());
         assertEquals(5, step.completedAfterNanos());
         assertSame(actual, observation(observation));
-        assertSame(result, execution.finish(terminal, config(1, 20, 0)).orThrow());
+        assertSame(result, execution.result(terminal, config(1, 20, 0)).orThrow());
     }
 
     @Test
@@ -358,11 +358,11 @@ class ObservationTest {
 
     private static Attempt<?> attempt(Callable<Object> source, AwaitAttempt<Object, Object> condition) {
         var time = new FakeTime(0);
-        return new WaitEngine(withTime(config(1, 2, 0), time, time), source, new ConditionRun<>(check("test condition", actual -> {
+        return new WaitEngine(withTime(config(1, 2, 0), time, time), new AwaitRun<>(source, check("test condition", actual -> {
             AttemptResult<?> evaluation = condition.probe(actual);
             time.advanceNanos(2);
             return evaluation;
-        }))).waitFor().step().attempt();
+        }), time)).waitFor().step().reportedAttempt();
     }
 
     @Test

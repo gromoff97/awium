@@ -20,20 +20,17 @@ public final class WaitEngine {
 
     public static <OBSERVED, RESULT> AwaitResult<OBSERVED, RESULT> execute(
             WaitConfiguration configuration, Callable<? extends OBSERVED> source, AwaitCondition condition) {
-        var execution = new ConditionRun<OBSERVED, RESULT>(condition);
-        var outcome = new WaitEngine(configuration, source, execution).waitFor();
-        return execution.finish(outcome, configuration);
+        var runner = new AwaitRun<OBSERVED, RESULT>(source, condition, configuration.clock());
+        var outcome = new WaitEngine(configuration, runner).waitFor();
+        return runner.result(outcome, configuration);
     }
 
     private final WaitConfiguration configuration;
-    private final AttemptExecution<?> runner;
-    private final long started;
+    private final AwaitRun<?, ?> runner;
 
-    <OBSERVED> WaitEngine(WaitConfiguration configuration, Callable<? extends OBSERVED> source,
-            ConditionRun<OBSERVED, ?> execution) {
+    WaitEngine(WaitConfiguration configuration, AwaitRun<?, ?> runner) {
         this.configuration = configuration;
-        started = configuration.clock().getAsLong();
-        runner = new AttemptExecution<>(source, execution, configuration.clock(), started);
+        this.runner = runner;
     }
 
     WaitCompletion waitFor() {
@@ -42,41 +39,37 @@ public final class WaitEngine {
             return new Uncontrolled(initializationFailure);
         }
         WaitCompletion acquisition = acquire();
-        if (!(acquisition instanceof SatisfiedWait acquired)
-                || configuration.persistenceNanos() == 0) {
-            return acquisition;
-        }
-        return persist(acquired);
+        return switch (acquisition) {
+            case SatisfiedWait acquired when configuration.persistenceNanos() > 0 -> persist(acquired);
+            default -> acquisition;
+        };
     }
 
     private WaitCompletion acquire() {
-        long deadline = started + configuration.upToNanos();
+        long deadline = configuration.upToNanos();
         ExecutionStep<?> lastStep = null;
-        long completed = started;
 
         while (true) {
             ExecutionStep<?> preparationFailure = lastStep == null
                     ? runner.interruptedBefore(ACQUISITION)
-                    : waitBeforeAttempt(min(configuration.everyNanos(), remaining(completed, deadline)),
-                            ACQUISITION, completed);
+                    : waitBeforeAttempt(ACQUISITION, lastStep, deadline);
             if (preparationFailure != null) {
                 return new Uncontrolled(preparationFailure);
             }
 
-            long retrievalStarted = configuration.clock().getAsLong();
-            if (lastStep != null && reached(retrievalStarted, deadline) && !currentThread().isInterrupted()) {
-                return new Timeout(retrievalStarted - started, lastStep);
+            long elapsed = runner.elapsedNanos();
+            if (lastStep != null && reached(elapsed, deadline) && !currentThread().isInterrupted()) {
+                return new Timeout(elapsed, lastStep);
             }
 
-            ExecutionStep<?> step = runner.call(ACQUISITION);
-            completed = started + step.completedAfterNanos();
-            if (step.attempt() instanceof Failure<?>) {
+            ExecutionStep<?> step = runner.poll(ACQUISITION);
+            if (step.reportedAttempt() instanceof Failure<?>) {
                 return new Uncontrolled(step);
             }
-            if (reached(completed, deadline)) {
+            if (reached(step.completedAfterNanos(), deadline)) {
                 return new Timeout(step);
             }
-            if (runner.execution().isSatisfied()) {
+            if (step.conditionSatisfied()) {
                 return new SatisfiedWait(step);
             }
             lastStep = step;
@@ -84,36 +77,34 @@ public final class WaitEngine {
     }
 
     private WaitCompletion persist(SatisfiedWait acquired) {
-        long acquiredAt = started + acquired.step().completedAfterNanos();
-        long deadline = acquiredAt + configuration.persistenceNanos();
-        long completed = acquiredAt;
+        ExecutionStep<?> lastStep = acquired.step();
+        long deadline = lastStep.completedAfterNanos() + configuration.persistenceNanos();
 
         while (true) {
-            ExecutionStep<?> preparationFailure = waitBeforeAttempt(
-                    min(configuration.everyNanos(), remaining(completed, deadline)), PERSISTENCE, completed);
+            ExecutionStep<?> preparationFailure = waitBeforeAttempt(PERSISTENCE, lastStep, deadline);
             if (preparationFailure != null) {
                 return new Uncontrolled(preparationFailure);
             }
 
-            ExecutionStep<?> step = runner.call(PERSISTENCE);
-            completed = started + step.completedAfterNanos();
-            if (step.attempt() instanceof Failure<?>) {
+            ExecutionStep<?> step = runner.poll(PERSISTENCE);
+            if (step.reportedAttempt() instanceof Failure<?>) {
                 return new Uncontrolled(step);
             }
-            if (!runner.execution().isSatisfied()) {
+            if (!step.conditionSatisfied()) {
                 return new PersistenceFailure(acquired.step().completedAfterNanos(), step);
             }
-            if (reached(completed, deadline)) {
+            if (reached(step.completedAfterNanos(), deadline)) {
                 return new SatisfiedWait(step);
             }
+            lastStep = step;
         }
     }
 
-    private ExecutionStep<?> waitBeforeAttempt(long delay,
-            Phase phase, long completed) {
-        long deadline = completed + delay;
+    private ExecutionStep<?> waitBeforeAttempt(Phase phase, ExecutionStep<?> previous, long waitDeadline) {
+        long completed = previous.completedAfterNanos();
+        long deadline = completed + min(configuration.everyNanos(), remaining(completed, waitDeadline));
         long remaining;
-        while ((remaining = remaining(configuration.clock().getAsLong(), deadline)) > 0) {
+        while ((remaining = remaining(runner.elapsedNanos(), deadline)) > 0) {
             ExecutionStep<?> interrupted = runner.interruptedBefore(phase);
             if (interrupted != null) {
                 return interrupted;

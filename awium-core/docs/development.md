@@ -37,27 +37,45 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | Component | Owns |
 | --- | --- |
 | `Condition`, `AwaitCondition` families | Definitions, type constraints, and run creation |
-| `ConditionRun` | Executing a condition, recording history, and assembling the terminal result |
+| `AwaitRun` | One wait's source, condition, selected value, history and terminal result |
 | `AttemptHistory` | Invocation numbering and grouping within each history |
 | `Await`; fluent await classes | Source entry points and configuration |
 | `AwaitSupport` | Passing source and configuration to the engine |
-| `AwaitAttempt.bind`; internal `ConditionExecution` | Lazy evaluator initialization and nested check invocation |
-| `WaitEngine` | Running waits: polling, deadlines, persistence, and completion |
-| `AttemptExecution`; `ExecutionStep` | Source/check calls, failures, and attempt timing |
-| `FailureDiagnostics`; `DiagnosticText` | Stop reason, attempt number, timing, cause, and guarded rendering |
+| `AwaitAttempt.bind`; internal `GuardedAttempt` | Lazy evaluator initialization and guarded check invocation, including nested checks |
+| `WaitEngine` | Polling a supplied run, deadlines, persistence, and completion |
+| `ExecutionStep` | Immutable condition verdict, reported attempt, failures and completion time |
+| `FailureDiagnostics`; `DiagnosticText` | Failure fields; report buffer and guarded rendering |
 
-Override `newRun()` for per-wait state; return a fresh `Condition` whose `probe`
-performs the check. For a lazy evaluator, override `newAttempt()` instead.
+A wait calls `newRun()` before reading the source, then creates its evaluator through
+`newAttempt()` on the first observation. Later probes reuse that evaluator. Return a
+fresh condition or evaluator for per-wait state. Nested `bind` initializes on its first probe.
 
 Checks return `Diagnostic` data in their `AttemptResult`; `diagnostics(attempt)`
 can add final context. Core adds the stop reason, timing, and cause.
-`historyResult` defaults to the probe result; composites can report a stage's outcome
-without completing the whole wait.
+`historyResult` defaults to the probe result. A composite can report a successful
+stage while the whole condition is still unsatisfied: `ExecutionStep.reportedAttempt`
+contains that report, and `conditionSatisfied` controls waiting.
 `historyConditions(definition)` lists the reported conditions; `definition` retains
 the original `because` reason. `historySlot(attempt)` selects a condition by its
 1-based position in that list.
 These hooks belong to `Condition`; no lifecycle base class is needed.
 `ProbeFailure` adds a nested location while preserving the original cause.
+
+## Pattern choices
+
+| Approach | Application |
+| --- | --- |
+| Thin Glue; Inline Class | Remove a layer only when its responsibility disappears; merging must not spread its dependencies. |
+| Functional Core, Imperative Shell | Keep decisions over completed data separate from source, probe, clock and parking effects. Do not add adapters just to make the split formal. |
+| Single state owner; immutability | `ExecutionStep` owns its verdict and completion time; polling derives the next interval from the previous step. Mutable run, evaluator, history and rendering state stays local to one execution. Final fields do not freeze observed objects. |
+| State machine | `ACQUISITION` → optional `PERSISTENCE` → completion. Separate loops preserve different deadline rules: acquisition rejects late success; persistence requires a final probe. |
+| Result types | Sealed outcomes distinguish mismatch, execution failure and absent observations. User `Condition` implementations remain open. |
+| Pure dependency injection | `WaitEngine.execute` creates one `AwaitRun`; the engine constructor receives that run and configuration. No container or service locator. |
+| Policy vs mechanism | Conditions own check, stage and diagnostic policy; core enforces invocation and waiting contracts. |
+| Architectural fitness functions | `CoreArchitectureTest` checks dependency boundaries, verdict access and allowed owners of mutable fields. |
+| Strategy | `Condition` and `AwaitAttempt` supply checks. |
+| Decorator | `Explained` adds immutable `because` metadata while retaining condition-specific inference. |
+| Facade | Typed await builders keep execution details behind the fluent API. |
 
 ## Type and module boundaries
 

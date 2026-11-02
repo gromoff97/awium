@@ -9,12 +9,12 @@ import java.util.concurrent.Callable;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
-public final class ConditionExecution<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
+public final class GuardedAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
     public static <INPUT, RESULT> AwaitAttempt<INPUT, RESULT> bind(AwaitCondition condition) {
         requireNonNull(condition, "condition must not be null");
-        return new ConditionExecution<>(() -> {
-            var check = ConditionExecution.<INPUT, RESULT>prepare(condition);
+        return new GuardedAttempt<>(() -> {
+            var check = GuardedAttempt.<INPUT, RESULT>prepare(condition);
             if (currentThread().isInterrupted()) throw new InterruptedException("caller thread interrupt flag was set");
             return check.newAttempt();
         });
@@ -34,7 +34,7 @@ public final class ConditionExecution<OBSERVED, RESULT> implements AwaitAttempt<
     private final Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory;
     private AwaitAttempt<? super OBSERVED, ? extends RESULT> evaluator;
 
-    ConditionExecution(Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
+    GuardedAttempt(Callable<? extends AwaitAttempt<? super OBSERVED, ? extends RESULT>> evaluatorFactory) {
         this.evaluatorFactory = requireNonNull(evaluatorFactory, "evaluator factory must not be null");
     }
 

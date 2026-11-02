@@ -28,6 +28,7 @@ public final class DiagnosticText {
             TimeUnit.DAYS, TimeUnit.HOURS, TimeUnit.MINUTES, TimeUnit.SECONDS,
             TimeUnit.MILLISECONDS, TimeUnit.MICROSECONDS, TimeUnit.NANOSECONDS);
 
+    private final StringBuilder out = new StringBuilder();
     private final Throwable primaryCause;
     private final List<Throwable> secondaryCauses = new ArrayList<>();
 
@@ -39,8 +40,13 @@ public final class DiagnosticText {
         return List.copyOf(secondaryCauses);
     }
 
-    public void appendFailures(StringBuilder out, String indentation) {
-        for (Throwable failure : secondaryCauses) field(out, indentation, "Suppressed", failure.getClass().getName());
+    public void line(String value) {
+        out.append(value).append('\n');
+    }
+
+    public String finish(String indentation) {
+        for (Throwable failure : secondaryCauses) field(indentation, "Suppressed", failure.getClass().getName());
+        return out.substring(0, out.length() - 1);
     }
 
     public String cause(Throwable cause) {
@@ -50,55 +56,51 @@ public final class DiagnosticText {
     }
 
     public static String attempt(Attempt<?> attempt) {
-        var out = new StringBuilder();
         var text = new DiagnosticText(attempt.cause());
-        text.appendAttempt(out, "Result", attempt);
-        text.appendFailures(out, "    ");
-        return out.substring(0, out.length() - 1);
+        text.appendAttempt("Result", attempt);
+        return text.finish("    ");
     }
 
     public static String conditionHistory(ConditionHistory<?> history) {
-        var out = new StringBuilder();
         var text = new DiagnosticText(null);
-        text.appendHistory(out, "Condition", history);
-        text.appendFailures(out, "    ");
-        return out.substring(0, out.length() - 1);
+        text.appendHistory("Condition", history);
+        return text.finish("    ");
     }
 
-    public void histories(StringBuilder out, List<? extends ConditionHistory<?>> histories) {
+    public void histories(List<? extends ConditionHistory<?>> histories) {
         for (int i = 0; i < histories.size(); i++) {
             out.append('\n');
-            appendHistory(out, "Condition " + (i + 1), histories.get(i));
+            appendHistory("Condition " + (i + 1), histories.get(i));
         }
     }
 
-    private void appendHistory(StringBuilder out, String label, ConditionHistory<?> history) {
-        condition(out, label, history.condition(), "");
-        if (history.attempts().isEmpty()) field(out, "Result", "not attempted");
+    private void appendHistory(String label, ConditionHistory<?> history) {
+        condition(label, history.condition(), "");
+        if (history.attempts().isEmpty()) field("Result", "not attempted");
         history.attempts().forEach((through, attempt) -> {
             out.append('\n');
-            appendAttempt(out, "Through #" + through, attempt);
+            appendAttempt("Through #" + through, attempt);
         });
     }
 
-    void appendAttempt(StringBuilder out, String label, Attempt<?> attempt) {
+    void appendAttempt(String label, Attempt<?> attempt) {
         var cause = attempt.cause();
         switch (attempt) {
-            case SatisfiedObservation<?> ignored -> field(out, "", label, "satisfied");
-            case UnsatisfiedObservation<?> ignored -> field(out, "", label, "unsatisfied");
+            case SatisfiedObservation<?> ignored -> field("", label, "satisfied");
+            case UnsatisfiedObservation<?> ignored -> field("", label, "unsatisfied");
             case Failure<?> failure -> {
-                field(out, "", label, "failed (" + failure.operation() + ")");
-                if (failure.location() != null) field(out, "Within", failure.location());
+                field("", label, "failed (" + failure.operation() + ")");
+                if (failure.location() != null) field("Within", failure.location());
             }
         }
-        diagnostic(out, attempt.diagnostic());
+        diagnostic(attempt.diagnostic());
         String observation = observation(attempt);
         if (observation != null) {
-            field(out, "Observed now", observation);
+            field("Observed now", observation);
         } else {
-            field(out, "Observed", "unavailable");
+            field("Observed", "unavailable");
         }
-        if (cause != null) field(out, "Cause", cause(cause));
+        if (cause != null) field("Cause", cause(cause));
     }
 
     static String unsignedDuration(long remainingNanos) {
@@ -150,13 +152,13 @@ public final class DiagnosticText {
         };
     }
 
-    void diagnostic(StringBuilder out, Diagnostic diagnostic) {
-        if (diagnostic.mismatch() != null) field(out, "Mismatch", diagnostic.mismatch());
+    void diagnostic(Diagnostic diagnostic) {
+        if (diagnostic.mismatch() != null) field("Mismatch", diagnostic.mismatch());
         for (var detail : diagnostic.fields()) {
             if (detail.value() instanceof AwaitCondition condition) {
-                condition(out, detail.label(), condition, "    ");
+                condition(detail.label(), condition, "    ");
             } else {
-                field(out, detail.label(), value(detail.value()));
+                field(detail.label(), value(detail.value()));
             }
         }
     }
@@ -190,25 +192,24 @@ public final class DiagnosticText {
         return out.append(quote).toString();
     }
 
-    void condition(StringBuilder out, String label, AwaitCondition condition, String indentation) {
-        field(out, indentation, label, render(condition::description));
+    void condition(String label, AwaitCondition condition, String indentation) {
+        field(indentation, label, render(condition::description));
         String detailsIndentation = indentation + "    ";
         render(() -> {
             for (var reference : condition.references()) {
-                field(out, detailsIndentation, reference.label(), value(reference.value()));
+                field(detailsIndentation, reference.label(), value(reference.value()));
             }
             return "";
         });
         String explanation = render(condition::explanation);
-        if (explanation != null) field(out, detailsIndentation, "Because", explanation);
+        if (explanation != null) field(detailsIndentation, "Because", explanation);
     }
 
-    public static void field(StringBuilder out, String label, String value) {
-        field(out, "    ", label, value);
+    public void field(String label, String value) {
+        field("    ", label, value);
     }
 
-    static void field(StringBuilder out, String indentation,
-            String label, String value) {
+    void field(String indentation, String label, String value) {
         String normalized = String.valueOf(value).replace("\r\n", "\n").replace('\r', '\n');
         if (!normalized.contains("\n")) {
             out.append(indentation).append(label).append(": ")

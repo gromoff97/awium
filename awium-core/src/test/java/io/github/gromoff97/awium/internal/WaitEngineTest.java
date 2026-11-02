@@ -64,13 +64,13 @@ class WaitEngineTest {
         Condition<String, Integer> condition = mock(CALLS_REAL_METHODS);
         doReturn(unsatisfied("another observation is required"), satisfied(5)).when(condition).probe("ready");
         doReturn(satisfied(5)).when(condition).historyResult(any());
-        ConditionRun<String, Integer> run = new ConditionRun<>(condition);
+        AwaitRun<String, Integer> run = new AwaitRun<>(() -> "ready", condition, time);
 
-        var outcome = new WaitEngine(withTime(config(1, 10, 0), time, time), () -> "ready", run)
+        var outcome = new WaitEngine(withTime(config(1, 10, 0), time, time), run)
                 .waitFor();
 
         assertInstanceOf(SatisfiedWait.class, outcome);
-        var history = run.finish(outcome, config(1, 10, 0)).conditions().getFirst().attempts();
+        var history = run.result(outcome, config(1, 10, 0)).conditions().getFirst().attempts();
         assertEquals(2L, history.lastKey());
         assertInstanceOf(SatisfiedObservation.class, history.lastEntry().getValue());
         verify(condition, times(2)).probe("ready");
@@ -81,13 +81,13 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         Callable<String> source = mock();
         when(clock.getAsLong()).thenReturn(0L, 7L);
-        var engine = new WaitEngine(withTime(config(1, 10, 0), clock, time), source,
-                new ConditionRun<>(accepted));
+        var engine = new WaitEngine(withTime(config(1, 10, 0), clock, time),
+                new AwaitRun<>(source, accepted, clock));
         currentThread().interrupt();
 
         var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor());
 
-        assertInstanceOf(InterruptedException.class, uncontrolled(WAITING, failure.step().attempt()).cause());
+        assertInstanceOf(InterruptedException.class, uncontrolled(WAITING, failure.step().reportedAttempt()).cause());
         assertEquals(7L, failure.step().completedAfterNanos());
         verify(clock, times(2)).getAsLong();
         verifyNoInteractions(source);
@@ -174,7 +174,7 @@ class WaitEngineTest {
         assertEquals(10, timeout.elapsedNanos());
         assertEquals(8, unsatisfied.completedAfterNanos());
         assertEquals("mismatch 3", mismatch(unsatisfied));
-        assertSame(assertion, unsatisfied.attempt().cause());
+        assertSame(assertion, unsatisfied.reportedAttempt().cause());
     }
 
     @Test
@@ -184,10 +184,10 @@ class WaitEngineTest {
         when(clock.getAsLong()).thenReturn(0L, 10L);
 
         WaitCompletion outcome = new WaitEngine(withTime(config(1, 10, 0), clock,
-                ignored -> {}), () -> {
+                ignored -> {}), new AwaitRun<>(() -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, new ConditionRun<>(accepted)).waitFor();
+                }, accepted, clock)).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -209,9 +209,9 @@ class WaitEngineTest {
         var unsatisfied = timeout.step();
         assertEquals(10, unsatisfied.completedAfterNanos());
         assertEquals(10, timeout.elapsedNanos());
-        assertSame(actual, observation(unsatisfied.attempt()));
+        assertSame(actual, observation(unsatisfied.reportedAttempt()));
         assertEquals("late", mismatch(unsatisfied));
-        assertSame(assertion, unsatisfied.attempt().cause());
+        assertSame(assertion, unsatisfied.reportedAttempt().cause());
     }
 
     @Test
@@ -230,7 +230,7 @@ class WaitEngineTest {
         var satisfied = timeout.step();
         assertEquals(11, satisfied.completedAfterNanos());
         assertEquals(11, timeout.elapsedNanos());
-        assertSame(actual, observation(satisfied.attempt()));
+        assertSame(actual, observation(satisfied.reportedAttempt()));
         assertSame(actual, successfulObservation(satisfied));
     }
 
@@ -280,7 +280,7 @@ class WaitEngineTest {
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
-        var attempt = uncontrolled(SOURCE, uncontrolled.step().attempt());
+        var attempt = uncontrolled(SOURCE, uncontrolled.step().reportedAttempt());
         assertSame(failure, attempt.cause());
     }
 
@@ -297,7 +297,7 @@ class WaitEngineTest {
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, uncontrolled.step().attempt());
+        var attempt = uncontrolled(WAITING, uncontrolled.step().reportedAttempt());
         assertSame(failure, attempt.cause());
         assertEquals(0, uncontrolled.step().completedAfterNanos());
     }
@@ -315,7 +315,7 @@ class WaitEngineTest {
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, uncontrolled.step().attempt());
+        var attempt = uncontrolled(WAITING, uncontrolled.step().reportedAttempt());
         assertEquals(InterruptedException.class,
                 attempt.cause().getClass());
         assertEquals(1, parkCalls[0]);
@@ -336,7 +336,7 @@ class WaitEngineTest {
                 actual -> unsatisfied("not yet"));
 
         var uncontrolled = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, uncontrolled.step().attempt());
+        var attempt = uncontrolled(WAITING, uncontrolled.step().reportedAttempt());
         assertSame(interruption, attempt.cause());
         assertFalse(currentThread().isInterrupted());
     }
@@ -351,11 +351,11 @@ class WaitEngineTest {
         });
         var outcome = new WaitEngine(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
-                () -> { sourceCalls[0]++; return "actual"; },
-                new ConditionRun<>(accepted)).waitFor();
+                new AwaitRun<>(() -> { sourceCalls[0]++; return "actual"; },
+                        accepted, clock)).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, failure.step().attempt());
+        var attempt = uncontrolled(WAITING, failure.step().reportedAttempt());
         assertEquals(0, sourceCalls[0]);
         assertInstanceOf(InterruptedException.class, attempt.cause());
         assertTrue(currentThread().isInterrupted());
@@ -366,17 +366,17 @@ class WaitEngineTest {
         int[] sourceCalls = {0};
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L);
-        var outcome = new WaitEngine(withTime(config(1, 2, 0), clock, nanos -> {}), () -> {
+        var outcome = new WaitEngine(withTime(config(1, 2, 0), clock, nanos -> {}), new AwaitRun<>(() -> {
             sourceCalls[0]++;
             return "actual";
-        }, new ConditionRun<>(check("not ready", (String value) -> {
+        }, check("not ready", (String value) -> {
             doReturn(0L, 1L).doAnswer(ignored -> { currentThread().interrupt(); return 2L; })
                     .doReturn(2L).when(clock).getAsLong();
             return unsatisfied("not yet");
-        }))).waitFor();
+        }), clock)).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, failure.step().attempt());
+        var attempt = uncontrolled(WAITING, failure.step().reportedAttempt());
         assertEquals(1, sourceCalls[0]);
         assertInstanceOf(InterruptedException.class, attempt.cause());
         assertTrue(currentThread().isInterrupted());
@@ -390,14 +390,14 @@ class WaitEngineTest {
         LongSupplier clock = mock();
         when(clock.getAsLong()).thenReturn(0L);
         var outcome = new WaitEngine(withTime(config(5, 20, persistence), clock,
-                nanos -> parkCalls[0]++), () -> { sourceCalls[0]++; return "actual"; },
-                new ConditionRun<>(check("ready", (String actual) -> {
+                nanos -> parkCalls[0]++), new AwaitRun<>(() -> { sourceCalls[0]++; return "actual"; },
+                check("ready", (String actual) -> {
                     doReturn(0L).doAnswer(ignored -> { currentThread().interrupt(); return 0L; }).when(clock).getAsLong();
                     return evaluation;
-                }))).waitFor();
+                }), clock)).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, failure.step().attempt());
+        var attempt = uncontrolled(WAITING, failure.step().reportedAttempt());
         assertEquals(1, sourceCalls[0]);
         assertEquals(0, parkCalls[0]);
         assertEquals(phase, failure.step().phase());
@@ -418,7 +418,7 @@ class WaitEngineTest {
                     throw fatal;
                 }, () -> "actual",
                         actual -> unsatisfied("not yet"));
-        assertSame(fatal, assertInstanceOf(Uncontrolled.class, outcome).step().attempt().cause());
+        assertSame(fatal, assertInstanceOf(Uncontrolled.class, outcome).step().reportedAttempt().cause());
     }
 
     @Test
@@ -431,7 +431,7 @@ class WaitEngineTest {
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
-        var attempt = uncontrolled(WAITING, uncontrolled.step().attempt());
+        var attempt = uncontrolled(WAITING, uncontrolled.step().reportedAttempt());
         assertEquals(InterruptedException.class,
                 attempt.cause().getClass());
         assertTrue(currentThread().isInterrupted());
@@ -545,9 +545,9 @@ class WaitEngineTest {
         var unsatisfied = loss.step();
         assertEquals(0, loss.acquiredAfterNanos());
         assertEquals(5, unsatisfied.completedAfterNanos());
-        assertSame(failingActual, observation(unsatisfied.attempt()));
+        assertSame(failingActual, observation(unsatisfied.reportedAttempt()));
         assertEquals("lost", mismatch(unsatisfied));
-        assertSame(assertion, unsatisfied.attempt().cause());
+        assertSame(assertion, unsatisfied.reportedAttempt().cause());
         assertThat(time.parkRequests).containsExactly(5L);
     }
 
@@ -564,7 +564,7 @@ class WaitEngineTest {
 
         var uncontrolled = assertInstanceOf(
                 Uncontrolled.class, outcome);
-        var attempt = uncontrolled(CONDITION, uncontrolled.step().attempt());
+        var attempt = uncontrolled(CONDITION, uncontrolled.step().reportedAttempt());
         assertSame(failure, attempt.cause());
     }
 
@@ -578,15 +578,15 @@ class WaitEngineTest {
             LongConsumer parker,
             Callable<S> source,
             AwaitAttempt<S, R> condition) {
-        return new WaitEngine(withTime(config, time, parker), source,
-                new ConditionRun<>(check("test condition", condition))).waitFor();
+        return new WaitEngine(withTime(config, time, parker),
+                new AwaitRun<>(source, check("test condition", condition), time)).waitFor();
     }
 
     private static Object successfulObservation(ExecutionStep<?> attempt) {
-        return assertInstanceOf(SatisfiedObservation.class, attempt.attempt()).observed();
+        return assertInstanceOf(SatisfiedObservation.class, attempt.reportedAttempt()).observed();
     }
 
     private static String mismatch(ExecutionStep<?> attempt) {
-        return assertInstanceOf(UnsatisfiedObservation.class, attempt.attempt()).mismatch();
+        return assertInstanceOf(UnsatisfiedObservation.class, attempt.reportedAttempt()).mismatch();
     }
 }
