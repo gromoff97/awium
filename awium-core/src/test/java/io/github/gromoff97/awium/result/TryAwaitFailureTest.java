@@ -100,7 +100,7 @@ class TryAwaitFailureTest {
                     currentThread().interrupt();
                     return timedAwait(() -> "actual", config(1, 2, 0), time, time);
                 }, () -> accepted);
-        assertThat(beforeSource.failure().message()).startsWith("Waiting interrupted");
+        assertThat(beforeSource.failure().message()).startsWith("Wait interrupted").contains("failed (WAITING)");
     }
 
     @Test
@@ -121,17 +121,18 @@ class TryAwaitFailureTest {
                     return "actual";
                 }, config(1, 2, 0), time, time),
                 () -> accepted);
-        assertThat(sourceFlag.failure().message()).startsWith("Source retrieval interrupted");
-        assertThat(sourceFlag.failure().message()).contains("elapsed 7 ns", "Observed now: \"actual\"");
+        assertThat(sourceFlag.failure().message()).startsWith("Wait interrupted")
+                .contains("failed (SOURCE)", "elapsed 7 ns", "Observed now: \"actual\"");
     }
 
     @Test
     void diagnosticConditionInterruptionPreservesTheThreadFlag() {
-        failed(timedTryAwait(() -> "actual", config(1, 2, 0),
+        var result = failed(timedTryAwait(() -> "actual", config(1, 2, 0),
                 time, time).until(check("condition succeeds", actual -> {
                     currentThread().interrupt();
                     return satisfied(actual);
                 })));
+        assertThat(result.failure().message()).startsWith("Wait interrupted").contains("failed (CONDITION)");
         assertTrue(currentThread().isInterrupted());
     }
 

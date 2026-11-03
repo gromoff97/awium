@@ -19,11 +19,17 @@ public record AwaitFailure(Reason reason, String message, Throwable cause, List<
     }
 
     public enum Reason {
-        TIMEOUT,
-        PERSISTENCE_FAILED,
-        SOURCE_FAILED,
-        CONDITION_FAILED,
-        INTERRUPTED,
-        WAIT_FAILED
+        TIMEOUT("Wait timed out"),
+        PERSISTENCE_FAILED("Condition did not stay satisfied"),
+        SOURCE_FAILED("Source retrieval failed"),
+        CONDITION_FAILED("Condition evaluation failed"),
+        INTERRUPTED("Wait interrupted"),
+        WAIT_FAILED("Waiting failed");
+
+        private final String title;
+
+        Reason(String title) { this.title = title; }
+
+        public String title() { return title; }
     }
 }

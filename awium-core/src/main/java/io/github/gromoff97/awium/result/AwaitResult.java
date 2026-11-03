@@ -9,18 +9,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
     List<ConditionHistory<OBSERVED>> conditions();
 
-    default RESULT orThrow() {
-        return switch (this) {
-            case Succeeded<OBSERVED, RESULT> success -> success.result();
-            case Failed<OBSERVED, RESULT> failed -> {
-                AwaitFailure failure = failed.failure();
-                switch (failure.reason()) {
-                    case TIMEOUT, PERSISTENCE_FAILED -> throw new AwaitAssertionError(failure);
-                    default -> throw new AwaitExecutionException(failure);
-                }
-            }
-        };
-    }
+    RESULT orThrow();
 
     record Succeeded<OBSERVED, RESULT>(List<ConditionHistory<OBSERVED>> conditions,
             RESULT result) implements AwaitResult<OBSERVED, RESULT> {
@@ -28,6 +17,9 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         public Succeeded {
             conditions = List.copyOf(conditions);
         }
+
+        @Override
+        public RESULT orThrow() { return result; }
 
         @Override
         public String toString() {
@@ -45,6 +37,14 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
         public Failed {
             conditions = List.copyOf(conditions);
             requireNonNull(failure, "failure must not be null");
+        }
+
+        @Override
+        public RESULT orThrow() {
+            switch (failure.reason()) {
+                case TIMEOUT, PERSISTENCE_FAILED -> throw new AwaitAssertionError(failure);
+                default -> throw new AwaitExecutionException(failure);
+            }
         }
 
         @Override

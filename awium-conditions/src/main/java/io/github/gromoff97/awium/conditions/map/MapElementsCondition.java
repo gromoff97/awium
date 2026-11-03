@@ -18,15 +18,11 @@ import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         PreservingCondition<? extends Collection<?>> nested) implements PreservingCondition<INPUT> {
     enum Part {
-        KEYS, VALUES, ENTRIES, ENTRY_CONTENTS;
+        KEYS("keys"), VALUES("values"), ENTRIES("entries"), ENTRY_CONTENTS("entries");
 
-        String label() {
-            return switch (this) {
-                case KEYS -> "keys";
-                case VALUES -> "values";
-                case ENTRIES, ENTRY_CONTENTS -> "entries";
-            };
-        }
+        private final String label;
+
+        Part(String label) { this.label = label; }
 
         Iterable<?> elements(Map<?, ?> actual) {
             return switch (this) {
@@ -38,7 +34,7 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         }
     }
 
-    @Override public String description() { return "map " + part.label() + ": " + nested.description(); }
+    @Override public String description() { return "map " + part.label + ": " + nested.description(); }
     @Override public String explanation() { return nested.explanation(); }
     @Override public List<Reference<?>> references() {
         if (part != Part.ENTRY_CONTENTS) return nested.references();
@@ -51,10 +47,10 @@ record MapElementsCondition<INPUT extends Map<?, ?>>(Part part,
         AwaitAttempt<Collection<?>, ?> evaluator = bind(nested);
         return actual -> {
             if (actual == null) return unsatisfied("map was null");
-            var result = evaluator.probeAt(view(actual, () -> part.elements(actual)), "map " + part.label());
+            var result = evaluator.probeAt(view(actual, () -> part.elements(actual)), "map " + part.label);
             if (result instanceof Unsatisfied<?> failure) {
                 return unsatisfied(failure.diagnostic().withMismatch(
-                        "map " + part.label() + ": " + failure.mismatch()), failure.cause());
+                        "map " + part.label + ": " + failure.mismatch()), failure.cause());
             }
             return satisfied(actual, result.diagnostic());
         };

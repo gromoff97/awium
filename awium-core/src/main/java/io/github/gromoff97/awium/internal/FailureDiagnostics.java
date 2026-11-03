@@ -34,7 +34,7 @@ final class FailureDiagnostics {
         var cause = attempt.cause();
         var text = new DiagnosticText(cause);
         step.relatedCauses().forEach(text::retain);
-        text.line(title(reason, attempt));
+        text.line(reason.title());
         text.field("", "Attempt", attemptNumber + " (" + step.phase() + ")");
         if (histories.stream().noneMatch(history -> history.condition() == condition)) {
             text.line("");
@@ -67,21 +67,9 @@ final class FailureDiagnostics {
         };
     }
 
-    private static String title(Reason reason, Attempt<?> attempt) {
-        return switch (reason) {
-            case TIMEOUT -> "Wait timed out";
-            case PERSISTENCE_FAILED -> "Condition did not stay satisfied";
-            case SOURCE_FAILED, CONDITION_FAILED, WAIT_FAILED, INTERRUPTED -> (switch (((Failure<?>) attempt).operation()) {
-                case WAITING -> "Waiting";
-                case CONDITION -> "Condition evaluation";
-                case SOURCE -> "Source retrieval";
-            }) + (reason == INTERRUPTED ? " interrupted" : " failed");
-        };
-    }
-
     private static void timing(DiagnosticText text, WaitCompletion outcome, WaitConfiguration configuration) {
         var completedAfter = outcome.step().completedAfterNanos();
-        var elapsed = outcome instanceof Timeout timeout ? timeout.elapsedNanos() : completedAfter;
+        var elapsed = outcome.elapsedNanos();
         text.line("");
         text.field("", "Timing", "elapsed " + unsignedDuration(elapsed)
                 + "; timeout " + unsignedDuration(configuration.upToNanos())

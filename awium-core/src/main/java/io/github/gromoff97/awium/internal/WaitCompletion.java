@@ -6,6 +6,8 @@ sealed interface WaitCompletion {
 
     ExecutionStep<?> step();
 
+    default long elapsedNanos() { return step().completedAfterNanos(); }
+
     record SatisfiedWait(ExecutionStep<?> step) implements WaitCompletion {}
 
     record Uncontrolled(ExecutionStep<?> step,

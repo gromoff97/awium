@@ -152,7 +152,7 @@ class ThreadIntegrationTest {
                 AwaitExecutionException.class, terminal[0]);
         assertEquals(INTERRUPTED, failure.failure().reason());
         assertInstanceOf(InterruptedException.class, failure.getCause());
-        assertThat(failure).hasMessageStartingWith("Waiting interrupted");
+        assertThat(failure).hasMessageStartingWith("Wait interrupted").hasMessageContaining("failed (WAITING)");
         assertTrue(interrupted[0]);
     }
 

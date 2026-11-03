@@ -10,17 +10,23 @@ import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
 record NullElementsCondition(Nulls nulls) implements PreservingCondition<Collection<?>> {
-    enum Nulls { ANY, NONE, ONLY }
+    enum Nulls {
+        ANY("contains null", "did not contain null"),
+        NONE("does not contain null", "contained null"),
+        ONLY("contains only nulls", "did not contain only nulls");
+
+        private final String description;
+        private final String mismatch;
+
+        Nulls(String description, String mismatch) {
+            this.description = description;
+            this.mismatch = mismatch;
+        }
+    }
 
     @Override
     public String description() {
-        if (nulls == Nulls.ONLY) {
-            return "collection contains only nulls";
-        }
-        if (nulls == Nulls.NONE) {
-            return "collection does not contain null";
-        }
-        return "collection contains null";
+        return "collection " + nulls.description;
     }
 
     @Override
@@ -35,12 +41,6 @@ record NullElementsCondition(Nulls nulls) implements PreservingCondition<Collect
         if (matches) {
             return satisfied(actual);
         }
-        if (nulls == Nulls.ONLY) {
-            return unsatisfied("collection did not contain only nulls");
-        }
-        if (nulls == Nulls.NONE) {
-            return unsatisfied("collection contained null");
-        }
-        return unsatisfied("collection did not contain null");
+        return unsatisfied("collection " + nulls.mismatch);
     }
 }
