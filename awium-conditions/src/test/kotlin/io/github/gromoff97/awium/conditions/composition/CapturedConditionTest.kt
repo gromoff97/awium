@@ -37,6 +37,19 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 
 class CapturedConditionTest {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `rebinding a captured run starts the sequence over`(completed: Boolean) {
+        val run = captured(equalTo("ready"), equalTo("done")).newRun()
+        val first = AwaitAttempt.bind<String>(run)
+        first.probe("ready")
+        if (completed) first.probe("done")
+
+        val second = AwaitAttempt.bind<String>(run)
+
+        assertInstanceOf<Unsatisfied<*>>(second.probe("done"))
+    }
+
     @AfterEach
     fun `clear the caller interrupt flag`() {
         Thread.interrupted()

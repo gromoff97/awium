@@ -12,17 +12,13 @@ import java.util.concurrent.Callable;
 import java.util.function.LongSupplier;
 
 import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
-import static io.github.gromoff97.awium.internal.FailureDiagnostics.failure;
-import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
-import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
+import static io.github.gromoff97.awium.internal.DiagnosticReport.failure;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.FailedBeforeObservation;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static io.github.gromoff97.awium.result.Attempt.Operation;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
 import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
-import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
-import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AwaitResult.Failed;
 import static io.github.gromoff97.awium.result.AwaitResult.Succeeded;
 import static java.lang.Thread.currentThread;
@@ -83,19 +79,17 @@ final class AwaitRun<OBSERVED, RESULT> {
         boolean conditionSatisfied = false;
         try {
             var checked = evaluation.probe(actual);
-            if (checked instanceof Satisfied<? extends RESULT> success) {
-                selectedValue = success.value();
-                conditionSatisfied = true;
-            }
+            checked.ifSatisfied(value -> selectedValue = value);
+            conditionSatisfied = checked.isSatisfied();
             diagnostic = checked.diagnostic();
             conditionCause = checked.cause();
             var recorded = requireNonNull(condition.historyResult(checked), "condition returned null history result");
             diagnostic = recorded.diagnostic();
-            attempt = switch (recorded) {
-                case Satisfied<?> success -> new SatisfiedObservation<>(actual, success.diagnostic());
-                case Unsatisfied<?> mismatch ->
-                        new UnsatisfiedObservation<>(actual, mismatch.diagnostic(), mismatch.cause());
-            };
+            if (recorded.isSatisfied()) {
+                attempt = new SatisfiedObservation<>(actual, diagnostic);
+            } else {
+                attempt = new UnsatisfiedObservation<>(actual, diagnostic, recorded.cause());
+            }
         } catch (ProbeFailure failure) {
             attempt = new FailedAfterObservation<>(actual, Operation.CONDITION,
                     failure.getCause(), failure.location(), diagnostic);
@@ -125,7 +119,7 @@ final class AwaitRun<OBSERVED, RESULT> {
         var step = new ExecutionStep<>(phase, elapsedNanos(), attempt, conditionSatisfied)
                 .withRelatedCause(conditionCause);
         if (routingFailure != null) step = step.withConditionFailure(routingFailure, "condition history");
-        if (!(step.reportedAttempt() instanceof Failure<?>) && currentThread().isInterrupted()) {
+        if (step.failureReason() == null && currentThread().isInterrupted()) {
             var cause = conditionCause == null ? step.reportedAttempt().cause() : conditionCause;
             step = step.withConditionFailure(
                     cause == null ? new InterruptedException("caller thread interrupt flag was set") : cause, null);
@@ -153,14 +147,12 @@ final class AwaitRun<OBSERVED, RESULT> {
                     : requireNonNull(condition.historyConditions(definition), "condition returned null history conditions");
             conditions = history.conditions(definitions);
         } catch (Throwable cause) {
-            var step = outcome.step().withConditionFailure(cause, "condition histories");
-            outcome = outcome instanceof Uncontrolled failure
-                    ? new Uncontrolled(step, failure.interrupted()) : new Uncontrolled(step);
+            outcome = outcome.withConditionFailure(cause, "condition histories");
             conditions = List.of(history.flattened(definition));
         } finally {
             if (interrupted) currentThread().interrupt();
         }
-        return outcome instanceof SatisfiedWait
+        return outcome.failureReason() == null
                 ? new Succeeded<>(conditions, selectedValue)
                 : new Failed<>(conditions,
                         failure(definition, this::diagnostics, outcome, configuration, history.count(), conditions));

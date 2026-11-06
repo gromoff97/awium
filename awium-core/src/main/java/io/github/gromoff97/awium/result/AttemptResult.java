@@ -1,8 +1,10 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.internal.DiagnosticText;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static io.github.gromoff97.awium.internal.DiagnosticText.renderCause;
+import static io.github.gromoff97.awium.internal.DiagnosticText.renderValue;
 import static java.util.Objects.requireNonNull;
 
 public sealed interface AttemptResult<RESULT> {
@@ -12,6 +14,12 @@ public sealed interface AttemptResult<RESULT> {
     }
 
     Diagnostic diagnostic();
+
+    boolean isSatisfied();
+
+    default void ifSatisfied(Consumer<? super RESULT> action) {
+        requireNonNull(action, "action must not be null");
+    }
 
     static <RESULT> Satisfied<RESULT> satisfied(RESULT value) {
         return new Satisfied<>(value);
@@ -49,9 +57,15 @@ public sealed interface AttemptResult<RESULT> {
         public Satisfied { requireNonNull(diagnostic, "diagnostic must not be null"); }
         public Satisfied(RESULT value) { this(value, Diagnostic.EMPTY); }
 
+        @Override public boolean isSatisfied() { return true; }
+
+        @Override public void ifSatisfied(Consumer<? super RESULT> action) {
+            requireNonNull(action, "action must not be null").accept(value);
+        }
+
         @Override
         public final String toString() {
-            return "Satisfied[value=" + new DiagnosticText(null).value(value) + ", diagnostic=" + diagnostic + "]";
+            return "Satisfied[value=" + renderValue(value) + ", diagnostic=" + diagnostic + "]";
         }
     }
 
@@ -61,9 +75,11 @@ public sealed interface AttemptResult<RESULT> {
         }
         public String mismatch() { return diagnostic.mismatch(); }
 
+        @Override public boolean isSatisfied() { return false; }
+
         @Override
         public String toString() {
-            return "Unsatisfied[diagnostic=" + diagnostic + ", cause=" + new DiagnosticText(cause).cause(cause) + "]";
+            return "Unsatisfied[diagnostic=" + diagnostic + ", cause=" + renderCause(cause) + "]";
         }
     }
 }

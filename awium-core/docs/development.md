@@ -44,11 +44,13 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 | `AwaitAttempt.bind`; internal `GuardedAttempt` | Lazy evaluator initialization and guarded check invocation, including nested checks |
 | `WaitEngine` | Polling a supplied run, deadlines, persistence, and completion |
 | `ExecutionStep` | Immutable condition verdict, reported attempt, failures and completion time |
-| `FailureDiagnostics`; `DiagnosticText` | Failure fields; report buffer and guarded rendering |
+| `DiagnosticReport` | Report layout, buffer, and secondary failures |
+| `DiagnosticText` | Safe scalar, cause, and duration formatting |
 
 A wait calls `newRun()` before reading the source, then creates its evaluator through
 `newAttempt()` on the first observation. Later probes reuse that evaluator. Return a
-fresh condition or evaluator for per-wait state. Nested `bind` initializes on its first probe.
+fresh condition or evaluator for per-wait state, including when a run is rebound as a
+definition. Nested `bind` initializes on its first probe.
 
 Checks return `Diagnostic` data in their `AttemptResult`; `diagnostics(attempt)`
 can add final context. Core adds the stop reason, timing, and cause.

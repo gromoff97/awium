@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.internal.DiagnosticText;
 import java.util.List;
 
+import static io.github.gromoff97.awium.internal.DiagnosticReport.success;
 import static java.util.Objects.requireNonNull;
 
 public sealed interface AwaitResult<OBSERVED, RESULT> {
@@ -23,11 +23,7 @@ public sealed interface AwaitResult<OBSERVED, RESULT> {
 
         @Override
         public String toString() {
-            var text = new DiagnosticText(null);
-            text.line("Wait satisfied");
-            text.field("Result", text.value(result));
-            text.histories(conditions);
-            return text.finish("    ");
+            return success(result, conditions);
         }
     }
 

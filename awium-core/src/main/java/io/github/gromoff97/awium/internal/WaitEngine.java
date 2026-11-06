@@ -11,7 +11,6 @@ import static io.github.gromoff97.awium.internal.WaitCompletion.PersistenceFailu
 import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
-import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Thread.currentThread;
@@ -38,11 +37,11 @@ public final class WaitEngine {
         if (initializationFailure != null) {
             return new Uncontrolled(initializationFailure);
         }
-        WaitCompletion acquisition = acquire();
-        return switch (acquisition) {
-            case SatisfiedWait acquired when configuration.persistenceNanos() > 0 -> persist(acquired);
-            default -> acquisition;
-        };
+        var acquisition = acquire();
+        if (acquisition.failureReason() == null && configuration.persistenceNanos() > 0) {
+            return persist(acquisition.step());
+        }
+        return acquisition;
     }
 
     private WaitCompletion acquire() {
@@ -63,7 +62,7 @@ public final class WaitEngine {
             }
 
             ExecutionStep<?> step = runner.poll(ACQUISITION);
-            if (step.reportedAttempt() instanceof Failure<?>) {
+            if (step.failureReason() != null) {
                 return new Uncontrolled(step);
             }
             if (reached(step.completedAfterNanos(), deadline)) {
@@ -76,8 +75,8 @@ public final class WaitEngine {
         }
     }
 
-    private WaitCompletion persist(SatisfiedWait acquired) {
-        ExecutionStep<?> lastStep = acquired.step();
+    private WaitCompletion persist(ExecutionStep<?> acquired) {
+        ExecutionStep<?> lastStep = acquired;
         long deadline = lastStep.completedAfterNanos() + configuration.persistenceNanos();
 
         while (true) {
@@ -87,11 +86,11 @@ public final class WaitEngine {
             }
 
             ExecutionStep<?> step = runner.poll(PERSISTENCE);
-            if (step.reportedAttempt() instanceof Failure<?>) {
+            if (step.failureReason() != null) {
                 return new Uncontrolled(step);
             }
             if (!step.conditionSatisfied()) {
-                return new PersistenceFailure(acquired.step().completedAfterNanos(), step);
+                return new PersistenceFailure(acquired.completedAfterNanos(), step);
             }
             if (reached(step.completedAfterNanos(), deadline)) {
                 return new SatisfiedWait(step);

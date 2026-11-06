@@ -659,7 +659,7 @@ class DiagnosticsSnapshotTest {
         var attempt = (Attempt<Object>) outcome.step().reportedAttempt();
         attempts.put(attemptNumber, attempt);
         var histories = List.of(new ConditionHistory<>(condition, attempts));
-        var failure = FailureDiagnostics.failure(condition, ignored -> Diagnostic.EMPTY,
+        var failure = DiagnosticReport.failure(condition, ignored -> Diagnostic.EMPTY,
                 outcome, configuration, attemptNumber, histories);
         return assertFailure(reason, () -> new AwaitResult.Failed<>(histories, failure).orThrow());
     }

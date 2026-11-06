@@ -207,8 +207,12 @@ class CapturedDiagnosticsTest {
         return run
     }
 
-    private fun <INPUT> diagnose(run: Condition<INPUT, *>, actual: INPUT) =
-        failure(tryAwait(Callable { actual }).every(ofNanos(1)).upTo(ofMillis(100)).until(run))
+    private fun <INPUT, RESULT> diagnose(run: Condition<INPUT, RESULT>, actual: INPUT) =
+        failure(tryAwait(Callable { actual }).every(ofNanos(1)).upTo(ofMillis(100)).until(object : Condition<INPUT, RESULT> {
+            override fun description() = run.description()
+            override fun probe(actual: INPUT) = run.probe(actual)
+            override fun newRun() = run
+        }))
 
     private class RenderingValue(val render: () -> String) {
         var calls = 0

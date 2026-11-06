@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium;
 
-import io.github.gromoff97.awium.internal.DiagnosticText;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 
+import static io.github.gromoff97.awium.internal.DiagnosticText.renderValue;
 import static java.util.Objects.requireNonNull;
 
 public interface AwaitCondition {
@@ -72,6 +72,6 @@ public interface AwaitCondition {
             requireNonNull(label, "reference label must not be null");
             if (label.isBlank()) throw new IllegalArgumentException("reference label must not be blank");
         }
-        @Override public String toString() { return label + "=" + new DiagnosticText(null).value(value); }
+        @Override public String toString() { return label + "=" + renderValue(value); }
     }
 }

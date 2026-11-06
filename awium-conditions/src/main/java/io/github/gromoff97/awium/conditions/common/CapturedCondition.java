@@ -50,6 +50,9 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         public String description() { return CapturedCondition.this.description(); }
 
         @Override
+        public Condition<OBSERVED, List<OBSERVED>> newRun() { return new Run<>(); }
+
+        @Override
         public AttemptResult<List<OBSERVED>> probe(OBSERVED actual) throws Throwable {
             attemptedStage = min(results.size() + 1, stages.size());
             if (results.size() == stages.size()) results.removeLast();

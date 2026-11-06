@@ -66,7 +66,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class FailureDiagnosticsTest {
+class DiagnosticReportTest {
 
     @Test
     void aCustomRunWithoutHistoriesStillExplainsItsTerminalAttempt() {
@@ -244,7 +244,7 @@ class FailureDiagnosticsTest {
     private static AwaitResult<Object, Object> report(Condition<Object, Object> condition,
             Attempt<Object> retained, WaitCompletion outcome) {
         var histories = List.of(new ConditionHistory<>(condition, new TreeMap<>(Map.of(1L, retained))));
-        var failure = FailureDiagnostics.failure(condition, condition::diagnostics, outcome, config(1, 2, 0), 1, histories);
+        var failure = DiagnosticReport.failure(condition, condition::diagnostics, outcome, config(1, 2, 0), 1, histories);
         return new AwaitResult.Failed<>(histories, failure);
     }
 

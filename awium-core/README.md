@@ -56,6 +56,8 @@ The declared result sets the terminal type: `AttemptResult<CharSequence>` yields
 values and preserves diagnostic data. Blank or null mismatch messages, including
 `Diagnostic.mismatch`, cause `IllegalArgumentException`.
 
+`isSatisfied()` inspects the outcome; `ifSatisfied(action)` passes success values to an action.
+
 ## Reasons
 
 The default `because(nonBlankReason)` copies the condition, preserving lifecycle

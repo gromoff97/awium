@@ -73,7 +73,7 @@ class CoreArtifactContractIT {
     @Test
     void engineInternalsAreHiddenFromModuleConsumers() {
         for (var type : List.of("WaitConfiguration", "WaitEngine", "AwaitRun", "GuardedAttempt",
-                "ExecutionStep", "WaitCompletion", "DiagnosticText")) {
+                "ExecutionStep", "WaitCompletion", "DiagnosticText", "DiagnosticReport")) {
             var consumer = forSourceString("consumer.Contract", """
                     package consumer;
                     import %s;

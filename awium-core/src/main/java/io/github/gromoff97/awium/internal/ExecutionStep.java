@@ -4,10 +4,10 @@ import io.github.gromoff97.awium.result.Attempt;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
-import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;
-import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
+import static io.github.gromoff97.awium.result.Attempt.Observation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 
 record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
@@ -17,6 +17,12 @@ record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
 
     ExecutionStep(Phase phase, long completedAfterNanos, Attempt<OBSERVED> reportedAttempt, boolean conditionSatisfied) {
         this(phase, completedAfterNanos, reportedAttempt, conditionSatisfied, List.of());
+    }
+
+    Reason failureReason() {
+        var operation = reportedAttempt.operation();
+        if (operation == null) return null;
+        return operation.failureReason();
     }
 
     ExecutionStep<OBSERVED> withConditionFailure(Throwable cause, String location) {
@@ -34,11 +40,9 @@ record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
 
     private Failure<OBSERVED> conditionFailure(Throwable cause, String location) {
         return switch (reportedAttempt) {
-            case SatisfiedObservation<OBSERVED> observation -> new FailedAfterObservation<>(
-                    observation.observed(), CONDITION, cause, location, observation.diagnostic());
-            case UnsatisfiedObservation<OBSERVED> observation -> new FailedAfterObservation<>(
-                    observation.observed(), CONDITION, cause, location, observation.diagnostic());
             case Failure<OBSERVED> failure -> failure;
+            case Observation<OBSERVED> observation -> new FailedAfterObservation<>(
+                    observation.observed(), CONDITION, cause, location, observation.diagnostic());
         };
     }
 

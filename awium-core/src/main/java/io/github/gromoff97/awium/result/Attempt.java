@@ -1,6 +1,10 @@
 package io.github.gromoff97.awium.result;
 
-import static io.github.gromoff97.awium.internal.DiagnosticText.attempt;
+import static io.github.gromoff97.awium.internal.DiagnosticReport.attempt;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.CONDITION_FAILED;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.SOURCE_FAILED;
+import static io.github.gromoff97.awium.result.AwaitFailure.Reason.WAIT_FAILED;
 import static java.util.Objects.requireNonNull;
 
 public sealed interface Attempt<OBSERVED> {
@@ -11,7 +15,9 @@ public sealed interface Attempt<OBSERVED> {
 
     default Diagnostic diagnostic() { return Diagnostic.EMPTY; }
 
-    record SatisfiedObservation<OBSERVED>(OBSERVED observed, Diagnostic diagnostic) implements Attempt<OBSERVED> {
+    default Operation operation() { return null; }
+
+    record SatisfiedObservation<OBSERVED>(OBSERVED observed, Diagnostic diagnostic) implements Observation<OBSERVED> {
         public SatisfiedObservation { requireNonNull(diagnostic, "diagnostic must not be null"); }
         public SatisfiedObservation(OBSERVED observed) { this(observed, Diagnostic.EMPTY); }
         @Override
@@ -20,7 +26,7 @@ public sealed interface Attempt<OBSERVED> {
         }
     }
 
-    record UnsatisfiedObservation<OBSERVED>(OBSERVED observed, Diagnostic diagnostic, Throwable cause) implements Attempt<OBSERVED> {
+    record UnsatisfiedObservation<OBSERVED>(OBSERVED observed, Diagnostic diagnostic, Throwable cause) implements Observation<OBSERVED> {
         public UnsatisfiedObservation {
             requireNonNull(diagnostic, "diagnostic must not be null").requireMismatch();
         }
@@ -35,7 +41,7 @@ public sealed interface Attempt<OBSERVED> {
     }
 
     record FailedAfterObservation<OBSERVED>(OBSERVED observed, Operation operation,
-            Throwable cause, String location, Diagnostic diagnostic) implements Failure<OBSERVED> {
+            Throwable cause, String location, Diagnostic diagnostic) implements Observation<OBSERVED>, Failure<OBSERVED> {
 
         public FailedAfterObservation {
             requireNonNull(operation, "operation must not be null");
@@ -66,8 +72,14 @@ public sealed interface Attempt<OBSERVED> {
         }
     }
 
+    sealed interface Observation<OBSERVED> extends Attempt<OBSERVED> {
+
+        OBSERVED observed();
+    }
+
     sealed interface Failure<OBSERVED> extends Attempt<OBSERVED> {
 
+        @Override
         Operation operation();
 
         default String location() {
@@ -79,8 +91,14 @@ public sealed interface Attempt<OBSERVED> {
     }
 
     enum Operation {
-        WAITING,
-        SOURCE,
-        CONDITION
+        WAITING(WAIT_FAILED),
+        SOURCE(SOURCE_FAILED),
+        CONDITION(CONDITION_FAILED);
+
+        private final Reason failureReason;
+
+        Operation(Reason failureReason) { this.failureReason = failureReason; }
+
+        public Reason failureReason() { return failureReason; }
     }
 }

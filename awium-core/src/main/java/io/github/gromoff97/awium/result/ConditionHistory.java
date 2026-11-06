@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.AwaitCondition;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import static io.github.gromoff97.awium.internal.DiagnosticText.conditionHistory;
+import static io.github.gromoff97.awium.internal.DiagnosticReport.conditionHistory;
 import static java.util.Collections.unmodifiableNavigableMap;
 import static java.util.Objects.requireNonNull;
 

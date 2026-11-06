@@ -88,8 +88,10 @@ The sealed `Attempt<OBSERVED>` has four immutable records:
 | `FailedAfterObservation` | `observed`, `operation`, `cause`, `location`, `diagnostic` | Observation obtained, then execution failed |
 | `FailedBeforeObservation` | `operation`, `cause` | Observation unavailable |
 
-Observed nulls and observations preceding a check failure or interruption are retained.
-Every variant has `cause()` (null if absent) and `diagnostic()` (empty if absent).
+The three variants with an observation share `Attempt.Observation<OBSERVED>` and its
+`observed()` accessor, including null. Values preceding a check failure or interruption are retained.
+Every variant has `cause()` (null if absent), `diagnostic()` (empty if absent), and
+`operation()` (null unless execution failed).
 `UnsatisfiedObservation.mismatch()` reads the diagnostic message. Failure variants share
 `Attempt.Failure<OBSERVED>`: non-null cause, operation `SOURCE`/`CONDITION`/`WAITING`,
 and optional nested `location()`. Record patterns preserve types without casts.

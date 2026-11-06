@@ -1,5 +1,6 @@
 package io.github.gromoff97.awium.result;
 
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 import io.github.gromoff97.awium.AwaitCondition.Reference;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,6 +16,33 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AttemptResultTest {
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = "actual")
+    void aSuccessActionReceivesTheChosenValue(String value) {
+        var delivered = new ArrayList<String>();
+        AttemptResult<String> result = satisfied(value);
+
+        result.ifSatisfied(delivered::add);
+
+        assertThat(delivered).containsExactly(value);
+    }
+
+    @Test
+    void aMismatchSkipsTheSuccessActionEvenWithACause() {
+        AttemptResult<String> result = unsatisfied("pending", new IllegalStateException("retry"));
+
+        result.ifSatisfied(value -> { throw new AssertionError("a mismatch has no selected value"); });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void aSuccessActionMustNotBeNull(boolean successful) {
+        AttemptResult<String> result = successful ? satisfied("actual") : unsatisfied("pending");
+
+        assertThrows(NullPointerException.class, () -> result.ifSatisfied(null));
+    }
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
