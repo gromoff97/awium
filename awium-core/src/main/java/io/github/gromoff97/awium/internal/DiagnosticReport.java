@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitFailure;
 import io.github.gromoff97.awium.result.ConditionHistory;
@@ -21,7 +21,7 @@ import static io.github.gromoff97.awium.result.Attempt.UnsatisfiedObservation;
 
 public final class DiagnosticReport {
 
-    static AwaitFailure failure(AwaitCondition condition, Function<Attempt<?>, Diagnostic> diagnostics,
+    static AwaitFailure failure(Condition<?, ?> condition, Function<Attempt<?>, Diagnostic> diagnostics,
             WaitCompletion outcome, WaitConfiguration configuration, long attemptNumber, List<? extends ConditionHistory<?>> histories) {
         var reason = outcome.failureReason();
         if (reason == null) throw new IllegalArgumentException("successful outcomes have no failure diagnostics");
@@ -147,7 +147,7 @@ public final class DiagnosticReport {
     private void diagnostic(Diagnostic diagnostic) {
         if (diagnostic.mismatch() != null) field("Mismatch", diagnostic.mismatch());
         for (var detail : diagnostic.fields()) {
-            if (detail.value() instanceof AwaitCondition condition) {
+            if (detail.value() instanceof Condition<?, ?> condition) {
                 condition(detail.label(), condition, "    ");
             } else {
                 value(detail.label(), detail.value());
@@ -157,7 +157,7 @@ public final class DiagnosticReport {
 
     private void value(String label, Object value) { field(label, renderValue(value, this::retain)); }
 
-    private void condition(String label, AwaitCondition condition, String indentation) {
+    private void condition(String label, Condition<?, ?> condition, String indentation) {
         field(indentation, label, render(condition::description));
         String detailsIndentation = indentation + "    ";
         render(() -> {

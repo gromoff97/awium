@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditions.composition
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
@@ -19,7 +19,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
@@ -54,7 +54,7 @@ class NestedConditionTest {
     }
     data class Selection(
         val wrap: (Number) -> Any,
-        val compose: (Condition<Number, Number>) -> AwaitCondition
+        val compose: (TypedCondition<Number, Number>) -> AwaitCondition
     )
 
     @ParameterizedTest
@@ -67,7 +67,7 @@ class NestedConditionTest {
     @MethodSource("selections")
     fun `nested factories start lazily for each execution`(selection: Selection) {
         var factories = 0
-        val nested: Condition<Number, Number> = conditionPerWait("second observation") {
+        val nested: TypedCondition<Number, Number> = conditionPerWait("second observation") {
             factories++
             var calls = 0
             AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("first observation") }
@@ -181,14 +181,14 @@ class NestedConditionTest {
 
     @ParameterizedTest
     @MethodSource("positions")
-    fun `positional selectors preserve nested mismatch details`(select: (Condition<Any, String>?) -> AwaitCondition) {
+    fun `positional selectors preserve nested mismatch details`(select: (TypedCondition<Any, String>?) -> AwaitCondition) {
         val rejected = rejection(select(instanceOf(String::class.java)), listOf(1, "ready", 2))
         assertThat(rejected.mismatch()).contains("value type was java.lang.Integer")
     }
 
     @ParameterizedTest
     @MethodSource("positions")
-    fun `positional selectors reject a missing nested condition`(select: (Condition<Any, String>?) -> AwaitCondition) {
+    fun `positional selectors reject a missing nested condition`(select: (TypedCondition<Any, String>?) -> AwaitCondition) {
         assertEquals("condition must not be null", assertThrows<NullPointerException> { select(null) }.message)
     }
 
@@ -293,9 +293,9 @@ class NestedConditionTest {
 
         @JvmStatic
         fun positions() = listOf(
-            argumentSet("first", { nested: Condition<Any, String>? -> firstElement(nested) }),
-            argumentSet("last", { nested: Condition<Any, String>? -> lastElement(nested) }),
-            argumentSet("index", { nested: Condition<Any, String>? -> elementAt(0, nested) }))
+            argumentSet("first", { nested: TypedCondition<Any, String>? -> firstElement(nested) }),
+            argumentSet("last", { nested: TypedCondition<Any, String>? -> lastElement(nested) }),
+            argumentSet("index", { nested: TypedCondition<Any, String>? -> elementAt(0, nested) }))
 
         @JvmStatic
         fun failures() = listOf(argumentSet("checked", IOException("checked")), argumentSet("interrupted", InterruptedException("interrupted")),

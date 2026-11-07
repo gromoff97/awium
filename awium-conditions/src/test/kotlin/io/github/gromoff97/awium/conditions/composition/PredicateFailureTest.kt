@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.composition
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none

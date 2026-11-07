@@ -1,0 +1,91 @@
+package io.github.gromoff97.awium.dsl;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+
+import static java.util.Map.Entry;
+import static java.util.Objects.requireNonNull;
+
+public final class Await {
+
+    private Await() {}
+
+    public static <VALUE> ValueAwait<VALUE> await(Callable<? extends VALUE> source) {
+        return new ValueAwait<>(io.github.gromoff97.awium.Await.await(source));
+    }
+
+    public static <VALUE> SelectionAwait<Optional<VALUE>, VALUE> await(OptionalSource<VALUE> source) {
+        return new SelectionAwait<>(io.github.gromoff97.awium.Await.await(source));
+    }
+
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> SelectionAwait<VALUES, ELEMENT> await(CollectionSource<VALUES> source) {
+        return new SelectionAwait<>(io.github.gromoff97.awium.Await.await(source));
+    }
+
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> MapAwait<ENTRIES, Entry<KEY, VALUE>, VALUE> await(MapSource<ENTRIES> source) {
+        return new MapAwait<>(io.github.gromoff97.awium.Await.await(source));
+    }
+
+    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
+            SelectionAwait<VALUES, ELEMENT> await(CollectionViewSource<ELEMENT, VALUES> source) {
+        return new SelectionAwait<>(io.github.gromoff97.awium.Await.await(requireNonNull(source, "source must not be null").delegate()));
+    }
+
+    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
+            MapAwait<ENTRIES, Entry<? extends KEY, ? extends VALUE>, VALUE> await(MapViewSource<KEY, VALUE, ENTRIES> source) {
+        return new MapAwait<>(io.github.gromoff97.awium.Await.await(requireNonNull(source, "source must not be null").delegate()));
+    }
+
+    public static <VALUE> DiagnosticAwait<VALUE> tryAwait(Callable<? extends VALUE> source) {
+        return new DiagnosticAwait<>(io.github.gromoff97.awium.Await.tryAwait(source));
+    }
+
+    public static <VALUE> DiagnosticSelectionAwait<Optional<VALUE>, VALUE> tryAwait(OptionalSource<VALUE> source) {
+        return new DiagnosticSelectionAwait<>(io.github.gromoff97.awium.Await.tryAwait(source));
+    }
+
+    public static <ELEMENT, VALUES extends Collection<ELEMENT>> DiagnosticSelectionAwait<VALUES, ELEMENT> tryAwait(CollectionSource<VALUES> source) {
+        return new DiagnosticSelectionAwait<>(io.github.gromoff97.awium.Await.tryAwait(source));
+    }
+
+    public static <KEY, VALUE, ENTRIES extends Map<KEY, VALUE>> DiagnosticMapAwait<ENTRIES, Entry<KEY, VALUE>, VALUE> tryAwait(MapSource<ENTRIES> source) {
+        return new DiagnosticMapAwait<>(io.github.gromoff97.awium.Await.tryAwait(source));
+    }
+
+    public static <ELEMENT, VALUES extends Collection<? extends ELEMENT>>
+            DiagnosticSelectionAwait<VALUES, ELEMENT> tryAwait(CollectionViewSource<ELEMENT, VALUES> source) {
+        return new DiagnosticSelectionAwait<>(io.github.gromoff97.awium.Await.tryAwait(requireNonNull(source, "source must not be null").delegate()));
+    }
+
+    public static <KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>
+            DiagnosticMapAwait<ENTRIES, Entry<? extends KEY, ? extends VALUE>, VALUE> tryAwait(MapViewSource<KEY, VALUE, ENTRIES> source) {
+        return new DiagnosticMapAwait<>(io.github.gromoff97.awium.Await.tryAwait(requireNonNull(source, "source must not be null").delegate()));
+    }
+
+    @FunctionalInterface
+    public interface OptionalSource<VALUE> extends Callable<Optional<VALUE>> {}
+
+    @FunctionalInterface
+    public interface CollectionSource<VALUES extends Collection<?>> extends Callable<VALUES> {}
+
+    @FunctionalInterface
+    public interface MapSource<ENTRIES extends Map<?, ?>> extends Callable<ENTRIES> {}
+
+    public record CollectionViewSource<ELEMENT, VALUES extends Collection<? extends ELEMENT>>(
+            Callable<? extends VALUES> delegate) {
+
+        public CollectionViewSource {
+            requireNonNull(delegate, "delegate must not be null");
+        }
+    }
+
+    public record MapViewSource<KEY, VALUE, ENTRIES extends Map<? extends KEY, ? extends VALUE>>(
+            Callable<? extends ENTRIES> delegate) {
+
+        public MapViewSource {
+            requireNonNull(delegate, "delegate must not be null");
+        }
+    }
+}

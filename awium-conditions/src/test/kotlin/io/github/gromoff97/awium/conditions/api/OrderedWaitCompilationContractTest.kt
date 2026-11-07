@@ -33,8 +33,8 @@ class OrderedWaitCompilationContractTest {
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.result.AwaitResult;
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.Await.tryAwait;
+                import static io.github.gromoff97.awium.dsl.Await.await;
+                import static io.github.gromoff97.awium.dsl.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
                 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
                 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.present;

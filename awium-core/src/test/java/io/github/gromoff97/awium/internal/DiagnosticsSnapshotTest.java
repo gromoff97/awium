@@ -1,8 +1,7 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.AwaitCondition.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.support.TestCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitResult;
@@ -296,9 +295,9 @@ class DiagnosticsSnapshotTest {
             Callable<String> source = () -> { throw cause; };
             var waiting = await(source);
 
-            var returned = failure(diagnostic(waiting).until(accepted));
+            var returned = failure(diagnostic(waiting).until(accepted()));
             var thrown = assertThrows(AwaitExecutionException.class,
-                    () -> waiting.until(accepted));
+                    () -> waiting.until(accepted()));
 
             assertThat(returned.message()).contains("java.lang.IllegalStateException: " + message);
             assertThat(thrown.getMessage()).contains("java.lang.IllegalStateException: " + message);
@@ -321,8 +320,8 @@ class DiagnosticsSnapshotTest {
         };
         Callable<Object> source = () -> { throw cause; };
         var waiting = withTime(await(source), time, time);
-        var failure = returnResult ? failure(diagnostic(waiting).until(accepted))
-                : assertThrows(AwaitExecutionException.class, () -> waiting.until(accepted)).failure();
+        var failure = returnResult ? failure(diagnostic(waiting).until(accepted()))
+                : assertThrows(AwaitExecutionException.class, () -> waiting.until(accepted())).failure();
 
         assertEquals(SOURCE_FAILED, failure.reason());
         assertSame(cause, failure.cause());
@@ -532,7 +531,7 @@ class DiagnosticsSnapshotTest {
         var cause = (AssertionError) constructor.newInstance("isolated cause");
 
         var sourceFailure = assertFailure(SOURCE_FAILED,
-                () -> await((Callable<String>) () -> { throw cause; }).until(accepted));
+                () -> await((Callable<String>) () -> { throw cause; }).until(accepted()));
         assertSame(cause, sourceFailure.getCause());
         assertThat(sourceFailure).hasMessageContainingAll(cause.getClass().getName(), "isolated cause");
 
@@ -652,7 +651,7 @@ class DiagnosticsSnapshotTest {
         assertThat(failure).hasMessageContainingAll("[[[1, 2], leaf], [[1, 2], leaf], [null, [a, b]], [[...]]]");
     }
 
-    private static Throwable renderFailure(AwaitCondition condition, AwaitFailure.Reason reason, WaitCompletion outcome,
+    private static Throwable renderFailure(Condition<?, ?> condition, AwaitFailure.Reason reason, WaitCompletion outcome,
             WaitConfiguration configuration, long attemptNumber) {
         var attempts = new TreeMap<Long, Attempt<Object>>();
         @SuppressWarnings("unchecked")
@@ -760,10 +759,10 @@ class DiagnosticsSnapshotTest {
             case "entry" -> entry(signalling, clearing);
             default -> signalling;
         };
-        var check = new AwaitCondition.PreservingCondition<Object>() {
+        var check = new Condition<Object, Object>() {
             @Override public String description() { return "ready"; }
             @Override public List<Reference<?>> references() { return List.of(new Reference<>("Expected", expected)); }
-            @Override public AttemptResult<?> probe(Object actual) { return unsatisfied("not ready", original); }
+            @Override public AttemptResult<Object> probe(Object actual) { return unsatisfied("not ready", original); }
         };
         var waiting = timedAwait(() -> clearing, config(1, 2, 0), time, time);
         AwaitFailure failure = returnResult

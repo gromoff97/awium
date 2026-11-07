@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
@@ -8,7 +8,7 @@ import static io.github.gromoff97.awium.internal.DiagnosticReport.conditionHisto
 import static java.util.Collections.unmodifiableNavigableMap;
 import static java.util.Objects.requireNonNull;
 
-public record ConditionHistory<OBSERVED>(AwaitCondition condition, NavigableMap<Long, Attempt<OBSERVED>> attempts) {
+public record ConditionHistory<OBSERVED>(Condition<?, ?> condition, NavigableMap<Long, Attempt<OBSERVED>> attempts) {
 
     public ConditionHistory {
         requireNonNull(condition, "condition must not be null");

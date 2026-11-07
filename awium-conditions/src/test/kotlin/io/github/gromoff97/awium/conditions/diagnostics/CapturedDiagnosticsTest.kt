@@ -1,10 +1,10 @@
 package io.github.gromoff97.awium.conditions.diagnostics
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.Await.tryAwait
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.Await.tryAwait
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.capturedRun
-import io.github.gromoff97.awium.AwaitCondition.Reference
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.Condition.Reference
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
@@ -175,7 +175,7 @@ class CapturedDiagnosticsTest {
         val attempt = FailedBeforeObservation<String>(operation, IllegalStateException("external failure"))
 
         assertEquals(2, run.historySlot(attempt))
-        assertEquals(listOf(first, last), run.historyConditions(definition))
+        assertEquals(listOf(first, last), run.historyDefinitions(definition))
         assertEquals(listOf(Reference("Sequence", "captured $completed/2; stage 2/2")), run.diagnostics(attempt).fields())
     }
 
@@ -188,27 +188,27 @@ class CapturedDiagnosticsTest {
         assertEquals(listOf(Reference("Sequence", "captured 2/2; stage 2/2")), run.diagnostics(SatisfiedObservation("done")).fields())
     }
 
-    private fun withOperand(name: String, operand: Reference<*>, check: AwaitAttempt<Any, Any>) = object : Condition<Any, Any> {
+    private fun withOperand(name: String, operand: Reference<*>, check: AwaitAttempt<Any, Any>) = object : TypedCondition<Any, Any> {
         override fun description() = name
         override fun references() = listOf(operand)
         override fun probe(actual: Any) = check.probe(actual).mapValue { it }
     }
 
-    private fun lifecycle(pending: Condition<String, String> = status("pending")) =
+    private fun lifecycle(pending: TypedCondition<String, String> = status("pending")) =
         captured(status("created"), pending, status("completed"))
 
     private fun status(expected: String) = condition<String, String>("payment status is $expected") {
         if (it == expected) satisfied(it) else unsatisfied("payment status was $it")
     }
 
-    private fun secondStage(second: AwaitCondition): Condition<Any, List<Any>> {
+    private fun secondStage(second: AwaitCondition): TypedCondition<Any, List<Any>> {
         val run = capturedRun<Any>(captured(isNotNull, second))
         run.probe("ready")
         return run
     }
 
-    private fun <INPUT, RESULT> diagnose(run: Condition<INPUT, RESULT>, actual: INPUT) =
-        failure(tryAwait(Callable { actual }).every(ofNanos(1)).upTo(ofMillis(100)).until(object : Condition<INPUT, RESULT> {
+    private fun <INPUT, RESULT> diagnose(run: TypedCondition<INPUT, RESULT>, actual: INPUT) =
+        failure(tryAwait(Callable { actual }).every(ofNanos(1)).upTo(ofMillis(100)).until(object : TypedCondition<INPUT, RESULT> {
             override fun description() = run.description()
             override fun probe(actual: INPUT) = run.probe(actual)
             override fun newRun() = run

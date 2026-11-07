@@ -20,8 +20,16 @@ class ConditionsArchitectureTest {
     }
 
     @Test
+    fun `fluent typing does not depend on concrete conditions`() {
+        noClasses().that().resideInAPackage("..awium.dsl")
+            .should().dependOnClassesThat().resideInAPackage("..awium.conditions..")
+            .check(productClasses)
+    }
+
+    @Test
     fun `condition implementations do not call waiting facades`() {
-        noClasses().that(inFamilies(catalogs).negate()).should().dependOnClassesThat(
+        noClasses().that().resideInAPackage("..awium.conditions..")
+            .and(inFamilies(catalogs).negate()).should().dependOnClassesThat(
             inFamilies(setOf("Await", "ValueAwait", "SelectionAwait", "MapAwait", "DiagnosticAwait", "DiagnosticSelectionAwait", "DiagnosticMapAwait"))
         ).check(productClasses)
     }
@@ -50,10 +58,10 @@ class ConditionsArchitectureTest {
     }
 
     @Test
-    fun `product packages contain only condition families and checked callbacks`() {
+    fun `product packages contain only condition families fluent typing and checked callbacks`() {
         val packages = productClasses.map { it.packageName }.toSet()
         assertThat(packages).containsExactlyInAnyOrderElementsOf(
-            factories.map { it.substringBeforeLast('.') }.toSet() + "io.github.gromoff97.awium.function.checked")
+            factories.map { it.substringBeforeLast('.') }.toSet() + setOf("io.github.gromoff97.awium.function.checked", "io.github.gromoff97.awium.dsl"))
     }
 
     @Test

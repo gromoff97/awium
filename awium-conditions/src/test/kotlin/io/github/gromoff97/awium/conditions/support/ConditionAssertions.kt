@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditions.support
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.CollectingCondition
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.CollectingCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.result.Attempt
@@ -20,11 +20,11 @@ import org.junit.jupiter.api.Assertions.fail
 
 object ConditionAssertions {
     @Suppress("UNCHECKED_CAST")
-    fun <OBSERVED> capturedRun(condition: CollectingCondition<*>): Condition<OBSERVED, List<OBSERVED>> =
-        condition.newRun() as Condition<OBSERVED, List<OBSERVED>>
+    fun <OBSERVED> capturedRun(condition: CollectingCondition<*>): TypedCondition<OBSERVED, List<OBSERVED>> =
+        condition.newRun() as TypedCondition<OBSERVED, List<OBSERVED>>
 
     fun evaluate(condition: AwaitCondition, actual: Any?): AttemptResult<*> =
-        AwaitAttempt.bind<Any?>(condition).probe(actual)
+        AwaitCondition.bind<Any?>(condition).probe(actual)
 
     fun rejection(condition: AwaitCondition, actual: Any?): Unsatisfied<*> =
         assertInstanceOf<Unsatisfied<*>>(evaluate(condition, actual))

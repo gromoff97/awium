@@ -1,10 +1,12 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.dsl;
 
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
+import java.util.Optional;
 
-import static io.github.gromoff97.awium.internal.DiagnosticText.renderValue;
 import static java.util.Objects.requireNonNull;
 
 public interface AwaitCondition {
@@ -13,6 +15,21 @@ public interface AwaitCondition {
     default List<Reference<?>> references() { return List.of(); }
     AwaitCondition because(String explanation);
     Condition<?, ?> newRun();
+
+    static Optional<AwaitCondition> definitionOf(Condition<?, ?> condition) {
+        requireNonNull(condition, "condition must not be null");
+        if (condition instanceof ConditionBinding<?, ?> binding) return Optional.of(binding.definition());
+        if (condition instanceof AwaitCondition definition) return Optional.of(definition);
+        return Optional.empty();
+    }
+
+    static <INPUT, RESULT> AwaitAttempt<INPUT, RESULT> bind(TypedCondition<? super INPUT, ? extends RESULT> condition) {
+        return io.github.gromoff97.awium.function.AwaitAttempt.bind(condition);
+    }
+
+    static <INPUT> AwaitAttempt<INPUT, ?> bind(AwaitCondition condition) {
+        return io.github.gromoff97.awium.function.AwaitAttempt.bind(ConditionBinding.<INPUT, Object>bind(condition));
+    }
 
     interface ApplicableCondition<INPUT, REFERENCE> extends AwaitCondition {
         AttemptResult<?> probe(INPUT actual) throws Throwable;
@@ -67,11 +84,4 @@ public interface AwaitCondition {
         }
     }
 
-    record Reference<VALUE>(String label, VALUE value) {
-        public Reference {
-            requireNonNull(label, "reference label must not be null");
-            if (label.isBlank()) throw new IllegalArgumentException("reference label must not be blank");
-        }
-        @Override public String toString() { return label + "=" + renderValue(value); }
-    }
 }

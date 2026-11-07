@@ -49,13 +49,12 @@ class CompilationContractTest {
     })
     void bindingCannotInventAResultType(String expression) {
         assertRejected("""
-                import io.github.gromoff97.awium.AwaitCondition;
                 import io.github.gromoff97.awium.Condition;
                 import io.github.gromoff97.awium.function.AwaitAttempt;
                 import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
                 final class Contract {
                     void check(Condition<String, Integer> length) {
-                        AwaitCondition definition = length;
+                        Condition<?, ?> definition = length;
                         %s
                     }
                 }
@@ -82,29 +81,6 @@ class CompilationContractTest {
                     }
                 }
                 """.formatted(declaration));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"await(StringBuilder::new);", "await(Optional::empty);", "await(() -> null);"})
-    void ambiguousSourcesNeedALambdaOrAnExplicitSourceCategory(String expression) {
-        assertRejected("""
-                final class Contract { void check() { %s } }
-                """.formatted(expression));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "SelectedCondition<Optional<?>>", "SelectedCondition<Collection<?>>", "SelectedCondition<Map<?, ?>>"
-    })
-    void categorySpecificTerminalsRejectWrongConditions(String type) {
-        assertRejected("""
-                import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
-                final class Contract {
-                    void check(Callable<String> source, %s condition) {
-                        await(source).until(condition);
-                    }
-                }
-                """.formatted(type));
     }
 
     static Stream<Arguments> invalidFixtures() {

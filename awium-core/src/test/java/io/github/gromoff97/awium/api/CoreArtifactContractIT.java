@@ -55,10 +55,11 @@ class CoreArtifactContractIT {
     private static void assertConsumer(ClassLoader loader) throws Exception {
         var consumer = loader.loadClass("consumer.CoreConsumer");
         assertArrayEquals(new Object[]{5, 5, 1, 1, false, 5}, (Object[]) consumer.getMethod("run").invoke(null));
+        assertEquals(5, consumer.getMethod("runWithHandler").invoke(null));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"io.github.gromoff97.awium.Explained", "io.github.gromoff97.awium.internal.AwaitRun",
+    @ValueSource(strings = {"io.github.gromoff97.awium.ExplainedCondition", "io.github.gromoff97.awium.internal.AwaitRun",
             "io.github.gromoff97.awium.internal.ExecutionStep", "io.github.gromoff97.awium.internal.WaitCompletion"})
     void implementationTypesAreHiddenFromClasspathConsumers(String type) {
         var consumer = forSourceString("consumer.Contract", """

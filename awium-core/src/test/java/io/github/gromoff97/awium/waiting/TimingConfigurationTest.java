@@ -105,7 +105,7 @@ class TimingConfigurationTest {
     @ValueSource(longs = {50, 100})
     void timeoutAtMostTheDefaultIntervalAllowsImmediateSuccess(long timeoutMillis) {
         var timeout = ofMillis(timeoutMillis);
-        assertEquals("ready", withTime(await(() -> "ready"), time, time).upTo(timeout).until(accepted));
+        assertEquals("ready", withTime(await(() -> "ready"), time, time).upTo(timeout).until(accepted()));
         assertThat(time.parkRequests).isEmpty();
     }
 

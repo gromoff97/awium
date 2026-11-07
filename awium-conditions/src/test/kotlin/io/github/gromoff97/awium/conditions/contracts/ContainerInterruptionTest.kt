@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.contracts
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.InputCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.InputCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all as allElements
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any as anyElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.contains

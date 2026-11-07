@@ -1,16 +1,15 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.dsl;
 
-import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
-import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition.Reference;
-import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.ApplicableCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.CollectingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.MapValueCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
-import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AttemptResult;
-import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -34,18 +33,6 @@ abstract class Explained<ORIGINAL extends AwaitCondition> implements AwaitCondit
         public AttemptResult<?> probe(INPUT actual) throws Throwable { return original.probe(actual); }
         public AwaitAttempt<? super INPUT, ?> newAttempt() throws Exception { return original.newAttempt(); }
         public Condition<INPUT, ?> newRun() { return original.newRun(); }
-    }
-
-    static final class Typed<INPUT, RESULT> extends Explained<Condition<INPUT, RESULT>> implements Condition<INPUT, RESULT> {
-        Typed(Condition<INPUT, RESULT> original, String explanation) { super(original, explanation); }
-        @Override public AttemptResult<RESULT> probe(INPUT actual) throws Throwable { return original.probe(actual); }
-        @Override public AwaitAttempt<? super INPUT, ? extends RESULT> newAttempt() throws Exception { return original.newAttempt(); }
-        @Override public Condition<INPUT, RESULT> newRun() { return original.newRun(); }
-        @Override public AttemptResult<?> historyResult(AttemptResult<? extends RESULT> attempt) throws Throwable { return original.historyResult(attempt); }
-        @Override public int historySlot(Attempt<?> attempt) { return original.historySlot(attempt); }
-        @Override public List<? extends AwaitCondition> historyConditions(AwaitCondition definition) { return original.historyConditions(definition); }
-        @Override public Diagnostic diagnostics(Attempt<?> attempt) { return original.diagnostics(attempt); }
-        @Override public Condition<INPUT, RESULT> because(String explanation) { return original.because(explanation); }
     }
 
     static final class Preserving<INPUT> extends Check<INPUT, PreservingCondition<INPUT>> implements PreservingCondition<INPUT> {

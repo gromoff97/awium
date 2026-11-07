@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.api;
 
 import io.github.gromoff97.awium.Await;
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.Collection;
@@ -19,8 +18,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import static io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.*;
@@ -42,15 +39,20 @@ class SourceContractTest {
     }
 
     @Test
-    void nullReturningSourcesCanDeclareTheirCategory() {
-        Callable<Object> value = () -> null;
-        Await.OptionalSource<String> optional = () -> null;
-        Await.CollectionSource<List<String>> collection = () -> null;
-        Await.MapSource<Map<String, String>> map = () -> null;
-        assertNull(await(value).until(accepted));
-        assertNull(await(optional).until(accepted));
-        assertNull(await(collection).until(accepted));
-        assertNull(await(map).until(accepted));
+    void constructorReferencesKeepTheirConcreteTypes() {
+        var value = await(StringBuilder::new).until(accepted());
+        assertEquals(0, value.length());
+    }
+
+    @Test
+    void genericMethodReferencesNeedNoSourceCategory() {
+        var value = await(java.util.Optional::empty).until(accepted());
+        assertEquals(java.util.Optional.empty(), value);
+    }
+
+    @Test
+    void nullReturningSourcesNeedNoCategory() {
+        assertNull(await(() -> null).until(accepted()));
     }
 
     @Test
@@ -60,24 +62,8 @@ class SourceContractTest {
         LongSupplier clock = () -> { throw unexpected; };
         LongConsumer parker = nanos -> { throw unexpected; };
         var waiting = withTime(await(source), clock, parker);
-        assertNullRejected("condition", () -> waiting.until((PreservingCondition<String>) null));
-        assertNullRejected("condition", () -> diagnostic(waiting).until((PreservingCondition<String>) null));
-        assertNullRejected("condition", () -> waiting.until((Condition<String, String>) null));
-        assertNullRejected("condition", () -> diagnostic(waiting).until((Condition<String, String>) null));
-        assertNullRejected("condition", () -> waiting.until((AwaitCondition.ComparisonCondition<String>) null));
-        assertNullRejected("condition", () -> diagnostic(waiting).until((AwaitCondition.ComparisonCondition<String>) null));
-        AwaitCondition.CollectingCondition<PreservingCondition<String>> sequence = null;
-        assertNullRejected("condition", () -> waiting.until(sequence));
-        assertNullRejected("condition", () -> diagnostic(waiting).until(sequence));
-
-        Await.MapSource<Map<String, String>> mapSource = () -> { throw unexpected; };
-        var map = withTime(await(mapSource), clock, parker);
-        SelectedCondition<Map<?, ?>> selected = null;
-        AwaitCondition.MapValueCondition<Map<?, ?>> mapped = null;
-        assertNullRejected("condition", () -> map.until(selected));
-        assertNullRejected("condition", () -> withTime(tryAwait(mapSource), clock, parker).until(selected));
-        assertNullRejected("condition", () -> map.until(mapped));
-        assertNullRejected("condition", () -> withTime(tryAwait(mapSource), clock, parker).until(mapped));
+        assertNullRejected("condition", () -> waiting.until(null));
+        assertNullRejected("condition", () -> diagnostic(waiting).until(null));
     }
 
     @Test
@@ -104,19 +90,7 @@ class SourceContractTest {
 
     private static Stream<Arguments> missingSources() {
         return Stream.of(
-                argumentSet("collection view delegate", "delegate", (Executable) () -> new Await.CollectionViewSource<>(null)),
-                argumentSet("map view delegate", "delegate", (Executable) () -> new Await.MapViewSource<>(null)),
                 argumentSet("await / value", "source", (Executable) () -> await((Callable<Object>) null)),
-                argumentSet("await / optional", "source", (Executable) () -> await((Await.OptionalSource<Object>) null)),
-                argumentSet("await / collection", "source", (Executable) () -> await((Await.CollectionSource<Collection<Object>>) null)),
-                argumentSet("await / map", "source", (Executable) () -> await((Await.MapSource<Map<Object, Object>>) null)),
-                argumentSet("await / collection view", "source", (Executable) () -> await((Await.CollectionViewSource<Object, List<Object>>) null)),
-                argumentSet("await / map view", "source", (Executable) () -> await((Await.MapViewSource<Object, Object, Map<Object, Object>>) null)),
-                argumentSet("tryAwait / value", "source", (Executable) () -> tryAwait((Callable<Object>) null)),
-                argumentSet("tryAwait / optional", "source", (Executable) () -> tryAwait((Await.OptionalSource<Object>) null)),
-                argumentSet("tryAwait / collection", "source", (Executable) () -> tryAwait((Await.CollectionSource<Collection<Object>>) null)),
-                argumentSet("tryAwait / map", "source", (Executable) () -> tryAwait((Await.MapSource<Map<Object, Object>>) null)),
-                argumentSet("tryAwait / collection view", "source", (Executable) () -> tryAwait((Await.CollectionViewSource<Object, List<Object>>) null)),
-                argumentSet("tryAwait / map view", "source", (Executable) () -> tryAwait((Await.MapViewSource<Object, Object, Map<Object, Object>>) null)));
+                argumentSet("tryAwait / value", "source", (Executable) () -> tryAwait((Callable<Object>) null)));
     }
 }

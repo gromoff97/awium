@@ -1,6 +1,7 @@
 package consumer;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.execution.DefaultAwaitHandler;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 
@@ -24,6 +25,10 @@ public final class CoreConsumer {
         return new Object[]{await(() -> "ready").until(length), successful.orThrow(),
                 successful.conditions().size(), failed.conditions().size(), failed instanceof Succeeded<?, ?>,
                 ((Satisfied<? extends Number>) attempt.probeAt("ready", "name")).value()};
+    }
+
+    public static int runWithHandler() {
+        return await(() -> "ready").handling(DefaultAwaitHandler::new).until(new Length());
     }
 
     private static final class Length implements Condition<CharSequence, Integer> {

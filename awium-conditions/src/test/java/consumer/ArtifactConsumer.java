@@ -1,6 +1,6 @@
 package consumer;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.io.IOException;
@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.*;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
 import static io.github.gromoff97.awium.conditions.map.MapConditions.*;
@@ -37,7 +37,7 @@ public final class ArtifactConsumer {
         Map.Entry<String, Integer> entry = await(() -> Map.of("key", 1)).until(singleEntry);
         String text = await(ArtifactConsumer::text).until(contains("read"));
         String regex = await(ArtifactConsumer::text).until(matchesRegex("ready"));
-        Condition<CharSequence, Integer> custom = new Length().because("text has a length");
+        TypedCondition<CharSequence, Integer> custom = new Length().because("text has a length");
         int direct = await(ArtifactConsumer::text).until(custom);
         int nested = await(() -> values).until(singleElement(custom));
         var diagnostic = tryAwait(ArtifactConsumer::text).until(custom);
@@ -52,7 +52,7 @@ public final class ArtifactConsumer {
                 diagnostic.conditions().getFirst().condition() == custom, custom.explanation(), new Length().explanation(), customStages};
     }
 
-    public static final class Length implements Condition<CharSequence, Integer> {
+    public static final class Length implements TypedCondition<CharSequence, Integer> {
         @Override
         public String description() { return "text length"; }
 

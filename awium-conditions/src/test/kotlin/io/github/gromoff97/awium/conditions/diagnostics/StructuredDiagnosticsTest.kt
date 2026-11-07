@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.diagnostics
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.Reference
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.Condition.Reference
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement

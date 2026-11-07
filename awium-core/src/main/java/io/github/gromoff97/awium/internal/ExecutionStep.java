@@ -9,6 +9,7 @@ import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;
 import static io.github.gromoff97.awium.result.Attempt.Failure;
 import static io.github.gromoff97.awium.result.Attempt.Observation;
 import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
+import static io.github.gromoff97.awium.result.Attempt.Operation;
 
 record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
         Attempt<OBSERVED> reportedAttempt, boolean conditionSatisfied, List<Throwable> relatedCauses) {
@@ -26,8 +27,12 @@ record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
     }
 
     ExecutionStep<OBSERVED> withConditionFailure(Throwable cause, String location) {
+        return withFailure(CONDITION, cause, location);
+    }
+
+    ExecutionStep<OBSERVED> withFailure(Operation operation, Throwable cause, String location) {
         return new ExecutionStep<>(phase, completedAfterNanos,
-                conditionFailure(cause, location), conditionSatisfied, relatedCauses)
+                failure(operation, cause, location), conditionSatisfied, relatedCauses)
                 .withRelatedCause(reportedAttempt.cause()).withRelatedCause(cause);
     }
 
@@ -38,11 +43,11 @@ record ExecutionStep<OBSERVED>(Phase phase, long completedAfterNanos,
         return new ExecutionStep<>(phase, completedAfterNanos, reportedAttempt, conditionSatisfied, failures);
     }
 
-    private Failure<OBSERVED> conditionFailure(Throwable cause, String location) {
+    private Failure<OBSERVED> failure(Operation operation, Throwable cause, String location) {
         return switch (reportedAttempt) {
             case Failure<OBSERVED> failure -> failure;
             case Observation<OBSERVED> observation -> new FailedAfterObservation<>(
-                    observation.observed(), CONDITION, cause, location, observation.diagnostic());
+                    observation.observed(), operation, cause, location, observation.diagnostic());
         };
     }
 

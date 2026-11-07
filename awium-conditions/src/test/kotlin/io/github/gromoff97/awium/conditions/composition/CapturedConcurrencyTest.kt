@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium.conditions.composition
 
-import io.github.gromoff97.awium.Await.tryAwait
+import io.github.gromoff97.awium.dsl.AwaitCondition.definitionOf
+
+import io.github.gromoff97.awium.dsl.Await.tryAwait
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
@@ -52,7 +54,7 @@ class CapturedConcurrencyTest {
             assertEquals(listOf(caller, caller), result.orThrow())
             assertEquals(2, result.conditions().size)
             result.conditions().forEach { history ->
-                assertSame(check, history.condition())
+                assertSame(check, definitionOf(history.condition()).orElseThrow())
                 assertEquals(2, history.attempts().size)
             }
             val attempts = attempts(result)

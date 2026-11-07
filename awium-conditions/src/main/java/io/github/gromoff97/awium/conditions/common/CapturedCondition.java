@@ -1,7 +1,9 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -35,7 +37,7 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         return new Run<>();
     }
 
-    private final class Run<OBSERVED> implements Condition<OBSERVED, List<OBSERVED>> {
+    private final class Run<OBSERVED> implements TypedCondition<OBSERVED, List<OBSERVED>> {
 
         private final List<AwaitAttempt<OBSERVED, ?>> evaluations;
         private final List<OBSERVED> results = new ArrayList<>();
@@ -43,14 +45,14 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         private AttemptResult<?> stageResult;
 
         private Run() {
-            evaluations = stages.stream().<AwaitAttempt<OBSERVED, ?>>map(AwaitAttempt::<OBSERVED>bind).toList();
+            evaluations = stages.stream().<AwaitAttempt<OBSERVED, ?>>map(AwaitCondition::<OBSERVED>bind).toList();
         }
 
         @Override
         public String description() { return CapturedCondition.this.description(); }
 
         @Override
-        public Condition<OBSERVED, List<OBSERVED>> newRun() { return new Run<>(); }
+        public TypedCondition<OBSERVED, List<OBSERVED>> newRun() { return new Run<>(); }
 
         @Override
         public AttemptResult<List<OBSERVED>> probe(OBSERVED actual) throws Throwable {
@@ -80,7 +82,7 @@ final class CapturedCondition<CHECK extends AwaitCondition> implements AwaitCond
         }
 
         @Override
-        public List<AwaitCondition> historyConditions(AwaitCondition definition) { return stages; }
+        public List<AwaitCondition> historyDefinitions(AwaitCondition definition) { return stages; }
 
         @Override
         public Diagnostic diagnostics(Attempt<?> attempt) {

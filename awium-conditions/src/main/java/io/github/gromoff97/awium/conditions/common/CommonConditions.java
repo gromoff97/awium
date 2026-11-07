@@ -1,22 +1,22 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition.Reference;
-import io.github.gromoff97.awium.AwaitCondition;
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.CollectingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.function.checked.CheckedConsumer;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.concurrent.Callable;
 
-import static io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
-import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
 import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.AT_LEAST;
 import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.AT_MOST;
 import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.GREATER_THAN;
 import static io.github.gromoff97.awium.conditions.common.BoundCondition.Relation.LESS_THAN;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.ApplicableCondition;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.InputCondition;
 
 public final class CommonConditions {
 
@@ -46,12 +46,12 @@ public final class CommonConditions {
         return new CapturedCondition<>(conditions);
     }
 
-    public static <INPUT, RESULT> Condition<INPUT, RESULT> condition(String description,
+    public static <INPUT, RESULT> TypedCondition<INPUT, RESULT> condition(String description,
             AwaitAttempt<? super INPUT, ? extends RESULT> evaluation) {
         return new CallbackCondition<>(description, evaluation);
     }
 
-    public static <INPUT, RESULT> Condition<INPUT, RESULT> conditionPerWait(String description,
+    public static <INPUT, RESULT> TypedCondition<INPUT, RESULT> conditionPerWait(String description,
             Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> evaluatorFactory) {
         return new CallbackCondition<>(description, evaluatorFactory);
     }
@@ -76,11 +76,11 @@ public final class CommonConditions {
         return new EqualityCondition<>(unexpected, true, true);
     }
 
-    public static <RESULT> Condition<Object, RESULT> instanceOf(Class<RESULT> type) {
+    public static <RESULT> TypedCondition<Object, RESULT> instanceOf(Class<RESULT> type) {
         return new InstanceOfCondition<>(type, false);
     }
 
-    public static <RESULT> Condition<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
+    public static <RESULT> TypedCondition<Object, RESULT> exactlyInstanceOf(Class<RESULT> type) {
         return new InstanceOfCondition<>(type, true);
     }
 

@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.composition
 
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.Await.tryAwait
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
@@ -15,7 +15,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPer
 import io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.capturedRun
 import io.github.gromoff97.awium.execution.ProbeFailure
 import io.github.gromoff97.awium.function.AwaitAttempt
@@ -136,14 +136,14 @@ class CompositionFailureTest {
             }
         }
 
-        private fun compositions(check: Condition<String, String>) = listOf(
+        private fun compositions(check: TypedCondition<String, String>) = listOf(
             Triple("optional", hasValue(check), Optional.of("actual")),
             Triple("collection", singleElement(check), listOf("actual")),
             Triple("map value", valueFor("key", check), mapOf("key" to "actual")),
             Triple("captured", captured(check, check), "actual")
         )
 
-        private fun waits(check: Condition<String, String>): List<Pair<String, () -> AwaitResult<*, *>>> = listOf(
+        private fun waits(check: TypedCondition<String, String>): List<Pair<String, () -> AwaitResult<*, *>>> = listOf(
             "optional" to { tryAwait(Callable { Optional.of("actual") }).until(hasValue(check)) },
             "collection" to { tryAwait(Callable { listOf("actual") }).until(singleElement(check)) },
             "map value" to { tryAwait(Callable { mapOf("key" to "actual") }).until(valueFor("key", check)) },

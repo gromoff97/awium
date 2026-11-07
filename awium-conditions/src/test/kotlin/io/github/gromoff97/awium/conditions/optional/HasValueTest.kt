@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.optional
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
@@ -9,7 +9,7 @@ import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
 import io.github.gromoff97.awium.conditions.common.CommonConditions.notEqualTo
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.hasValue
 import io.github.gromoff97.awium.conditions.support.Directional
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import java.util.Optional
 import org.assertj.core.api.Assertions.assertThatNullPointerException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -73,7 +73,7 @@ class HasValueTest {
 
     @Test
     fun `rejects a missing typed condition immediately`() {
-        assertThatNullPointerException().isThrownBy { hasValue(null as Condition<Any, Any>?) }
+        assertThatNullPointerException().isThrownBy { hasValue(null as TypedCondition<Any, Any>?) }
             .withMessageContaining("condition")
     }
 

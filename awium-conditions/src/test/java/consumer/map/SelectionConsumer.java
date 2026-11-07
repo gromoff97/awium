@@ -1,6 +1,6 @@
 package consumer.map;
 
-import io.github.gromoff97.awium.Await.MapSource;
+import io.github.gromoff97.awium.dsl.Await.MapSource;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
 import java.util.AbstractMap;
@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.atLeast;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo;

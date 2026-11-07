@@ -1,9 +1,9 @@
 package io.github.gromoff97.awium.conditions.history
 
-import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.Await.CollectionSource
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.Await.tryAwait
+import io.github.gromoff97.awium.dsl.Await.CollectionSource
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsAll
@@ -39,7 +39,7 @@ class ObservationDiagnosticsTest {
 
     @ParameterizedTest
     @MethodSource("typeChecks")
-    fun `type diagnostics distinguish observations with the same text`(check: Condition<Any?, String>) {
+    fun `type diagnostics distinguish observations with the same text`(check: TypedCondition<Any?, String>) {
         val source = listOf(null, null, StringBuilder("pending"), StringBuilder("pending"), StringBuffer("pending"), "ready").iterator()
         val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(check)
 

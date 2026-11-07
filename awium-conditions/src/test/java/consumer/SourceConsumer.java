@@ -8,10 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import static io.github.gromoff97.awium.Await.CollectionViewSource;
-import static io.github.gromoff97.awium.Await.MapViewSource;
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.CollectionViewSource;
+import static io.github.gromoff97.awium.dsl.Await.MapViewSource;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.all;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;

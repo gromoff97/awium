@@ -1,8 +1,8 @@
 package consumer.collection;
 
-import io.github.gromoff97.awium.AwaitCondition;
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition.CollectingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.CollectingCondition;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasSize;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;

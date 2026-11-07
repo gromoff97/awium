@@ -17,7 +17,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
@@ -68,7 +67,7 @@ class TryAwaitFailureTest {
     @ParameterizedTest
     @MethodSource("sourceFailures")
     void capturesSourceFailuresWithoutChangingThem(Callable<Object> source) {
-        var result = assertParity(time -> timedAwait(source, config(1, 2, 0), time, time), () -> accepted);
+        var result = assertParity(time -> timedAwait(source, config(1, 2, 0), time, time), () -> accepted());
         uncontrolled(Operation.SOURCE, attempts(result).getLast());
     }
 
@@ -85,7 +84,7 @@ class TryAwaitFailureTest {
 
     @ParameterizedTest
     @MethodSource("parkingConditions")
-    void capturesParkingFailuresInBothPhases(long persistence, PreservingCondition<Object> check) {
+    void capturesParkingFailuresInBothPhases(long persistence, Condition<Object, Object> check) {
         var parking = assertParity(time -> timedAwait(() -> "actual", config(1, 2, persistence), time,
                         nanos -> { throw new IllegalStateException("park failed"); }),
                 () -> check);
@@ -99,7 +98,7 @@ class TryAwaitFailureTest {
         var beforeSource = assertParity(time -> {
                     currentThread().interrupt();
                     return timedAwait(() -> "actual", config(1, 2, 0), time, time);
-                }, () -> accepted);
+                }, () -> accepted());
         assertThat(beforeSource.failure().message()).startsWith("Wait interrupted").contains("failed (WAITING)");
     }
 
@@ -108,7 +107,7 @@ class TryAwaitFailureTest {
         var thrownSourceInterruption = assertParity(time -> timedAwait((Callable<Object>) () -> {
                     throw new InterruptedException("source interrupted");
                 }, config(1, 2, 0), time, time),
-                () -> accepted);
+                () -> accepted());
         assertEquals(SOURCE_FAILED, thrownSourceInterruption.failure().reason());
         assertThat(thrownSourceInterruption.failure().message()).startsWith("Source retrieval failed");
     }
@@ -120,7 +119,7 @@ class TryAwaitFailureTest {
                     currentThread().interrupt();
                     return "actual";
                 }, config(1, 2, 0), time, time),
-                () -> accepted);
+                () -> accepted());
         assertThat(sourceFlag.failure().message()).startsWith("Wait interrupted")
                 .contains("failed (SOURCE)", "elapsed 7 ns", "Observed now: \"actual\"");
     }
@@ -160,7 +159,7 @@ class TryAwaitFailureTest {
     @Test
     void capturesFatalSourceErrors() {
         var sourceFatal = new InternalError("fatal source");
-        var source = failed(withTime(tryAwait((Callable<Object>) () -> { throw sourceFatal; }), time, time).until(accepted));
+        var source = failed(withTime(tryAwait((Callable<Object>) () -> { throw sourceFatal; }), time, time).until(accepted()));
         assertSame(sourceFatal, source.failure().cause());
         assertEquals(SOURCE_FAILED, source.failure().reason());
     }
@@ -184,7 +183,7 @@ class TryAwaitFailureTest {
         assertSame(diagnosticsFatal, diagnostics.failure().suppressed().getFirst());
     }
 
-    private static <VALUE> Failed<?, ?> assertParity(Function<FakeTime, ValueAwait<VALUE>> waiting, Supplier<PreservingCondition<? super VALUE>> condition) {
+    private static <VALUE> Failed<?, ?> assertParity(Function<FakeTime, ValueAwait<VALUE>> waiting, Supplier<Condition<? super VALUE, ? super VALUE>> condition) {
         return assertParity(() -> waiting.apply(new FakeTime(0)).until(condition.get()),
                 () -> diagnostic(waiting.apply(new FakeTime(0))).until(condition.get()));
     }
@@ -236,7 +235,7 @@ class TryAwaitFailureTest {
 
     private static List<Arguments> parkingConditions() {
         return List.of(argumentSet("acquisition", 0L, matching(actual -> false)),
-                argumentSet("persistence", 2L, accepted));
+                argumentSet("persistence", 2L, accepted()));
     }
 
     private static Condition<Object, Object> unstableCondition() {

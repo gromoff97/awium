@@ -1,6 +1,6 @@
 package consumer.value;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.ArrayList;
@@ -13,8 +13,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.asserted;
@@ -88,7 +88,7 @@ public final class CustomConsumer {
     }
 
     public static String nullSelection(User user) {
-        Condition<User, String> check = condition("no label", actual -> satisfied(null));
+        TypedCondition<User, String> check = condition("no label", actual -> satisfied(null));
         return await(() -> user).until(check);
     }
 

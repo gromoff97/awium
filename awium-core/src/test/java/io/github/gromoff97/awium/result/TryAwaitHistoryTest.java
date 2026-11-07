@@ -114,12 +114,12 @@ class TryAwaitHistoryTest {
         var changed = withTime(original.every(ofNanos(2)).upTo(ofNanos(20))
                 .persisting(ofNanos(6)), otherTime, otherTime);
 
-        changed.until(accepted);
+        changed.until(accepted());
         assertEquals(6, otherTime.getAsLong());
         assertEquals(0, time.getAsLong());
-        var shorter = original.until(accepted);
+        var shorter = original.until(accepted());
         assertEquals(3, time.getAsLong());
-        assertEquals(4L, original.until(accepted).conditions().getFirst().attempts().lastKey());
+        assertEquals(4L, original.until(accepted()).conditions().getFirst().attempts().lastKey());
         assertEquals(4, shorter.conditions().getFirst().attempts().lastKey());
     }
 

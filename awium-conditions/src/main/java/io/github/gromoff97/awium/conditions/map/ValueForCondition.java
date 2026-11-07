@@ -1,10 +1,11 @@
 package io.github.gromoff97.awium.conditions.map;
 
-import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static io.github.gromoff97.awium.conditions.map.MapEntries.findEntry;
 

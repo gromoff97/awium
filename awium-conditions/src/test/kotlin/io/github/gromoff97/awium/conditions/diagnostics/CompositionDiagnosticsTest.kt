@@ -1,12 +1,14 @@
 package io.github.gromoff97.awium.conditions.diagnostics
 
+import io.github.gromoff97.awium.dsl.AwaitCondition.definitionOf
+
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
-import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.Await.MapSource
-import io.github.gromoff97.awium.Await.OptionalSource
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.Condition
-import io.github.gromoff97.awium.AwaitCondition.Reference
+import io.github.gromoff97.awium.dsl.Await.tryAwait
+import io.github.gromoff97.awium.dsl.Await.MapSource
+import io.github.gromoff97.awium.dsl.Await.OptionalSource
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
+import io.github.gromoff97.awium.Condition.Reference
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none
@@ -73,7 +75,7 @@ class CompositionDiagnosticsTest {
             override val size: Int get() = error("operand must not be inspected")
             override fun get(index: Int): String = error("operand must not be inspected")
         }
-        val nested = object : Condition<String, String> {
+        val nested = object : TypedCondition<String, String> {
             override fun description() = "custom expectation"
             override fun references() = listOf(Reference("Expected", operand))
             override fun probe(actual: String) = unsatisfied<String>("custom expectation was not met")
@@ -107,7 +109,7 @@ class CompositionDiagnosticsTest {
 
         assertEquals("ready", result.orThrow())
         assertEquals(4, attempts(result).size)
-        assertSame(check, result.conditions().single().condition())
+        assertSame(check, definitionOf(result.conditions().single().condition()).orElseThrow())
         assertThat(result.conditions().single().toString()).contains("Key: \"account\"", "Key: \"state\"",
             "value is an instance of java.lang.String")
     }
@@ -143,7 +145,7 @@ class CompositionDiagnosticsTest {
 
         assertSame(cause, failure(result).cause())
         assertEquals(2, calls)
-        assertSame(check, result.conditions().last().condition())
+        assertSame(check, definitionOf(result.conditions().last().condition()).orElseThrow())
         assertEquals(2L, result.conditions().last().attempts().firstKey())
         assertEquals(location, uncontrolled(CONDITION, last).location())
         assertThat(failure(result).message()).contains("Within: $location")
@@ -226,7 +228,7 @@ class CompositionDiagnosticsTest {
         val result = tryAwait(OptionalSource { source.next() }).every(ofNanos(1)).until(check)
         assertEquals("Bob", result.orThrow())
         assertEquals(3, attempts(result).size)
-        assertSame(check, result.conditions().single().condition())
+        assertSame(check, definitionOf(result.conditions().single().condition()).orElseThrow())
         assertEquals(nested.references(), result.conditions().single().condition().references())
     }
 
@@ -245,7 +247,7 @@ class CompositionDiagnosticsTest {
         val result = tryAwait(MapSource { source.next().toMutableMap() }).every(ofNanos(1)).until(check)
         assertEquals("Bob", result.orThrow())
         assertEquals(3, attempts(result).size)
-        assertSame(check, result.conditions().single().condition())
+        assertSame(check, definitionOf(result.conditions().single().condition()).orElseThrow())
         assertEquals(listOf(Reference("Key", "customerId"), Reference("Expected", "Bob")),
             result.conditions().single().condition().references())
     }

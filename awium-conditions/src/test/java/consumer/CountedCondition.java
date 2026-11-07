@@ -1,12 +1,12 @@
 package consumer;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
 
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 
-public record CountedCondition(int observations) implements Condition<String, Integer> {
+public record CountedCondition(int observations) implements TypedCondition<String, Integer> {
     @Override
     public String description() { return "observe text " + observations + " times"; }
 
@@ -14,8 +14,8 @@ public record CountedCondition(int observations) implements Condition<String, In
     public AttemptResult<Integer> probe(String actual) { return satisfied(actual.length()); }
 
     @Override
-    public Condition<String, Integer> newRun() {
-        return new Condition<>() {
+    public TypedCondition<String, Integer> newRun() {
+        return new TypedCondition<>() {
             private int count;
             private int totalLength;
 

@@ -82,7 +82,7 @@ class WaitEngineTest {
         Callable<String> source = mock();
         when(clock.getAsLong()).thenReturn(0L, 7L);
         var engine = new WaitEngine(withTime(config(1, 10, 0), clock, time),
-                new AwaitRun<>(source, accepted, clock));
+                new AwaitRun<>(source, accepted(), clock));
         currentThread().interrupt();
 
         var failure = assertInstanceOf(Uncontrolled.class, engine.waitFor());
@@ -187,7 +187,7 @@ class WaitEngineTest {
                 ignored -> {}), new AwaitRun<>(() -> {
                     sourceCalls[0]++;
                     return "actual";
-                }, accepted, clock)).waitFor();
+                }, accepted(), clock)).waitFor();
 
         assertInstanceOf(Timeout.class, outcome);
         assertEquals(1, sourceCalls[0]);
@@ -352,7 +352,7 @@ class WaitEngineTest {
         var outcome = new WaitEngine(withTime(config(5, 20, 0), clock,
                 nanos -> { throw new AssertionError("parker must not be called"); }),
                 new AwaitRun<>(() -> { sourceCalls[0]++; return "actual"; },
-                        accepted, clock)).waitFor();
+                        accepted(), clock)).waitFor();
 
         var failure = assertInstanceOf(Uncontrolled.class, outcome);
         var attempt = uncontrolled(WAITING, failure.step().reportedAttempt());

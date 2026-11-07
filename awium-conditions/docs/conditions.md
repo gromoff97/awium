@@ -84,8 +84,13 @@ String receipt = await(paymentRepository::load).until(condition("payment has a r
 Return `satisfied(value)` to finish with that value, including null, or
 `unsatisfied(message)` to retry. A mismatch requires a non-blank message and may include a cause:
 `unsatisfied("receipt was absent", cause)`. Any throwable escaping the callback
-stops the wait. For a reusable class, implement `Condition<INPUT, RESULT>` with
+stops the wait. For a reusable class, implement core's `Condition<INPUT, RESULT>` with
 `description()` and `probe(actual)`; its result type determines what `until` returns.
+
+Core conditions work directly in `until` and typed selectors. To combine one with
+other definitions in `captured` or a quantifier, use `TypedCondition.from(check)`.
+Implement `TypedCondition<INPUT, RESULT>` instead for a reusable class that composes
+with those definitions directly.
 
 `condition` reuses its callback. `conditionPerWait` accepts a `Callable` that creates
 one callback per wait and captured position, on first evaluation. Nested factories
@@ -319,7 +324,16 @@ history is never trimmed. Stored observations are references, so later mutations
 can change what old entries show. `result.conditions()` and each history's
 `attempts()` map are immutable.
 
-## Container views
+## Sources and container views
+
+`dsl.Await` overloads infer optional, collection, and map sources from lambdas or
+method references. A stored JDK `Callable` selects the general overload; use
+`await(source::call)` for selectors. Stored `OptionalSource`, `CollectionSource`,
+and `MapSource` instances select their category directly.
+
+Use a lambda for ambiguous references such as `StringBuilder::new` or
+`Optional::empty`. A source returning only null needs a declared category.
+Wildcard method references may select the general overload; use a lambda or view.
 
 Views keep the complete container type and selected bound without copying data:
 

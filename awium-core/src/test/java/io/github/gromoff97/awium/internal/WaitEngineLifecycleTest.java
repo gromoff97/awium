@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitCondition.Reference;
+import static io.github.gromoff97.awium.Condition.Reference;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Uncontrolled;
 import static io.github.gromoff97.awium.result.Attempt.FailedAfterObservation;

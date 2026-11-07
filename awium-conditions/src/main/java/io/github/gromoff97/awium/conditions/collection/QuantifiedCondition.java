@@ -1,15 +1,16 @@
 package io.github.gromoff97.awium.conditions.collection;
 
-import io.github.gromoff97.awium.AwaitCondition.ApplicableCondition;
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.function.AwaitAttempt;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.ApplicableCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.execution.ProbeFailure;
+import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Diagnostic;
 import java.util.Collection;
 import java.util.List;
 
-import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.bind;
 import static io.github.gromoff97.awium.execution.ProbeFailure.locatedFailure;
 import static io.github.gromoff97.awium.result.AttemptResult.Satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;

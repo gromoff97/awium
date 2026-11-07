@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium.conditions.history
 
-import io.github.gromoff97.awium.Await.tryAwait
+import io.github.gromoff97.awium.dsl.AwaitCondition.definitionOf
+
+import io.github.gromoff97.awium.dsl.Await.tryAwait
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf
@@ -27,7 +29,7 @@ class NestedHistoryTest {
         assertEquals(listOf(2L, 4L, 5L), result.conditions().single().attempts().keys.toList())
         assertEquals(listOf("collection size was 0", "single element: collection size was 0"),
             attempts(result).take(2).map { assertInstanceOf<UnsatisfiedObservation<*>>(it).mismatch() })
-        assertSame(check, result.conditions().single().condition())
+        assertSame(check, definitionOf(result.conditions().single().condition()).orElseThrow())
     }
 
     @Test

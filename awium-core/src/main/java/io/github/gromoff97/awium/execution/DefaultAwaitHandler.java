@@ -1,6 +1,6 @@
-package io.github.gromoff97.awium.internal;
+package io.github.gromoff97.awium.execution;
 
-import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.ConditionHistory;
 import io.github.gromoff97.awium.result.Diagnostic;
@@ -17,31 +17,35 @@ import static java.util.Collections.emptyNavigableMap;
 import static java.util.Objects.deepEquals;
 import static java.util.Objects.requireNonNull;
 
-final class AttemptHistory<OBSERVED> {
+public class DefaultAwaitHandler<OBSERVED> implements AwaitHandler<OBSERVED> {
 
     private final Map<Integer, NavigableMap<Long, Attempt<OBSERVED>>> histories = new HashMap<>();
-    private long count;
+    private Condition<?, ?> definition;
 
-    void add(int stageNumber, Attempt<OBSERVED> attempt) {
-        requireNonNull(attempt, "attempt must not be null");
-        count++;
-        var attempts = histories.computeIfAbsent(stageNumber, ignored -> new TreeMap<>());
+    public DefaultAwaitHandler() {}
+
+    @Override
+    public void onStart(WaitStarted start) {
+        definition = requireNonNull(start, "start must not be null").condition();
+        histories.clear();
+    }
+
+    @Override
+    public void onAttemptFinish(AttemptFinished<OBSERVED> event) {
+        var attempts = histories.computeIfAbsent(event.historySlot(), ignored -> new TreeMap<>());
         var previous = attempts.lastEntry();
-        if (previous != null && sameGroup(previous.getValue(), attempt)) attempts.pollLastEntry();
-        attempts.put(count, attempt);
+        if (previous != null && sameGroup(previous.getValue(), event.historyAttempt())) attempts.pollLastEntry();
+        attempts.put(event.number(), event.historyAttempt());
     }
 
-    long count() {
-        return count;
-    }
-
-    ConditionHistory<OBSERVED> flattened(AwaitCondition definition) {
-        var attempts = new TreeMap<Long, Attempt<OBSERVED>>();
-        for (var history : histories.values()) attempts.putAll(history);
-        return new ConditionHistory<>(definition, attempts);
-    }
-
-    List<ConditionHistory<OBSERVED>> conditions(List<? extends AwaitCondition> definitions) {
+    @Override
+    public List<ConditionHistory<OBSERVED>> onFinish(WaitFinished finish) {
+        if (finish.historyConditions().isEmpty()) {
+            var attempts = new TreeMap<Long, Attempt<OBSERVED>>();
+            for (var history : histories.values()) attempts.putAll(history);
+            return List.of(new ConditionHistory<>(definition, attempts));
+        }
+        var definitions = finish.historyConditions().orElseThrow();
         if (!definitions.isEmpty() && histories.keySet().stream().anyMatch(slot -> slot > definitions.size())) {
             throw new IllegalArgumentException("history slot exceeds condition count");
         }

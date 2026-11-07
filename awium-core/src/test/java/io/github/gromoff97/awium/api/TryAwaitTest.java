@@ -15,7 +15,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
@@ -119,7 +118,7 @@ class TryAwaitTest {
         int[] calls = {0};
 
         AwaitResult<String, String> result = timedTryAwait(() -> results.get(calls[0]++),
-                config(2, 10, 3), time, time).until(accepted);
+                config(2, 10, 3), time, time).until(accepted());
 
         assertEquals("boundary", result.orThrow());
         assertThat(result.conditions().getFirst().attempts().keySet()).containsExactly(1L, 2L, 3L);
@@ -130,8 +129,8 @@ class TryAwaitTest {
     void everyExecutionStartsWithFreshHistory() {
         var stage = timedAwait(() -> "actual", config(1, 2, 0), time, time);
 
-        var first = diagnostic(stage).until(accepted);
-        var second = diagnostic(stage).until(accepted);
+        var first = diagnostic(stage).until(accepted());
+        var second = diagnostic(stage).until(accepted());
 
         assertEquals("actual", first.orThrow());
         assertEquals("actual", second.orThrow());
@@ -165,7 +164,7 @@ class TryAwaitTest {
     void reusableStageRetainsTheExactSourceAndStartsEachTerminalFresh() {
         int[] calls = {0};
         ValueAwait<Integer> stage = timedAwait(() -> ++calls[0], config(1, 3, 0), time, time);
-        PreservingCondition<Integer> evenObservation = matching(value -> value % 2 == 0);
+        Condition<Integer, Integer> evenObservation = matching(value -> value % 2 == 0);
 
         assertEquals(2, stage.until(evenObservation));
         assertEquals(4, stage.until(evenObservation));

@@ -2,8 +2,8 @@ package io.github.gromoff97.awium.conditions.composition
 
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import consumer.collection.CapturedConsumer
-import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.dsl.Await.tryAwait
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
@@ -40,12 +40,12 @@ class CapturedConditionTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `rebinding a captured run starts the sequence over`(completed: Boolean) {
-        val run = captured(equalTo("ready"), equalTo("done")).newRun()
-        val first = AwaitAttempt.bind<String>(run)
+        val run = capturedRun<String>(captured(equalTo("ready"), equalTo("done")))
+        val first = AwaitAttempt.bind(run)
         first.probe("ready")
         if (completed) first.probe("done")
 
-        val second = AwaitAttempt.bind<String>(run)
+        val second = AwaitAttempt.bind(run)
 
         assertInstanceOf<Unsatisfied<*>>(second.probe("done"))
     }

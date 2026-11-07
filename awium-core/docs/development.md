@@ -36,11 +36,11 @@ execution of custom conditions. Core tests have no dependency on built-in condit
 
 | Component | Owns |
 | --- | --- |
-| `Condition`, `AwaitCondition` families | Definitions, type constraints, and run creation |
+| `Condition<INPUT, RESULT>` | Check, metadata, run creation, history and diagnostic policy |
 | `AwaitRun` | One wait's source, condition, selected value, history and terminal result |
-| `AttemptHistory` | Invocation numbering and grouping within each history |
+| `DefaultAwaitHandler` | Default history grouping and snapshots |
 | `Await`; fluent await classes | Source entry points and configuration |
-| `AwaitSupport` | Passing source and configuration to the engine |
+| `AwaitSupport` | Passing source, configuration, and handler factory to the engine |
 | `AwaitAttempt.bind`; internal `GuardedAttempt` | Lazy evaluator initialization and guarded check invocation, including nested checks |
 | `WaitEngine` | Polling a supplied run, deadlines, persistence, and completion |
 | `ExecutionStep` | Immutable condition verdict, reported attempt, failures and completion time |
@@ -75,25 +75,23 @@ These hooks belong to `Condition`; no lifecycle base class is needed.
 | Pure dependency injection | `WaitEngine.execute` creates one `AwaitRun`; the engine constructor receives that run and configuration. No container or service locator. |
 | Policy vs mechanism | Conditions own check, stage and diagnostic policy; core enforces invocation and waiting contracts. |
 | Architectural fitness functions | `CoreArchitectureTest` checks dependency boundaries, verdict access and allowed owners of mutable fields. |
-| Strategy | `Condition` and `AwaitAttempt` supply checks. |
-| Decorator | `Explained` adds immutable `because` metadata while retaining condition-specific inference. |
+| Strategy | `Condition` and `AwaitAttempt` supply checks; `AwaitHandler` supplies history collection. |
+| Decorator | `ExplainedCondition` adds immutable `because` metadata without changing the input or result. |
 | Facade | Typed await builders keep execution details behind the fluent API. |
 
 ## Type and module boundaries
 
-`ApplicableCondition` constrains inputs and comparisons; `InputCondition` fixes
-the comparison constraint for input-only checks. `CollectingCondition` declares a
-source-observation list result; its default `stages()` returns the condition itself
-as the only stage. `PreservesObservation` shares a terminal overload
-across preserving checks and comparisons. Selector implementations must return the
-corresponding source element, entry, or value; typed `Condition` declares its output.
-These families preserve result inference through `because`; all use the same run contract.
-`AwaitAttempt.bind(Condition)` retains the declared result type. Binding a general
-`AwaitCondition` trusts the chosen input type and leaves the result type unknown;
-`until` checks source-dependent types.
+Core has one open condition interface and one `until(Condition)` per wait mode.
+`AwaitAttempt.bind(condition)` retains its declared input and result types.
+Container selectors and source-dependent fluent typing belong to consumers of
+this contract. They do not add condition families or casts to the engine.
+
+The public builders provide protected copy constructors for fluent extensions;
+copies retain source, timing, and handler factory. Their final `until` methods
+enforce the same execution contract.
 
 The Java module `io.github.gromoff97.awium.core` exports `io.github.gromoff97.awium`,
 `.result`, `.function`, and `.execution`.
 The unexported `.internal` package owns run coordination, polling, history recording,
-and diagnostic rendering. `.execution` exposes only nested failure locations.
+and diagnostic rendering. `.execution` exposes wait handlers, their events, and nested failure locations.
 No `permits` list names an external condition.

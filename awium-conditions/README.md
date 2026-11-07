@@ -11,6 +11,7 @@ Payment payment = await(paymentRepository::find)
 ```
 
 `find()` returns `Optional<Payment>`; `until(present)` returns its `Payment`.
+Import `await` and `tryAwait` from `io.github.gromoff97.awium.dsl.Await`.
 `upTo` limits the wait; `every` sets the polling interval. Callbacks run on the
 calling thread, so a blocked callback cannot be forcibly stopped.
 

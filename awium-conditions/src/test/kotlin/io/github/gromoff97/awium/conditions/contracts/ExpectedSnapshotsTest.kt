@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.contracts
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsAll
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance

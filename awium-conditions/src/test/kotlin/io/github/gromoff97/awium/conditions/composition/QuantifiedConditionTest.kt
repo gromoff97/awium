@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.composition
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.InputCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.InputCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.all
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.any
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.none
@@ -29,7 +29,7 @@ import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.optional.OptionalConditions.present
 import io.github.gromoff97.awium.conditions.support.ProbeContainers.EntryMap
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.function.checked.CheckedPredicate
 import io.github.gromoff97.awium.result.AttemptResult.Satisfied

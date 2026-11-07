@@ -1,8 +1,8 @@
 package io.github.gromoff97.awium.conditions.api
 
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
 import io.github.gromoff97.awium.conditions.common.CommonConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
@@ -58,9 +58,9 @@ class FactoryContractTest {
             argumentSet("hasNoEntry predicate", "predicate", Executable { hasNoEntry(null as CheckedPredicate<Map.Entry<String, String>>?) }),
             argumentSet("all preserving check", "condition", Executable { all(null as PreservingCondition<String>?) }),
             argumentSet("any comparison", "condition", Executable { any(null as ComparisonCondition<String>?) }),
-            argumentSet("none typed check", "condition", Executable { none(null as Condition<Any, String>?) }),
+            argumentSet("none typed check", "condition", Executable { none(null as TypedCondition<Any, String>?) }),
             argumentSet("valueFor preserving check", "condition", Executable { valueFor("key", null as PreservingCondition<String>?) }),
-            argumentSet("valueFor typed check", "condition", Executable { valueFor("key", null as Condition<Any, String>?) }),
+            argumentSet("valueFor typed check", "condition", Executable { valueFor("key", null as TypedCondition<Any, String>?) }),
             argumentSet("hasValue comparison", "condition", Executable { hasValue(null as ComparisonCondition<String>?) }),
             argumentSet("singleElement comparison", "condition", Executable { singleElement(null as ComparisonCondition<String>?) }),
             argumentSet("valueFor comparison", "condition", Executable { valueFor("key", null as ComparisonCondition<String>?) }),

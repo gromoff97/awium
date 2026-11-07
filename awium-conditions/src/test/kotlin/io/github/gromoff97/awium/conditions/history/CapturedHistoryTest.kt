@@ -1,6 +1,8 @@
 package io.github.gromoff97.awium.conditions.history
 
-import io.github.gromoff97.awium.Await.tryAwait
+import io.github.gromoff97.awium.dsl.AwaitCondition.definitionOf
+
+import io.github.gromoff97.awium.dsl.Await.tryAwait
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.attempts
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.failure
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.observation
@@ -56,7 +58,7 @@ class CapturedHistoryTest {
         assertThat(failure(result).message()).contains("stage 2/2", "Expected: \"paid\"",
             "Because: payment must be completed", "Because: checkout lifecycle", "Mismatch: value was not equal")
             .contains("payment must be created")
-        assertSame(second, result.conditions().last().condition())
+        assertSame(second, definitionOf(result.conditions().last().condition()).orElseThrow())
     }
 
     @Test
@@ -103,7 +105,7 @@ class CapturedHistoryTest {
 
         assertEquals(listOf(1, 2, 3), result.orThrow())
         assertEquals(listOf(1L, 2L, 3L), result.conditions().map { it.attempts().lastKey() })
-        result.conditions().forEach { assertSame(stage, it.condition()) }
+        result.conditions().forEach { assertSame(stage, definitionOf(it.condition()).orElseThrow()) }
     }
 
     @Test
@@ -126,7 +128,7 @@ class CapturedHistoryTest {
         val result = tryAwait(Callable<String> { throw cause })
             .until(captured(first, equalTo("done")).because("lifecycle"))
 
-        assertSame(first, result.conditions().first().condition())
+        assertSame(first, definitionOf(result.conditions().first().condition()).orElseThrow())
         assertTrue(result.conditions().last().attempts().isEmpty())
         val attempt = assertInstanceOf<FailedBeforeObservation<*>>(attempts(result).single())
         assertEquals(if (interrupted) WAITING else SOURCE, attempt.operation())
@@ -143,7 +145,7 @@ class CapturedHistoryTest {
         val stages = listOf(equalTo(10), equalTo(20), equalTo(30))
         val result = tryAwait(Callable { source.next() }).every(ofNanos(1)).until(captured(*stages.toTypedArray()))
 
-        assertEquals(stages, result.conditions().map { it.condition() })
+        assertEquals(stages, result.conditions().map { definitionOf(it.condition()).orElseThrow() })
         assertEquals(listOf(listOf(2L, 3L), listOf(4L, 5L), listOf(6L, 7L)),
             result.conditions().map { it.attempts().keys.toList() })
         assertEquals(List(3) { listOf(UnsatisfiedObservation::class.java, SatisfiedObservation::class.java) }.flatten(),
@@ -167,7 +169,7 @@ class CapturedHistoryTest {
         assertEquals(3, result.conditions().size)
         assertEquals(listOf(0, 2), result.conditions()[1].attempts().values.filterIsInstance<UnsatisfiedObservation<Int>>().map { it.observed() })
         val last = result.conditions().last()
-        assertSame(unreached, last.condition())
+        assertSame(unreached, definitionOf(last.condition()).orElseThrow())
         assertTrue(last.attempts().isEmpty())
         assertEquals(0, initialized)
         assertThat(last.toString()).contains("not attempted", "last check")

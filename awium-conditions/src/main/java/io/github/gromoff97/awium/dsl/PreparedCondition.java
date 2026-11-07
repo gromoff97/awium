@@ -1,12 +1,13 @@
-package io.github.gromoff97.awium;
+package io.github.gromoff97.awium.dsl;
 
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import java.util.concurrent.Callable;
 
 record PreparedCondition<INPUT, RESULT>(AwaitCondition definition,
-        Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> factory) implements Condition<INPUT, RESULT> {
+        Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> factory) implements TypedCondition<INPUT, RESULT> {
     @Override public String description() { return definition.description(); }
     @Override public String explanation() { return definition.explanation(); }
     @Override public List<Reference<?>> references() { return definition.references(); }

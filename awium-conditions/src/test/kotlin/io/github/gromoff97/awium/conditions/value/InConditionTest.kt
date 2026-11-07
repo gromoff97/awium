@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.common.CommonConditions.`in`

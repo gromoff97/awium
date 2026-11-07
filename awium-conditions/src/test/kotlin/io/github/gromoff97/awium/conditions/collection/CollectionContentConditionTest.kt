@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.collection
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactly
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactlyInAnyOrder
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsOnly

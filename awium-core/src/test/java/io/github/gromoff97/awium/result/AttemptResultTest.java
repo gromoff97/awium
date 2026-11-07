@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.result;
 
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
-import io.github.gromoff97.awium.AwaitCondition.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;

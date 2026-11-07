@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.collection;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -11,8 +12,8 @@ import static io.github.gromoff97.awium.conditions.collection.ExpectedValues.sna
 import static io.github.gromoff97.awium.conditions.collection.ValueMatching.prefixMatches;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
-import static java.util.Objects.deepEquals;
 import static java.util.Locale.ROOT;
+import static java.util.Objects.deepEquals;
 
 record CollectionSequenceCondition<INPUT extends SequencedCollection<?>>(List<?> expected, Sequence sequence, boolean negated) implements PreservingCondition<INPUT> {
     enum Sequence { PREFIX, SUFFIX, SEQUENCE, SUBSEQUENCE }

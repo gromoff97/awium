@@ -1,12 +1,14 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.AwaitCondition;
+import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.execution.AwaitHandler;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
+import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.ACQUISITION;
 import static io.github.gromoff97.awium.internal.ExecutionStep.Phase.PERSISTENCE;
-import static io.github.gromoff97.awium.internal.ExecutionStep.Phase;
 import static io.github.gromoff97.awium.internal.WaitCompletion.PersistenceFailure;
 import static io.github.gromoff97.awium.internal.WaitCompletion.SatisfiedWait;
 import static io.github.gromoff97.awium.internal.WaitCompletion.Timeout;
@@ -17,11 +19,12 @@ import static java.lang.Thread.currentThread;
 
 public final class WaitEngine {
 
-    public static <OBSERVED, RESULT> AwaitResult<OBSERVED, RESULT> execute(
-            WaitConfiguration configuration, Callable<? extends OBSERVED> source, AwaitCondition condition) {
-        var runner = new AwaitRun<OBSERVED, RESULT>(source, condition, configuration.clock());
+    public static <OBSERVED, RESULT, OUTPUT extends RESULT> AwaitResult<OBSERVED, RESULT> execute(
+            WaitConfiguration configuration, Callable<? extends OBSERVED> source,
+            Condition<? super OBSERVED, OUTPUT> condition, Supplier<? extends AwaitHandler<OBSERVED>> handlerFactory) {
+        var runner = new AwaitRun<OBSERVED, OUTPUT>(source, condition, configuration.clock(), handlerFactory);
         var outcome = new WaitEngine(configuration, runner).waitFor();
-        return runner.result(outcome, configuration);
+        return runner.result(outcome, configuration, runner.selectedValue());
     }
 
     private final WaitConfiguration configuration;
@@ -33,7 +36,7 @@ public final class WaitEngine {
     }
 
     WaitCompletion waitFor() {
-        var initializationFailure = runner.initialize();
+        var initializationFailure = runner.initialize(configuration);
         if (initializationFailure != null) {
             return new Uncontrolled(initializationFailure);
         }

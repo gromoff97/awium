@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.membership
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsAll
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsAny
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainAll

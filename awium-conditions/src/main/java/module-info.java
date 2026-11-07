@@ -1,6 +1,7 @@
 @SuppressWarnings("module")
 module io.github.gromoff97.awium.conditions {
     requires transitive io.github.gromoff97.awium.core;
+    exports io.github.gromoff97.awium.dsl;
     exports io.github.gromoff97.awium.conditions.common;
     exports io.github.gromoff97.awium.conditions.collection;
     exports io.github.gromoff97.awium.conditions.map;

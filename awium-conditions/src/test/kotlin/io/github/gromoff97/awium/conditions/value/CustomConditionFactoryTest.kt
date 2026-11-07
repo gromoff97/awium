@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.thrown
 import io.github.gromoff97.awium.conditions.common.CommonConditions.condition
 import io.github.gromoff97.awium.conditions.common.CommonConditions.conditionPerWait
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import io.github.gromoff97.awium.result.AttemptResult.satisfied
@@ -88,7 +88,7 @@ class CustomConditionFactoryTest {
     @Test
     fun `the evaluator factory is lazy`() {
         var factories = 0
-        val condition: Condition<Any, Any> = conditionPerWait("lazy") {
+        val condition: TypedCondition<Any, Any> = conditionPerWait("lazy") {
             factories++
             AwaitAttempt { satisfied(it) }
         }
@@ -100,7 +100,7 @@ class CustomConditionFactoryTest {
     @Test
     fun `each execution gets independent evaluator state`() {
         var factories = 0
-        val condition: Condition<Any, Any> = conditionPerWait("second observation") {
+        val condition: TypedCondition<Any, Any> = conditionPerWait("second observation") {
             factories++
             var calls = 0
             AwaitAttempt { actual -> if (++calls == 2) satisfied(actual) else unsatisfied("first observation") }

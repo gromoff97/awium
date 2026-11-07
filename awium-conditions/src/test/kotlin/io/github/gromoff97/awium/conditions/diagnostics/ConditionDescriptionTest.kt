@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.diagnostics
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions
 import io.github.gromoff97.awium.conditions.map.MapConditions
 import io.github.gromoff97.awium.conditions.common.CommonConditions.isNull

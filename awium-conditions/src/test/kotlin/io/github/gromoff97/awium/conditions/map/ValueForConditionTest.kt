@@ -5,7 +5,7 @@ import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejectio
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.map.MapConditions.valueFor
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
 import java.math.BigDecimal
 import org.junit.jupiter.api.Assertions.assertEquals

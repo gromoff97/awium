@@ -16,7 +16,7 @@ class AwaitResultTest {
 
     @Test
     void copiesConditionHistories() {
-        var history = new ConditionHistory<String>(accepted, new TreeMap<>());
+        var history = new ConditionHistory<String>(accepted(), new TreeMap<>());
         var mutable = new ArrayList<>(List.of(history));
 
         var result = new AwaitResult.Succeeded<>(mutable, null);

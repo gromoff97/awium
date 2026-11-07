@@ -40,7 +40,7 @@ class ConditionTypeCompilationContractTest {
         """String wrong = await(numbers).until(condition("identity", value -> AttemptResult.satisfied(value)));""",
         """AwaitResult<Number, String> wrong = tryAwait(numbers).until(condition("identity", value -> AttemptResult.satisfied(value)));""",
         """List<String> wrong = await(numbers).until(captured(condition("first", value -> AttemptResult.satisfied(value)), isNotNull));""",
-        """Condition<Number, String> wrong = condition("transform", value -> AttemptResult.satisfied(value));""",
+        """TypedCondition<Number, String> wrong = condition("transform", value -> AttemptResult.satisfied(value));""",
         "await(() -> 123).until(new consumer.ArtifactConsumer.Length());",
         """String wrong = await(() -> "ready").until(new consumer.ArtifactConsumer.Length());""",
         """String wrong = await(numbers).until(conditionPerWait("identity", () -> value -> AttemptResult.satisfied(value)));""",
@@ -133,8 +133,8 @@ class ConditionTypeCompilationContractTest {
 
     @TestFactory
     fun `preserving checks cannot be assigned arbitrary result types`() = listOf(
-        "Condition<Object, Object> erased = isNotNull;",
-        """Condition<String, String> erased = equalTo("ready");"""
+        "TypedCondition<Object, Object> erased = isNotNull;",
+        """TypedCondition<String, String> erased = equalTo("ready");"""
     ).map(::rejected)
 
     @TestFactory
@@ -200,8 +200,8 @@ class ConditionTypeCompilationContractTest {
 
     @TestFactory
     fun `selectors keep their declared input and result types`() = listOf(
-        "Condition<Optional<?>, Object> erased = present;",
-        """Condition<Map<?, ?>, Object> erased = valueFor("key");""",
+        "TypedCondition<Optional<?>, Object> erased = present;",
+        """TypedCondition<Map<?, ?>, Object> erased = valueFor("key");""",
         "Object value = await(() -> List.of(Optional.of(1))).until(singleElement(present));",
         """Object value = await(() -> Optional.of(Map.of("key", 1))).until(hasValue(valueFor("key")));""",
         "List<Object> values = await(collection::call).until(captured(singleElement, isNotNull));",
@@ -216,14 +216,16 @@ class ConditionTypeCompilationContractTest {
                 import java.util.*;
                 import java.util.concurrent.Callable;
                 import io.github.gromoff97.awium.*;
+                import io.github.gromoff97.awium.dsl.AwaitCondition;
+                import io.github.gromoff97.awium.dsl.TypedCondition;
                 import io.github.gromoff97.awium.conditions.common.*;
                 import io.github.gromoff97.awium.conditions.collection.CollectionConditions;
                 import io.github.gromoff97.awium.conditions.map.MapConditions;
                 import io.github.gromoff97.awium.result.*;
                 import io.github.gromoff97.awium.function.*;
-                import io.github.gromoff97.awium.Await.*;
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.Await.tryAwait;
+                import io.github.gromoff97.awium.dsl.Await.*;
+                import static io.github.gromoff97.awium.dsl.Await.await;
+                import static io.github.gromoff97.awium.dsl.Await.tryAwait;
                 import static io.github.gromoff97.awium.conditions.common.CommonConditions.*;
                 import static io.github.gromoff97.awium.conditions.optional.OptionalConditions.*;
                 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;

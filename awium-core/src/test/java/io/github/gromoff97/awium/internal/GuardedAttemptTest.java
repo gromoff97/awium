@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.gromoff97.awium.support.AwaitAssertions.result;
 import static io.github.gromoff97.awium.support.TestConditions.checkPerWait;
 import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
-import static io.github.gromoff97.awium.AwaitCondition.Reference;
+import static io.github.gromoff97.awium.Condition.Reference;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;

@@ -63,6 +63,7 @@ tasks.check {
 // Mutation testing requires an explicit user request; build/check/test never run it.
 pitest {
     targetClasses = setOf("io.github.gromoff97.awium.conditions.*",
+        "io.github.gromoff97.awium.dsl.*",
         "io.github.gromoff97.awium.function.checked.*")
     targetTests = setOf("io.github.gromoff97.awium.conditions.*Test", "io.github.gromoff97.awium.function.checked.*Test")
     excludedTestClasses = setOf(

@@ -141,9 +141,9 @@ class HistoryFormattingTest {
 
     @Test
     void aReturnedNullIsDifferentFromAnUnavailableObservation() {
-        var returnedNull = withTime(tryAwait((Callable<String>) () -> null), time, time).until(accepted);
+        var returnedNull = withTime(tryAwait((Callable<String>) () -> null), time, time).until(accepted());
         var cause = new IllegalStateException("source unavailable");
-        var sourceFailed = withTime(tryAwait((Callable<String>) () -> { throw cause; }), time, time).until(accepted);
+        var sourceFailed = withTime(tryAwait((Callable<String>) () -> { throw cause; }), time, time).until(accepted());
 
         assertThat(attempts(returnedNull).getFirst().toString()).contains("Observed now: null");
         String failed = attempts(sourceFailed).getFirst().toString();
@@ -254,7 +254,7 @@ class HistoryFormattingTest {
         var cause = new IllegalArgumentException("original cause") {
             @Override public String toString() { throw new IllegalStateException("cause renderer failed"); }
         };
-        var failed = withTime(tryAwait((Callable<String>) () -> { throw cause; }), time, time).until(accepted);
+        var failed = withTime(tryAwait((Callable<String>) () -> { throw cause; }), time, time).until(accepted());
 
         String successText = successful.toString();
         String failureText = failed.toString();

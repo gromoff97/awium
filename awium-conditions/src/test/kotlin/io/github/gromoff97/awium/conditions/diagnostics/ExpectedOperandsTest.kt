@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.diagnostics
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.contains
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsExactlyInAnyOrder
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsOnly
@@ -48,7 +48,7 @@ class ExpectedOperandsTest {
     fun `a mismatch report retains its expected or forbidden operand`(factory: () -> AwaitCondition, actual: Any, operand: String) {
         val check = factory()
         rejection(check, actual)
-        assertThat(ConditionHistory<Any>(check, TreeMap()).toString()).contains(operand)
+        assertThat(ConditionHistory<Any>(check.newRun(), TreeMap()).toString()).contains(operand)
     }
 
     @ParameterizedTest

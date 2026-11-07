@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.AwaitCondition.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;

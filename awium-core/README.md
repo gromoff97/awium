@@ -61,8 +61,8 @@ values and preserves diagnostic data. Blank or null mismatch messages, including
 ## Reasons
 
 The default `because(nonBlankReason)` copies the condition, preserving lifecycle
-methods and replacing any previous or inherited reason. Keep its specific type:
-`AwaitCondition` alone lacks the constraints required by `until`.
+methods and replacing any previous or inherited reason. Its input and result types
+remain unchanged.
 
 ## Documentation
 

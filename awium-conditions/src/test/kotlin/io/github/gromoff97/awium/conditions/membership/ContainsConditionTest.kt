@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.membership
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.contains
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContain
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance

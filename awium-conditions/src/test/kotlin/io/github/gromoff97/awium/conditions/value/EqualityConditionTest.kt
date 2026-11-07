@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.AwaitCondition
-import io.github.gromoff97.awium.AwaitCondition.Reference
+import io.github.gromoff97.awium.dsl.AwaitCondition
+import io.github.gromoff97.awium.Condition.Reference
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection

@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 

@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.conditions.api
 
 import consumer.value.TextConsumer
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition
 import io.github.gromoff97.awium.conditions.string.StringConditions
 import java.nio.CharBuffer
 import org.junit.jupiter.api.Assertions.assertEquals

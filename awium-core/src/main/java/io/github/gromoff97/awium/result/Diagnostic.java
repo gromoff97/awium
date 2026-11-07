@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.result;
 
-import io.github.gromoff97.awium.AwaitCondition.Reference;
+import io.github.gromoff97.awium.Condition.Reference;
 import java.util.List;
 
 public record Diagnostic(String mismatch, List<Reference<?>> fields) {

@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import io.github.gromoff97.awium.result.AttemptResult;
 

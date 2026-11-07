@@ -1,7 +1,7 @@
 package io.github.gromoff97.awium.api;
 
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.Condition.Reference;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import io.github.gromoff97.awium.result.Attempt;
@@ -9,6 +9,9 @@ import io.github.gromoff97.awium.result.Diagnostic;
 import io.github.gromoff97.awium.support.FakeTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static io.github.gromoff97.awium.support.AwaitAssertions.attempts;
 import static io.github.gromoff97.awium.support.TestConditions.check;
@@ -26,6 +29,36 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConditionContractTest {
+    @Test
+    void referencesGuardUserRendering() {
+        var value = new Object() {
+            @Override public String toString() { throw new IllegalStateException("cannot print"); }
+        };
+        assertEquals("Expected=<unprintable>", new Reference<>("Expected", value).toString());
+    }
+
+    @Test
+    void referenceLabelsCannotBeNull() {
+        assertThrows(NullPointerException.class, () -> new Reference<>(null, "ready"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "\n\t"})
+    void referenceLabelsCannotBeBlank(String label) {
+        assertThrows(IllegalArgumentException.class, () -> new Reference<>(label, "ready"));
+    }
+
+    @Test
+    void aReasonCannotBeNull() {
+        assertThrows(NullPointerException.class, () -> check("value", AttemptResult::satisfied).because(null));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "\n\t"})
+    void aReasonCannotBeBlank(String reason) {
+        assertThrows(IllegalArgumentException.class, () -> check("value", AttemptResult::satisfied).because(reason));
+    }
+
     @Test
     void replacingTheReasonManyTimesStillAllowsEvaluation() throws Throwable {
         Condition<String, Integer> condition = check("length",
@@ -98,7 +131,7 @@ class ConditionContractTest {
             @Override public AttemptResult<String> probe(String actual) { return unsatisfied("pending"); }
             @Override public AttemptResult<?> historyResult(AttemptResult<? extends String> attempt) { return unsatisfied("recorded"); }
             @Override public int historySlot(Attempt<?> attempt) { return 2; }
-            @Override public List<? extends AwaitCondition> historyConditions(AwaitCondition definition) { return List.of(unused, observed); }
+            @Override public List<? extends Condition<?, ?>> historyConditions(Condition<?, ?> definition) { return List.of(unused, observed); }
             @Override public Diagnostic diagnostics(Attempt<?> attempt) { return new Diagnostic(null, new Reference<>("Run detail", "retained")); }
         }.because("check the prepared run");
         var definition = new Condition<String, String>() {
@@ -109,7 +142,7 @@ class ConditionContractTest {
 
         var result = diagnostic(timedAwait(() -> "actual", new FakeTime(0))).upTo(ofNanos(1)).until(definition);
 
-        assertThat(result.conditions()).extracting(history -> history.condition()).containsExactly(unused, observed);
+        assertEquals(List.of(unused, observed), result.conditions().stream().map(history -> history.condition()).toList());
         assertThat(result.conditions().getFirst().attempts()).isEmpty();
         assertEquals("recorded", assertInstanceOf(UnsatisfiedObservation.class,
                 result.conditions().getLast().attempts().lastEntry().getValue()).mismatch());

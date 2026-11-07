@@ -4,7 +4,7 @@ import io.github.gromoff97.awium.result.AttemptResult;
 import java.io.IOException;
 import java.util.List;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.await;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.asserted;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.condition;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.isNotNull;

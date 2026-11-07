@@ -1,13 +1,14 @@
 package io.github.gromoff97.awium.conditions.string;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;
 import java.util.function.BiPredicate;
 
+import static io.github.gromoff97.awium.conditions.string.ExpectedText.text;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
-import static io.github.gromoff97.awium.conditions.string.ExpectedText.text;
 
 record TextMatchCondition(String value, Match match) implements PreservingCondition<CharSequence> {
     enum Match {

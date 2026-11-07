@@ -6,6 +6,8 @@ import static io.github.gromoff97.awium.result.AwaitFailure.Reason;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.INTERRUPTED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.PERSISTENCE_FAILED;
 import static io.github.gromoff97.awium.result.AwaitFailure.Reason.TIMEOUT;
+import static io.github.gromoff97.awium.result.Attempt.Operation;
+import static io.github.gromoff97.awium.result.Attempt.Operation.CONDITION;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
@@ -20,7 +22,11 @@ sealed interface WaitCompletion {
     default void onPersistenceFailure(LongConsumer action) { requireNonNull(action, "action must not be null"); }
 
     default Uncontrolled withConditionFailure(Throwable cause, String location) {
-        return new Uncontrolled(step().withConditionFailure(cause, location));
+        return withFailure(CONDITION, cause, location);
+    }
+
+    default Uncontrolled withFailure(Operation operation, Throwable cause, String location) {
+        return new Uncontrolled(step().withFailure(operation, cause, location));
     }
 
     record SatisfiedWait(ExecutionStep<?> step) implements WaitCompletion {
@@ -34,8 +40,8 @@ sealed interface WaitCompletion {
             this(step, currentThread().isInterrupted());
         }
         @Override public Reason failureReason() { return interrupted ? INTERRUPTED : step.failureReason(); }
-        @Override public Uncontrolled withConditionFailure(Throwable cause, String location) {
-            return new Uncontrolled(step.withConditionFailure(cause, location), interrupted);
+        @Override public Uncontrolled withFailure(Operation operation, Throwable cause, String location) {
+            return new Uncontrolled(step.withFailure(operation, cause, location), interrupted);
         }
     }
 

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.elementAt;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.firstElement;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.lastElement;

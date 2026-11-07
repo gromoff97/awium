@@ -1,15 +1,16 @@
 package io.github.gromoff97.awium.conditions.optional;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.SelectedCondition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
 import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition;
 
 public final class OptionalConditions {
 
@@ -22,7 +23,7 @@ public final class OptionalConditions {
         return hasValue(matches(predicate));
     }
 
-    public static <VALUE, RESULT> Condition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, RESULT> nested) {
+    public static <VALUE, RESULT> TypedCondition<Optional<? extends VALUE>, RESULT> hasValue(Condition<? super VALUE, RESULT> nested) {
         return compose("optional value", nested, present);
     }
 

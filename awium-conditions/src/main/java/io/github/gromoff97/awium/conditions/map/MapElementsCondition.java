@@ -1,6 +1,7 @@
 package io.github.gromoff97.awium.conditions.map;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.AbstractCollection;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static io.github.gromoff97.awium.function.AwaitAttempt.bind;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.bind;
 import static io.github.gromoff97.awium.result.AttemptResult.Unsatisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;

@@ -1,13 +1,13 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.result.AttemptResult;
 
 import static io.github.gromoff97.awium.result.AttemptResult.satisfied;
 import static io.github.gromoff97.awium.result.AttemptResult.unsatisfied;
 import static java.util.Objects.requireNonNull;
 
-record InstanceOfCondition<RESULT>(Class<RESULT> type, boolean exact) implements Condition<Object, RESULT> {
+record InstanceOfCondition<RESULT>(Class<RESULT> type, boolean exact) implements TypedCondition<Object, RESULT> {
     InstanceOfCondition { requireNonNull(type, "type must not be null"); }
 
     @Override

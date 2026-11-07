@@ -7,6 +7,40 @@ import org.junit.jupiter.api.TestFactory
 class CompilationContractTest {
 
     @TestFactory
+    fun `ambiguous sources need a lambda or a declared category`() = listOf("await", "tryAwait").flatMap { factory ->
+        listOf("StringBuilder::new", "Optional::empty", "() -> null").map { source ->
+            dynamicTest("$factory / $source") { assertRejected("""
+                    final class Contract { void check() { %s(%s); } }
+                    """.trimIndent().format(factory, source)) }
+        }
+    }
+
+    @TestFactory
+    fun `a general source rejects category selectors`() = listOf("await", "tryAwait").flatMap { factory ->
+        listOf("Optional<?>", "Collection<?>", "Map<?, ?>").map { input ->
+            dynamicTest("$factory / $input") { assertRejected("""
+                    import io.github.gromoff97.awium.dsl.AwaitCondition.SelectedCondition;
+                    final class Contract {
+                        void check(Callable<String> source, SelectedCondition<%s> condition) {
+                            %s(source).until(condition);
+                        }
+                    }
+                    """.trimIndent().format(input, factory)) }
+        }
+    }
+
+    @TestFactory
+    fun `a core entry point cannot bypass DSL constraints`() = listOf("await", "tryAwait").map { factory ->
+        dynamicTest(factory) { assertRejected("""
+                import io.github.gromoff97.awium.Await;
+                import static io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo;
+                final class Contract {
+                    void check() { Await.%s(() -> "ready").until(equalTo(123)); }
+                }
+                """.trimIndent().format(factory)) }
+    }
+
+    @TestFactory
     fun `nested quantifiers reject incompatible inputs and results`() = listOf(
             "await(() -> users).until(all(matches(String::isBlank)));",
             "await(() -> users).until(any(equalTo(123)));",
@@ -419,7 +453,7 @@ class CompilationContractTest {
     @Test
     fun `covariant map views keep independent value types across stages`() {
         assertRejected("""
-                import io.github.gromoff97.awium.Await.MapViewSource;
+                import io.github.gromoff97.awium.dsl.Await.MapViewSource;
                 import static io.github.gromoff97.awium.conditions.common.CommonConditions.captured;
                 import static io.github.gromoff97.awium.conditions.map.MapConditions.singleEntry;
                 final class Contract {
@@ -440,8 +474,8 @@ class CompilationContractTest {
         CompilationSupport.assertRejected("""
                 import java.util.*;
                 import java.util.concurrent.Callable;
-                import static io.github.gromoff97.awium.Await.await;
-                import static io.github.gromoff97.awium.Await.tryAwait;
+                import static io.github.gromoff97.awium.dsl.Await.await;
+                import static io.github.gromoff97.awium.dsl.Await.tryAwait;
                 """.trimIndent() + source)
     }
 }

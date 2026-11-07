@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.collection
 
-import io.github.gromoff97.awium.AwaitCondition
+import io.github.gromoff97.awium.dsl.AwaitCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsSequence
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.containsSubsequence
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.doesNotContainSequence

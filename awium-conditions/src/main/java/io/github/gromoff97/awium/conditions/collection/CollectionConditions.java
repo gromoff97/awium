@@ -1,7 +1,5 @@
 package io.github.gromoff97.awium.conditions.collection;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.collection.CollectionContentCondition.Content;
 import io.github.gromoff97.awium.conditions.collection.CollectionSequenceCondition.Sequence;
@@ -10,16 +8,19 @@ import io.github.gromoff97.awium.conditions.collection.ElementAtCondition.Positi
 import io.github.gromoff97.awium.conditions.collection.NullElementsCondition.Nulls;
 import io.github.gromoff97.awium.conditions.collection.QuantifiedCondition.Quantifier;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.SelectedCondition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.SequencedCollection;
 
-import static io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
+import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
 import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
 import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
-import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.InputCondition;
 
 public final class CollectionConditions {
 
@@ -75,7 +76,7 @@ public final class CollectionConditions {
         return selected(compose("single element", nested, singleElement));
     }
 
-    public static <ELEMENT, RESULT> Condition<Collection<? extends ELEMENT>, RESULT> singleElement(Condition<? super ELEMENT, RESULT> nested) {
+    public static <ELEMENT, RESULT> TypedCondition<Collection<? extends ELEMENT>, RESULT> singleElement(Condition<? super ELEMENT, RESULT> nested) {
         return compose("single element", nested, singleElement);
     }
 
@@ -204,7 +205,7 @@ public final class CollectionConditions {
         return selected(compose("first element", nested, firstElement));
     }
 
-    public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> firstElement(
+    public static <ELEMENT, RESULT> TypedCondition<SequencedCollection<? extends ELEMENT>, RESULT> firstElement(
             Condition<? super ELEMENT, RESULT> nested) {
         return compose("first element", nested, firstElement);
     }
@@ -226,7 +227,7 @@ public final class CollectionConditions {
         return selected(compose("last element", nested, lastElement));
     }
 
-    public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> lastElement(
+    public static <ELEMENT, RESULT> TypedCondition<SequencedCollection<? extends ELEMENT>, RESULT> lastElement(
             Condition<? super ELEMENT, RESULT> nested) {
         return compose("last element", nested, lastElement);
     }
@@ -250,7 +251,7 @@ public final class CollectionConditions {
         return selected(compose("element at index " + index, nested, elementAt(index)));
     }
 
-    public static <ELEMENT, RESULT> Condition<SequencedCollection<? extends ELEMENT>, RESULT> elementAt(int index,
+    public static <ELEMENT, RESULT> TypedCondition<SequencedCollection<? extends ELEMENT>, RESULT> elementAt(int index,
             Condition<? super ELEMENT, RESULT> nested) {
         return compose("element at index " + index, nested, elementAt(index));
     }

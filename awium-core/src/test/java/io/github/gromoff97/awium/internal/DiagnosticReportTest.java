@@ -1,7 +1,6 @@
 package io.github.gromoff97.awium.internal;
 
 import io.github.gromoff97.awium.Condition;
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.result.Attempt;
 import io.github.gromoff97.awium.result.AwaitResult;
 import io.github.gromoff97.awium.result.ConditionHistory;
@@ -23,7 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.gromoff97.awium.Await.await;
 import static io.github.gromoff97.awium.Await.tryAwait;
-import static io.github.gromoff97.awium.AwaitCondition.Reference;
+import static io.github.gromoff97.awium.Condition.Reference;
 import static io.github.gromoff97.awium.AwaitTestAccess.config;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.withTime;
@@ -74,7 +73,7 @@ class DiagnosticReportTest {
         var condition = new Condition<String, String>() {
             @Override public String description() { return "receipt"; }
             @Override public AttemptResult<String> probe(String actual) { throw original; }
-            @Override public List<AwaitCondition> historyConditions(AwaitCondition definition) { return List.of(); }
+            @Override public List<Condition<?, ?>> historyConditions(Condition<?, ?> definition) { return List.of(); }
         };
 
         var result = tryAwait(() -> "order").until(condition);

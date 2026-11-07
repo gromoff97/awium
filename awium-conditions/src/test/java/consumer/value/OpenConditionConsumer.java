@@ -1,13 +1,14 @@
 package consumer.value;
 
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.result.AwaitResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.Await.await;
-import static io.github.gromoff97.awium.Await.tryAwait;
+import static io.github.gromoff97.awium.dsl.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.tryAwait;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.all;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.hasSize;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
@@ -26,7 +27,22 @@ public final class OpenConditionConsumer {
         return List.of(collection, optional, map);
     }
 
-    public static AwaitResult<List<String>, List<List<String>>> mixedStages(List<String> values, Condition<CharSequence, Integer> condition) {
+    public static List<Integer> terminalResults(Condition<CharSequence, Integer> condition) {
+        int direct = await(() -> "ready").until(condition.because("DSL entry"));
+        int recorded = tryAwait(() -> "ready").until(condition).orThrow();
+        int core = io.github.gromoff97.awium.Await.await(() -> "ready").until(condition);
+        AwaitResult<String, Number> widened = io.github.gromoff97.awium.Await.tryAwait(() -> "ready").until(condition);
+        return List.of(direct, recorded, core, widened.orThrow().intValue());
+    }
+
+    public static AwaitResult<List<String>, List<List<String>>> adaptedStages(
+            List<String> values, Condition<CharSequence, Integer> condition) {
+        var check = TypedCondition.from(condition);
+        return tryAwait(() -> values).every(ofNanos(1))
+                .until(captured(hasSize(1), singleElement(condition), all(check)));
+    }
+
+    public static AwaitResult<List<String>, List<List<String>>> mixedStages(List<String> values, TypedCondition<CharSequence, Integer> condition) {
         return tryAwait(() -> values).every(ofNanos(1)).until(captured(hasSize(1), singleElement(condition), all(condition)));
     }
 }

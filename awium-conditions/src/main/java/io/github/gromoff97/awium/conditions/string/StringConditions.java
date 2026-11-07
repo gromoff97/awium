@@ -1,11 +1,9 @@
 package io.github.gromoff97.awium.conditions.string;
 
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
 import io.github.gromoff97.awium.conditions.string.TextMatchCondition.Match;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import java.util.regex.Pattern;
-
-
 
 public final class StringConditions {
 

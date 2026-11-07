@@ -1,7 +1,8 @@
 package io.github.gromoff97.awium.conditions.map;
 
-import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.Condition.Reference;
+import io.github.gromoff97.awium.dsl.AwaitCondition.MapValueCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.List;

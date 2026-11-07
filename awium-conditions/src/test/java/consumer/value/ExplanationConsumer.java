@@ -1,9 +1,9 @@
 package consumer.value;
 
-import io.github.gromoff97.awium.Await.CollectionSource;
-import io.github.gromoff97.awium.Await.MapSource;
-import io.github.gromoff97.awium.Await.OptionalSource;
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.Await.CollectionSource;
+import io.github.gromoff97.awium.dsl.Await.MapSource;
+import io.github.gromoff97.awium.dsl.Await.OptionalSource;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.github.gromoff97.awium.Await.await;
+import static io.github.gromoff97.awium.dsl.Await.await;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.all;
 import static io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.instanceOf;

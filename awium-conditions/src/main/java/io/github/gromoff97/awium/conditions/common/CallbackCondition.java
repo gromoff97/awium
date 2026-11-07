@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.common;
 
-import io.github.gromoff97.awium.Condition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
 import java.util.concurrent.Callable;
@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 import static java.util.Objects.requireNonNull;
 
 record CallbackCondition<INPUT, RESULT>(String description,
-        Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> factory) implements Condition<INPUT, RESULT> {
+        Callable<? extends AwaitAttempt<? super INPUT, ? extends RESULT>> factory) implements TypedCondition<INPUT, RESULT> {
     CallbackCondition {
         requireNonNull(description, "description must not be null");
         if (description.isBlank()) throw new IllegalArgumentException("description must not be blank");

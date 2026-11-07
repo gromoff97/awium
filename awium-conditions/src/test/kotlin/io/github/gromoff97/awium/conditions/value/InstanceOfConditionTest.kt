@@ -1,6 +1,6 @@
 package io.github.gromoff97.awium.conditions.value
 
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.preservesInstance
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.rejection
 import io.github.gromoff97.awium.conditions.common.CommonConditions.exactlyInstanceOf
@@ -20,20 +20,20 @@ class InstanceOfConditionTest {
 
     @ParameterizedTest
     @MethodSource("successfulChecks")
-    fun `returns the original instance`(condition: Condition<Any, *>) {
+    fun `returns the original instance`(condition: TypedCondition<Any, *>) {
         val actual = Child()
         preservesInstance(condition, actual)
     }
 
     @ParameterizedTest
     @MethodSource("stringChecks")
-    fun `null cannot be an instance`(condition: Condition<Any, *>) {
+    fun `null cannot be an instance`(condition: TypedCondition<Any, *>) {
         assertEquals("value was null", rejection(condition, null).mismatch())
     }
 
     @ParameterizedTest
     @MethodSource("stringChecks")
-    fun `an unrelated value reports its actual type`(condition: Condition<Any, *>) {
+    fun `an unrelated value reports its actual type`(condition: TypedCondition<Any, *>) {
         assertThat(rejection(condition, 42).mismatch()).contains("java.lang.Integer")
         assertThat(condition.description()).contains("java.lang.String")
     }
@@ -51,7 +51,7 @@ class InstanceOfConditionTest {
 
     @ParameterizedTest
     @MethodSource("factories")
-    fun `rejects a missing type immediately`(create: (Class<String>?) -> Condition<Any, String>) {
+    fun `rejects a missing type immediately`(create: (Class<String>?) -> TypedCondition<Any, String>) {
         val failure = assertThrows<NullPointerException> { create(null) }
         assertEquals("type must not be null", failure.message)
     }
@@ -68,7 +68,7 @@ class InstanceOfConditionTest {
         fun stringChecks() = listOf(named("instance", instanceOf(String::class.java)), named("exact instance", exactlyInstanceOf(String::class.java)))
 
         @JvmStatic
-        fun factories(): List<Named<(Class<String>?) -> Condition<Any, String>>> = listOf(
+        fun factories(): List<Named<(Class<String>?) -> TypedCondition<Any, String>>> = listOf(
             named("instance", { instanceOf(it) }),
             named("exact instance", { exactlyInstanceOf(it) })
         )

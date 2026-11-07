@@ -1,6 +1,5 @@
 package io.github.gromoff97.awium.internal;
 
-import io.github.gromoff97.awium.AwaitCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.function.AwaitAttempt;
 import io.github.gromoff97.awium.result.AttemptResult;
@@ -11,21 +10,19 @@ import static java.util.Objects.requireNonNull;
 
 public final class GuardedAttempt<OBSERVED, RESULT> implements AwaitAttempt<OBSERVED, RESULT> {
 
-    public static <INPUT, RESULT> AwaitAttempt<INPUT, RESULT> bind(AwaitCondition condition) {
+    public static <INPUT, RESULT> AwaitAttempt<INPUT, RESULT> bind(Condition<? super INPUT, ? extends RESULT> condition) {
         requireNonNull(condition, "condition must not be null");
         return new GuardedAttempt<>(() -> {
-            var check = GuardedAttempt.<INPUT, RESULT>prepare(condition);
+            var check = GuardedAttempt.prepare(condition);
             if (currentThread().isInterrupted()) throw new InterruptedException("caller thread interrupt flag was set");
             return check.newAttempt();
         });
     }
 
-    @SuppressWarnings("unchecked")
-    static <INPUT, RESULT> Condition<INPUT, RESULT> prepare(AwaitCondition condition) {
+    static <INPUT, RESULT> Condition<? super INPUT, RESULT> prepare(Condition<? super INPUT, RESULT> condition) {
         boolean interrupted = currentThread().isInterrupted();
         try {
-            // Terminal bounds determine the result of source-dependent selectors and preserving checks.
-            return (Condition<INPUT, RESULT>) requireNonNull(condition.newRun(), "condition returned null run");
+            return requireNonNull(condition.newRun(), "condition returned null run");
         } finally {
             if (interrupted) currentThread().interrupt();
         }

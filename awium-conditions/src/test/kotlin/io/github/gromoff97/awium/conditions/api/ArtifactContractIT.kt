@@ -2,7 +2,7 @@ package io.github.gromoff97.awium.conditions.api
 
 import com.google.testing.compile.Compiler.javac
 import com.google.testing.compile.JavaFileObjects.forSourceString
-import io.github.gromoff97.awium.Await
+import io.github.gromoff97.awium.dsl.Await
 import io.github.gromoff97.awium.conditions.support.conditionsJar
 import io.github.gromoff97.awium.conditions.support.coreJar
 import java.io.File.pathSeparator
@@ -30,7 +30,7 @@ class ArtifactContractIT {
         val conditions = ModuleFinder.of(conditionsJar).find("io.github.gromoff97.awium.conditions").orElseThrow().descriptor()
 
         assertFalse(conditions.isAutomatic)
-        assertEquals(setOf("io.github.gromoff97.awium.conditions.common", "io.github.gromoff97.awium.function.checked",
+        assertEquals(setOf("io.github.gromoff97.awium.dsl", "io.github.gromoff97.awium.conditions.common", "io.github.gromoff97.awium.function.checked",
             "io.github.gromoff97.awium.conditions.collection", "io.github.gromoff97.awium.conditions.map",
             "io.github.gromoff97.awium.conditions.optional", "io.github.gromoff97.awium.conditions.string"),
             conditions.exports().map { it.source() }.toSet())
@@ -52,7 +52,8 @@ class ArtifactContractIT {
         val configuration = boot().configuration().resolve(finder, ModuleFinder.of(), setOf("io.github.gromoff97.awium.conditions"))
         val layer = boot().defineModulesWithOneLoader(configuration, getPlatformClassLoader())
         val moduleLoader = layer.findLoader("io.github.gromoff97.awium.core")
-        assertEquals("io.github.gromoff97.awium.core", moduleLoader.loadClass(Await::class.java.name).module.name)
+        assertEquals("io.github.gromoff97.awium.conditions", moduleLoader.loadClass(Await::class.java.name).module.name)
+        assertEquals("io.github.gromoff97.awium.core", moduleLoader.loadClass("io.github.gromoff97.awium.Condition").module.name)
         URLClassLoader(arrayOf(clientClasses), moduleLoader).use { assertConsumerResult(it) }
     }
 

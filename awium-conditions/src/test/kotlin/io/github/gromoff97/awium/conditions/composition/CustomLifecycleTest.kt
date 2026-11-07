@@ -1,16 +1,18 @@
 package io.github.gromoff97.awium.conditions.composition
 
+import io.github.gromoff97.awium.dsl.AwaitCondition.definitionOf
+
 import consumer.ArtifactConsumer.Length
 import consumer.CountedCondition
 import consumer.value.OpenConditionConsumer
-import io.github.gromoff97.awium.Await.tryAwait
-import io.github.gromoff97.awium.Condition
+import io.github.gromoff97.awium.dsl.Await.tryAwait
+import io.github.gromoff97.awium.dsl.TypedCondition
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions.singleElement
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.evaluate
 import io.github.gromoff97.awium.conditions.support.ConditionAssertions.result
 import io.github.gromoff97.awium.conditions.common.CommonConditions.captured
 import io.github.gromoff97.awium.conditions.common.CommonConditions.equalTo
-import io.github.gromoff97.awium.function.AwaitAttempt.bind
+import io.github.gromoff97.awium.dsl.AwaitCondition.bind
 import io.github.gromoff97.awium.function.AwaitAttempt
 import io.github.gromoff97.awium.result.AttemptResult
 import io.github.gromoff97.awium.result.AttemptResult.Unsatisfied
@@ -53,13 +55,13 @@ class CustomLifecycleTest {
         val check = CountedCondition(2).because("twice")
         val result = tryAwait(Callable { "ready" }).every(ofNanos(1)).until(captured(check, equalTo("ready")))
         assertEquals(listOf("ready", "ready"), result.orThrow())
-        assertSame(check, result.conditions().first().condition())
+        assertSame(check, definitionOf(result.conditions().first().condition()).orElseThrow())
         assertEquals(listOf(2L, 3L), result.conditions().map { it.attempts().lastKey() })
     }
 
     @Test
     fun `history projection does not change a nested selected result`() {
-        val check = object : Condition<String, Int> {
+        val check = object : TypedCondition<String, Int> {
             override fun description() = "measure text"
             override fun probe(actual: String) = satisfied(actual.length)
             override fun historyResult(attempt: AttemptResult<out Int>) = unsatisfied<Int>("observed")
@@ -70,7 +72,7 @@ class CustomLifecycleTest {
     @Test
     fun `captured initializes a user evaluator separately for each stage and run`() {
         var factories = 0
-        val check = object : Condition<String, String> {
+        val check = object : TypedCondition<String, String> {
             override fun description() = "second observation"
             override fun probe(actual: String): AttemptResult<String> = error("factory must supply the evaluator")
             override fun newAttempt(): AwaitAttempt<String, String> {

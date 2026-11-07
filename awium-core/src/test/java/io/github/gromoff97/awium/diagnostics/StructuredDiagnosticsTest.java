@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
-import static io.github.gromoff97.awium.AwaitCondition.Reference;
+import static io.github.gromoff97.awium.Condition.Reference;
 import static io.github.gromoff97.awium.AwaitTestAccess.diagnostic;
 import static io.github.gromoff97.awium.AwaitTestAccess.timedAwait;
 import static io.github.gromoff97.awium.result.Attempt.SatisfiedObservation;

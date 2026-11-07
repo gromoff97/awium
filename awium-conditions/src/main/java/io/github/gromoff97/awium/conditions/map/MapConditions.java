@@ -1,27 +1,28 @@
 package io.github.gromoff97.awium.conditions.map;
 
-import io.github.gromoff97.awium.AwaitCondition.ComparisonCondition;
-import io.github.gromoff97.awium.AwaitCondition.MapValueCondition;
-import io.github.gromoff97.awium.AwaitCondition.PreservingCondition;
-import io.github.gromoff97.awium.AwaitCondition.SelectedCondition;
 import io.github.gromoff97.awium.Condition;
 import io.github.gromoff97.awium.conditions.collection.CollectionConditions;
 import io.github.gromoff97.awium.conditions.common.CommonConditions;
+import io.github.gromoff97.awium.dsl.AwaitCondition.ComparisonCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.MapValueCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.PreservingCondition;
+import io.github.gromoff97.awium.dsl.AwaitCondition.SelectedCondition;
+import io.github.gromoff97.awium.dsl.TypedCondition;
 import io.github.gromoff97.awium.function.checked.CheckedBiPredicate;
 import io.github.gromoff97.awium.function.checked.CheckedPredicate;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 
-import static io.github.gromoff97.awium.AwaitCondition.InputCondition;
 import static io.github.gromoff97.awium.conditions.common.CommonConditions.matches;
-import static io.github.gromoff97.awium.conditions.map.MapEntries.entryPredicate;
-import static io.github.gromoff97.awium.conditions.map.MapEntries.expectedEntries;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
+import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.ENTRIES;
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.ENTRY_CONTENTS;
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.KEYS;
 import static io.github.gromoff97.awium.conditions.map.MapElementsCondition.Part.VALUES;
-import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.compose;
-import static io.github.gromoff97.awium.conditions.composition.CompositionConditions.selected;
+import static io.github.gromoff97.awium.conditions.map.MapEntries.entryPredicate;
+import static io.github.gromoff97.awium.conditions.map.MapEntries.expectedEntries;
+import static io.github.gromoff97.awium.dsl.AwaitCondition.InputCondition;
 
 public final class MapConditions {
 
@@ -74,7 +75,7 @@ public final class MapConditions {
         return selected(compose("single entry", nested, singleEntry));
     }
 
-    public static <KEY, VALUE, RESULT> Condition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
+    public static <KEY, VALUE, RESULT> TypedCondition<Map<? extends KEY, ? extends VALUE>, RESULT> singleEntry(
             Condition<? super Entry<? extends KEY, ? extends VALUE>, RESULT> nested) {
         return compose("single entry", nested, singleEntry);
     }
@@ -221,7 +222,7 @@ public final class MapConditions {
         return valueFor(key, matches(predicate));
     }
 
-    public static <KEY, VALUE, RESULT> Condition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
+    public static <KEY, VALUE, RESULT> TypedCondition<Map<? super KEY, ? extends VALUE>, RESULT> valueFor(KEY key,
             Condition<? super VALUE, RESULT> nested) {
         return compose("map value", nested, valueFor(key));
     }
